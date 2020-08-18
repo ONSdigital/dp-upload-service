@@ -1,0 +1,42 @@
+swagger: "2.0"
+info:
+  title: dp-upload-service
+  description: "Digital publishing resemable file upload service that handles on the fly encryption and writing to S3. It updates images through the CMS"
+  version: 1.0.0
+  license:
+    name: "Open Government Licence v3.0"
+    url: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+basePath: "/v1"
+schemes:
+  - http
+tags:
+  - name: "hello"
+paths:
+  /hello:
+    get:
+      tags:
+        - hello
+      summary: Example hello world endpoint
+      description: Returns an example payload.
+      produces:
+        - application/json
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/HelloResponse"
+        500:
+          $ref: '#/responses/InternalError'
+
+responses:
+  InternalError:
+    description: "Failed to process the request due to an internal error"
+
+definitions:
+  HelloResponse:
+    type: object
+    properties:
+      message:
+        type: string
+        description: "Message returned by hello world endpoint"
+        example: "Hello, world!"
