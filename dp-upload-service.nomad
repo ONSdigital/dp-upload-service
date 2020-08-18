@@ -26,7 +26,7 @@ job "dp-upload-service" {
       mode     = "delay"
     }
 
-    task "dp-upload-service-publishing" {
+    task "dp-upload-service" {
       driver = "docker"
 
       artifact {
@@ -69,7 +69,7 @@ job "dp-upload-service" {
       }
 
       vault {
-        policies = ["dp-upload-service-publishing"]
+        policies = ["dp-upload-service"]
       }
     }
   }
