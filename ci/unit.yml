@@ -6,7 +6,7 @@ image_resource:
   type: docker-image
   source:
     repository: golang
-    tag: 
+    tag: 1.13.15
 
 inputs:
   - name: dp-upload-service

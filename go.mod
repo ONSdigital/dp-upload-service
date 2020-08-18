@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-upload-service
 
-go 1.14
+go 1.13
 
 require (
 	github.com/ONSdigital/dp-healthcheck v1.0.5
