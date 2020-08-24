@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
@@ -11,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Service contains all the configs, server and clients to run the Image API
 type Service struct {
 	Config      *config.Config
 	server      *server.Server
@@ -24,19 +26,23 @@ func Run(buildTime, gitCommit, version string, svcErrors chan error) (*Service, 
 	ctx := context.Background()
 	log.Event(ctx, "running service", log.INFO)
 
+	//Read config
 	cfg, err := config.Get()
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to retrieve service configuration")
 	}
 	log.Event(ctx, "got service configuration", log.Data{"config": cfg}, log.INFO)
 
+	// Get HTTP Server with collectionID checkHeader middleware
 	r := mux.NewRouter()
 
 	s := server.New(cfg.BindAddr, r)
 	s.HandleOSSignals = false
 
+	// Setup the API
 	a := api.Setup(ctx, r)
 
+	// Get HealthCheck
 	versionInfo, err := healthcheck.NewVersionInfo(
 		buildTime,
 		gitCommit,
@@ -52,6 +58,7 @@ func Run(buildTime, gitCommit, version string, svcErrors chan error) (*Service, 
 	r.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
 	hc.Start(ctx)
 
+	// Run the http server in a new go-routine
 	go func() {
 		if err := s.ListenAndServe(); err != nil {
 			svcErrors <- errors.Wrap(err, "failure in http listen and serve")
@@ -67,7 +74,7 @@ func Run(buildTime, gitCommit, version string, svcErrors chan error) (*Service, 
 	}, nil
 }
 
-// Gracefully shutdown the service
+// Close gracefully shuts the service down in the required order, with timeout
 func (svc *Service) Close(ctx context.Context) {
 	timeout := svc.Config.GracefulShutdownTimeout
 	log.Event(ctx, "commencing graceful shutdown", log.Data{"graceful_shutdown_timeout": timeout}, log.INFO)
