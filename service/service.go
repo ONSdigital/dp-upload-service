@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Service contains all the configs, server and clients to run the Image API
+// Service contains all the configs, server and clients to run the dp-upload-service API
 type Service struct {
 	Config      *config.Config
 	server      *server.Server
