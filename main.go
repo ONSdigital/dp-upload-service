@@ -23,19 +23,23 @@ var (
 
 func main() {
 	log.Namespace = serviceName
+	ctx := context.Background()
 
-	if err := run(); err != nil {
-		log.Event(nil, "fatal runtime error", log.Error(err), log.FATAL)
+	if err := run(ctx); err != nil {
+		log.Event(ctx, "fatal runtime error", log.Error(err), log.FATAL)
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run(ctx context.Context) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, os.Kill)
 
+	// Run the service, providing an error channel for fatal errors
 	svcErrors := make(chan error, 1)
-	svc, err := service.Run(BuildTime, GitCommit, Version, svcErrors)
+	svcList := service.NewServiceList(&service.Init{})
+
+	svc, err := service.Run(ctx, svcList, BuildTime, GitCommit, Version, svcErrors)
 	if err != nil {
 		return errors.Wrap(err, "running service failed")
 	}
@@ -47,7 +51,7 @@ func run() error {
 	case sig := <-signals:
 		ctx := context.Background()
 		log.Event(ctx, "os signal received", log.Data{"signal": sig}, log.INFO)
-		svc.Close(ctx)
+
 	}
-	return nil
+	return svc.Close(ctx)
 }

@@ -1,10 +1,14 @@
-package api
+package api_test
 
 import (
 	"context"
-	"github.com/gorilla/mux"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/gorilla/mux"
+
+	"github.com/ONSdigital/dp-upload-service/api"
+	"github.com/ONSdigital/dp-upload-service/api/mock"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -13,7 +17,7 @@ func TestSetup(t *testing.T) {
 	Convey("Given an API instance", t, func() {
 		r := mux.NewRouter()
 		ctx := context.Background()
-		api := Setup(ctx, r)
+		api := api.Setup(ctx, r, &mock.S3ClienterMock{})
 
 		Convey("When created the following routes should have been added", func() {
 			// Replace the check below with any newly added api endpoints
@@ -26,7 +30,7 @@ func TestClose(t *testing.T) {
 	Convey("Given an API instance", t, func() {
 		r := mux.NewRouter()
 		ctx := context.Background()
-		a := Setup(ctx, r)
+		a := api.Setup(ctx, r, &mock.S3ClienterMock{})
 
 		Convey("When the api is closed any dependencies are closed also", func() {
 			err := a.Close(ctx)
