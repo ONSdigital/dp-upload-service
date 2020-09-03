@@ -31,7 +31,7 @@ func NewServiceList(initialiser Initialiser) *ExternalServiceList {
 // Init implements the Initialiser interface to initialise dependencies
 type Init struct{}
 
-// GetHTTPServer creates an http server and sets the Server flag to true
+// GetHTTPServer creates an http server 
 func (e *ExternalServiceList) GetHTTPServer(bindAddr string, router http.Handler) HTTPServer {
 	s := e.Init.DoGetHTTPServer(bindAddr, router)
 	return s
