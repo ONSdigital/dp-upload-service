@@ -49,7 +49,6 @@ func run(ctx context.Context) error {
 	case err := <-svcErrors:
 		return errors.Wrap(err, "service error received")
 	case sig := <-signals:
-		ctx := context.Background()
 		log.Event(ctx, "os signal received", log.Data{"signal": sig}, log.INFO)
 
 	}
