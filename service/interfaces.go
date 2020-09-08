@@ -17,6 +17,7 @@ import (
 // Initialiser defines the methods to initialise external services
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
+	DoGetVault(ctx context.Context, cfg *config.Config) (api.VaultClienter, error)
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
 	DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3Clienter, error)
 }

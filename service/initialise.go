@@ -10,10 +10,12 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	dps3 "github.com/ONSdigital/dp-s3"
+	dpvault "github.com/ONSdigital/dp-vault"
 )
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
 type ExternalServiceList struct {
+	Vault       bool
 	S3Uploaded  bool
 	HealthCheck bool
 	Init        Initialiser
@@ -22,6 +24,7 @@ type ExternalServiceList struct {
 // NewServiceList creates a new service list with the provided initialiser
 func NewServiceList(initialiser Initialiser) *ExternalServiceList {
 	return &ExternalServiceList{
+		Vault:       false,
 		S3Uploaded:  false,
 		HealthCheck: false,
 		Init:        initialiser,
@@ -31,10 +34,20 @@ func NewServiceList(initialiser Initialiser) *ExternalServiceList {
 // Init implements the Initialiser interface to initialise dependencies
 type Init struct{}
 
-// GetHTTPServer creates an http server 
+// GetHTTPServer creates an http server
 func (e *ExternalServiceList) GetHTTPServer(bindAddr string, router http.Handler) HTTPServer {
 	s := e.Init.DoGetHTTPServer(bindAddr, router)
 	return s
+}
+
+// GetVault creates a Vault client and sets the Vault flag to true
+func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+	vault, err := e.Init.DoGetVault(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	e.Vault = true
+	return vault, nil
 }
 
 // GetS3Uploaded creates a S3 client and sets the S3Uploaded flag to true
@@ -71,6 +84,15 @@ func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3C
 		return nil, err
 	}
 	return s3Client, nil
+}
+
+// DoGetVault returns a VaultClient
+func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+	vault, err := dpvault.CreateClient(cfg.VaultToken, cfg.VaultAddress, 3)
+	if err != nil {
+		return nil, err
+	}
+	return vault, nil
 }
 
 // DoGetHealthCheck creates a healthcheck with versionInfo

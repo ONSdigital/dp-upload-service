@@ -19,6 +19,7 @@ type Service struct {
 	api         *api.API
 	serviceList *ExternalServiceList
 	healthCheck HealthChecker
+	vault       api.VaultClienter
 }
 
 // Run the service
@@ -45,8 +46,15 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
+	// Get Vault client
+	vault, err := serviceList.GetVault(ctx, cfg)
+	if err != nil {
+		log.Event(ctx, "failed to initialise Vault client", log.FATAL, log.Error(err))
+		return nil, err
+	}
+
 	// Setup the API
-	a := api.Setup(ctx, r, s3Uploaded)
+	a := api.Setup(ctx, vault, r, s3Uploaded)
 
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
 
@@ -55,7 +63,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	if err := registerCheckers(ctx, hc, s3Uploaded); err != nil {
+	if err := registerCheckers(ctx, hc, vault, s3Uploaded); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 	r.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
@@ -75,6 +83,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		healthCheck: hc,
 		serviceList: serviceList,
 		server:      s,
+		vault:       vault,
 	}, nil
 }
 
@@ -129,9 +138,15 @@ func (svc *Service) Close(ctx context.Context) error {
 
 func registerCheckers(ctx context.Context,
 	hc HealthChecker,
+	vault api.VaultClienter,
 	s3Uploaded api.S3Clienter) (err error) {
 
 	hasErrors := false
+
+	if err = hc.AddCheck("Vault client", vault.Checker); err != nil {
+		hasErrors = true
+		log.Event(ctx, "error adding check for vault", log.ERROR, log.Error(err))
+	}
 
 	if err := hc.AddCheck("S3 uploaded bucket", s3Uploaded.Checker); err != nil {
 		hasErrors = true

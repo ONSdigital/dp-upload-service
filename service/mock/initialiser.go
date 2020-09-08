@@ -31,6 +31,9 @@ var _ service.Initialiser = &InitialiserMock{}
 //             DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
 // 	               panic("mock out the DoGetS3Uploaded method")
 //             },
+//             DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+// 	               panic("mock out the DoGetVault method")
+//             },
 //         }
 //
 //         // use mockedInitialiser in code that requires service.Initialiser
@@ -46,6 +49,9 @@ type InitialiserMock struct {
 
 	// DoGetS3UploadedFunc mocks the DoGetS3Uploaded method.
 	DoGetS3UploadedFunc func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error)
+
+	// DoGetVaultFunc mocks the DoGetVault method.
+	DoGetVaultFunc func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -74,10 +80,18 @@ type InitialiserMock struct {
 			// Cfg is the cfg argument value.
 			Cfg *config.Config
 		}
+		// DoGetVault holds details about calls to the DoGetVault method.
+		DoGetVault []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Cfg is the cfg argument value.
+			Cfg *config.Config
+		}
 	}
 	lockDoGetHTTPServer  sync.RWMutex
 	lockDoGetHealthCheck sync.RWMutex
 	lockDoGetS3Uploaded  sync.RWMutex
+	lockDoGetVault       sync.RWMutex
 }
 
 // DoGetHTTPServer calls DoGetHTTPServerFunc.
@@ -190,5 +204,40 @@ func (mock *InitialiserMock) DoGetS3UploadedCalls() []struct {
 	mock.lockDoGetS3Uploaded.RLock()
 	calls = mock.calls.DoGetS3Uploaded
 	mock.lockDoGetS3Uploaded.RUnlock()
+	return calls
+}
+
+// DoGetVault calls DoGetVaultFunc.
+func (mock *InitialiserMock) DoGetVault(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+	if mock.DoGetVaultFunc == nil {
+		panic("InitialiserMock.DoGetVaultFunc: method is nil but Initialiser.DoGetVault was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Cfg *config.Config
+	}{
+		Ctx: ctx,
+		Cfg: cfg,
+	}
+	mock.lockDoGetVault.Lock()
+	mock.calls.DoGetVault = append(mock.calls.DoGetVault, callInfo)
+	mock.lockDoGetVault.Unlock()
+	return mock.DoGetVaultFunc(ctx, cfg)
+}
+
+// DoGetVaultCalls gets all the calls that were made to DoGetVault.
+// Check the length with:
+//     len(mockedInitialiser.DoGetVaultCalls())
+func (mock *InitialiserMock) DoGetVaultCalls() []struct {
+	Ctx context.Context
+	Cfg *config.Config
+} {
+	var calls []struct {
+		Ctx context.Context
+		Cfg *config.Config
+	}
+	mock.lockDoGetVault.RLock()
+	calls = mock.calls.DoGetVault
+	mock.lockDoGetVault.RUnlock()
 	return calls
 }

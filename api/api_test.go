@@ -13,11 +13,12 @@ import (
 
 func TestSetup(t *testing.T) {
 	Convey("Given an API instance", t, func() {
-		r := mux.NewRouter()
+		r := &mux.Router{}
 		ctx := context.Background()
-		api := api.Setup(ctx, r, &mock.S3ClienterMock{})
+		api := api.Setup(ctx, &mock.VaultClienterMock{}, r, &mock.S3ClienterMock{})
 
 		Convey("When created the following routes should have been added", func() {
+			So(api, ShouldNotBeNil)
 			// Replace the check below with any newly added api endpoints
 			So(hasRoute(api.Router, "/hello", "GET"), ShouldBeTrue)
 		})
@@ -28,7 +29,7 @@ func TestClose(t *testing.T) {
 	Convey("Given an API instance", t, func() {
 		r := mux.NewRouter()
 		ctx := context.Background()
-		a := api.Setup(ctx, r, &mock.S3ClienterMock{})
+		a := api.Setup(ctx, &mock.VaultClienterMock{}, r, &mock.S3ClienterMock{})
 
 		Convey("When the api is closed any dependencies are closed also", func() {
 			err := a.Close(ctx)
