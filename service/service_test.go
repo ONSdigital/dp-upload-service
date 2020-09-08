@@ -48,17 +48,17 @@ var funcDoGetHTTPServerNil = func(bindAddr string, router http.Handler) service.
 	return nil
 }
 
-var vaultMock = &apiMock.VaultClienterMock{
-	CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-}
-
-var s3UploadedMock = &apiMock.S3ClienterMock{
-	CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
-}
-
 func TestRun(t *testing.T) {
 
 	Convey("Having a set of mocked dependencies", t, func() {
+
+		vaultMock := &apiMock.VaultClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		}
+
+		s3UploadedMock := &apiMock.S3ClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		}
 
 		hcMock := &serviceMock.HealthCheckerMock{
 			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
@@ -217,6 +217,14 @@ func TestClose(t *testing.T) {
 	Convey("Having a correctly initialised service", t, func() {
 
 		hcStopped := false
+
+		vaultMock := &apiMock.VaultClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		}
+
+		s3UploadedMock := &apiMock.S3ClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		}
 
 		// healthcheck Stop does not depend on any other service being closed/stopped
 		hcMock := &serviceMock.HealthCheckerMock{
