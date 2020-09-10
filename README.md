@@ -1,6 +1,7 @@
 dp-upload-service
 ================
-Digital publishing resemable file upload service that handles on the fly encryption and writing to S3. It updates images through the CMS
+
+Digital publishing resumable file upload service that handles on the fly encryption and writing to S3. It updates images through the CMS
 
 ### Getting started
 

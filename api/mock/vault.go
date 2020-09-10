@@ -23,6 +23,12 @@ var _ api.VaultClienter = &VaultClienterMock{}
 //             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 // 	               panic("mock out the Checker method")
 //             },
+//             ReadKeyFunc: func(path string, key string) (string, error) {
+// 	               panic("mock out the ReadKey method")
+//             },
+//             WriteKeyFunc: func(path string, key string, value string) error {
+// 	               panic("mock out the WriteKey method")
+//             },
 //         }
 //
 //         // use mockedVaultClienter in code that requires api.VaultClienter
@@ -33,6 +39,12 @@ type VaultClienterMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
 
+	// ReadKeyFunc mocks the ReadKey method.
+	ReadKeyFunc func(path string, key string) (string, error)
+
+	// WriteKeyFunc mocks the WriteKey method.
+	WriteKeyFunc func(path string, key string, value string) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// Checker holds details about calls to the Checker method.
@@ -42,8 +54,26 @@ type VaultClienterMock struct {
 			// State is the state argument value.
 			State *healthcheck.CheckState
 		}
+		// ReadKey holds details about calls to the ReadKey method.
+		ReadKey []struct {
+			// Path is the path argument value.
+			Path string
+			// Key is the key argument value.
+			Key string
+		}
+		// WriteKey holds details about calls to the WriteKey method.
+		WriteKey []struct {
+			// Path is the path argument value.
+			Path string
+			// Key is the key argument value.
+			Key string
+			// Value is the value argument value.
+			Value string
+		}
 	}
-	lockChecker sync.RWMutex
+	lockChecker  sync.RWMutex
+	lockReadKey  sync.RWMutex
+	lockWriteKey sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
@@ -78,5 +108,79 @@ func (mock *VaultClienterMock) CheckerCalls() []struct {
 	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
 	mock.lockChecker.RUnlock()
+	return calls
+}
+
+// ReadKey calls ReadKeyFunc.
+func (mock *VaultClienterMock) ReadKey(path string, key string) (string, error) {
+	if mock.ReadKeyFunc == nil {
+		panic("VaultClienterMock.ReadKeyFunc: method is nil but VaultClienter.ReadKey was just called")
+	}
+	callInfo := struct {
+		Path string
+		Key  string
+	}{
+		Path: path,
+		Key:  key,
+	}
+	mock.lockReadKey.Lock()
+	mock.calls.ReadKey = append(mock.calls.ReadKey, callInfo)
+	mock.lockReadKey.Unlock()
+	return mock.ReadKeyFunc(path, key)
+}
+
+// ReadKeyCalls gets all the calls that were made to ReadKey.
+// Check the length with:
+//     len(mockedVaultClienter.ReadKeyCalls())
+func (mock *VaultClienterMock) ReadKeyCalls() []struct {
+	Path string
+	Key  string
+} {
+	var calls []struct {
+		Path string
+		Key  string
+	}
+	mock.lockReadKey.RLock()
+	calls = mock.calls.ReadKey
+	mock.lockReadKey.RUnlock()
+	return calls
+}
+
+// WriteKey calls WriteKeyFunc.
+func (mock *VaultClienterMock) WriteKey(path string, key string, value string) error {
+	if mock.WriteKeyFunc == nil {
+		panic("VaultClienterMock.WriteKeyFunc: method is nil but VaultClienter.WriteKey was just called")
+	}
+	callInfo := struct {
+		Path  string
+		Key   string
+		Value string
+	}{
+		Path:  path,
+		Key:   key,
+		Value: value,
+	}
+	mock.lockWriteKey.Lock()
+	mock.calls.WriteKey = append(mock.calls.WriteKey, callInfo)
+	mock.lockWriteKey.Unlock()
+	return mock.WriteKeyFunc(path, key, value)
+}
+
+// WriteKeyCalls gets all the calls that were made to WriteKey.
+// Check the length with:
+//     len(mockedVaultClienter.WriteKeyCalls())
+func (mock *VaultClienterMock) WriteKeyCalls() []struct {
+	Path  string
+	Key   string
+	Value string
+} {
+	var calls []struct {
+		Path  string
+		Key   string
+		Value string
+	}
+	mock.lockWriteKey.RLock()
+	calls = mock.calls.WriteKey
+	mock.lockWriteKey.RUnlock()
 	return calls
 }

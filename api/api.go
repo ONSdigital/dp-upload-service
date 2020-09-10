@@ -15,20 +15,14 @@ type API struct {
 }
 
 //Setup function sets up the api and returns an api
-func Setup(
-	ctx context.Context,
-	vault  VaultClienter,
-	r *mux.Router,
-	s3Uploaded S3Clienter,
-) *API {
+func Setup(ctx context.Context, vault VaultClienter, r *mux.Router, s3Uploaded S3Clienter) *API {
 	api := &API{
-		Router: r,
+		Router:     r,
 		s3Uploaded: s3Uploaded,
-		vault: vault,
+		vault:      vault,
 	}
-
 	r.HandleFunc("/hello", HelloHandler()).Methods("GET")
-	return api    
+	return api
 }
 
 //Close fuction shuts down dependenices
