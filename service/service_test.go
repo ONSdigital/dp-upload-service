@@ -10,7 +10,6 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-upload-service/api"
-	apiMock "github.com/ONSdigital/dp-upload-service/api/mock"
 	"github.com/ONSdigital/dp-upload-service/config"
 
 	"github.com/gorilla/mux"
@@ -57,11 +56,11 @@ func TestRun(t *testing.T) {
 			return r.Match(req, match)
 		}
 
-		vaultMock := &apiMock.VaultClienterMock{
+		vaultMock := &api.VaultClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
-		s3UploadedMock := &apiMock.S3ClienterMock{
+		s3UploadedMock := &api.S3ClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
@@ -234,11 +233,11 @@ func TestClose(t *testing.T) {
 
 		hcStopped := false
 
-		vaultMock := &apiMock.VaultClienterMock{
+		vaultMock := &api.VaultClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
-		s3UploadedMock := &apiMock.S3ClienterMock{
+		s3UploadedMock := &api.S3ClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
