@@ -51,11 +51,15 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	// Get Vault client
-	vault, err := serviceList.GetVault(ctx, cfg)
-	if err != nil {
-		log.Event(ctx, "failed to initialise Vault client", log.FATAL, log.Error(err))
-		return nil, err
+	var vault api.VaultClienter
+
+	if !cfg.EncryptionDisabled {
+		// Get Vault client
+		vault, err = serviceList.GetVault(ctx, cfg)
+		if err != nil {
+			log.Event(ctx, "failed to initialise Vault client", log.FATAL, log.Error(err))
+			return nil, err
+		}
 	}
 
 	// Create Uploader with S3 client and Vault
@@ -156,10 +160,11 @@ func registerCheckers(ctx context.Context,
 	s3Uploaded api.S3Clienter) (err error) {
 
 	hasErrors := false
-
-	if err = hc.AddCheck("Vault client", vault.Checker); err != nil {
-		hasErrors = true
-		log.Event(ctx, "error adding check for vault", log.ERROR, log.Error(err))
+	if vault != nil {
+		if err = hc.AddCheck("Vault client", vault.Checker); err != nil {
+			hasErrors = true
+			log.Event(ctx, "error adding check for vault", log.ERROR, log.Error(err))
+		}
 	}
 
 	if err := hc.AddCheck("S3 uploaded bucket", s3Uploaded.Checker); err != nil {
