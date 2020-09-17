@@ -33,8 +33,10 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	//Read config
 	cfg, err := config.Get()
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to retrieve service configuration")
+		log.Event(ctx, "unable to retrieve service configuration", log.FATAL, log.Error(err))
+		return nil, err
 	}
+
 	log.Event(ctx, "got service configuration", log.Data{"config": cfg}, log.INFO)
 
 	// Get HTTP Server with collectionID checkHeader middleware
@@ -70,7 +72,8 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	}
 
 	if err := registerCheckers(ctx, hc, vault, s3Uploaded); err != nil {
-		return nil, errors.Wrap(err, "unable to register checkers")
+		log.Event(ctx, "unable to register checkers", log.FATAL, log.Error(err))
+		return nil, err
 	}
 	r.StrictSlash(true).Path("/health").Methods(http.MethodGet).HandlerFunc(hc.Handler)
 	r.Path("/upload").Methods(http.MethodGet).HandlerFunc(uploader.CheckUploaded)

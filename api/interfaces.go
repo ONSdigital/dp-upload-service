@@ -7,8 +7,8 @@ import (
 	s3client "github.com/ONSdigital/dp-s3"
 )
 
-//go:generate moq -out mock_s3_test.go  . S3Clienter
-//go:generate moq -out mock_vault_test.go . VaultClienter
+//go:generate moq -out mock_s3.go  . S3Clienter
+//go:generate moq -out mock_vault.go . VaultClienter
 
 //VaultClienter defines the required method
 type VaultClienter interface {

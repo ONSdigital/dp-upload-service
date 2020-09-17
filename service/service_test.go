@@ -215,7 +215,7 @@ func TestRun(t *testing.T) {
 
 			Convey("Then service Run fails, but all checks try to register", func() {
 				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldResemble, fmt.Sprintf("unable to register checkers: %s", errAddheckFail.Error()))
+				So(err.Error(), ShouldResemble, fmt.Sprintf(errAddheckFail.Error()))
 				So(svcList.HealthCheck, ShouldBeTrue)
 				So(svcList.S3Uploaded, ShouldBeTrue)
 				So(svcList.Vault, ShouldBeTrue)
@@ -308,6 +308,7 @@ func TestClose(t *testing.T) {
 			So(err, ShouldNotBeNil)
 			So(len(hcMock.StopCalls()), ShouldEqual, 1)
 			So(len(failingserverMock.ShutdownCalls()), ShouldEqual, 1)
+
 		})
 	})
 }

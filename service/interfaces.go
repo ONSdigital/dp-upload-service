@@ -4,14 +4,14 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
 )
 
-//go:generate moq -out mock_initialiser_test.go . Initialiser
-//go:generate moq -out mock_server_test.go  . HTTPServer
-//go:generate moq -out mock_healthCheck_test.go  . HealthChecker
+//go:generate moq -out mock_initialiser.go . Initialiser
+//go:generate moq -out mock_server.go  . HTTPServer
+//go:generate moq -out mock_healthCheck.go  . HealthChecker
 
 // Initialiser defines the methods to initialise external services
 type Initialiser interface {
