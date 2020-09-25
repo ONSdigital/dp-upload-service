@@ -26,6 +26,18 @@ Digital publishing resumable file upload service that handles on the fly encrypt
 | VAULT_ADDR                   | http://localhost:8200             | The vault address
 | VAULT_PATH                   | secret/shared/psk                 | The path where the psks will be stored in vault
 
+#### To Test using Curl
+To test upload funtionality using the curl command you need to pass the following query string paramenters in the url as this is required to satisfy the schema mentioned in the Resumable struct and pass the file as form-data
+
+    ChunkNumber      int    `schema:"resumableChunkNumber"`
+	ChunkSize        int    `schema:"resumableChunkSize"`
+	Type             string `schema:"resumableType"`
+	Identifier       string `schema:"resumableIdentifier"`
+	FileName         string `schema:"resumableFilename"`
+	AliasName        string `schema:"aliasName"`
+
+* curl -i -X POST -H 'content-type: multipart/form-data' -F file=@README.md http://localhost:25100/upload\?resumableFilename\=README.md\&resumableChunkNumber\=1\&resumableType\=text/plain\&resumableTotalChunks\=1\&resumableIdentifier\=<key_to_match_vault_secret_key>\&resumableChunkSize\=1000000\&aliasName\=somealias
+
 ### Contributing
 
 See [CONTRIBUTING](CONTRIBUTING.md) for details.
@@ -35,4 +47,3 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details.
 Copyright © 2020, Office for National Statistics (https://www.ons.gov.uk)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.
-

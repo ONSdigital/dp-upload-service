@@ -29,6 +29,7 @@ type Resumable struct {
 
 // s3Request creates a S3 UploadRequest struct from a Resumable struct
 func (resum *Resumable) s3Request() *s3client.UploadPartRequest {
+	log.Event(nil, "calling function s3 request", log.Data{"resumeidentifier": resum.Identifier})
 	return &s3client.UploadPartRequest{
 		UploadKey:   resum.Identifier,
 		Type:        resum.Type,
@@ -87,7 +88,6 @@ func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 
 // Upload handles the uploading of a file to AWS s3
 func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
-	w.WriteHeader(http.StatusOK)
 	if err := req.ParseForm(); err != nil {
 		log.Event(req.Context(), "error parsing form", log.ERROR, log.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
