@@ -1,7 +1,7 @@
 dp-upload-service
 ================
 
-Digital publishing resumable file upload service that handles on the fly encryption and writing to S3. It updates images through the CMS
+Digital Publishing resumable file upload service that handles on-the-fly encryption and writing to S3. It updates images through the CMS.
 
 ### Getting started
 
@@ -27,16 +27,12 @@ Digital publishing resumable file upload service that handles on the fly encrypt
 | VAULT_PATH                   | secret/shared/psk                 | The path where the psks will be stored in vault
 
 #### To Test using Curl
-To test upload funtionality using the curl command you need to pass the following query string paramenters in the url as this is required to satisfy the schema mentioned in the Resumable struct and pass the file as form-data
 
-    ChunkNumber      int    `schema:"resumableChunkNumber"`
-	ChunkSize        int    `schema:"resumableChunkSize"`
-	Type             string `schema:"resumableType"`
-	Identifier       string `schema:"resumableIdentifier"`
-	FileName         string `schema:"resumableFilename"`
-	AliasName        string `schema:"aliasName"`
+To test upload functionality using the `curl`, you need to pass the following query string paramenters in the url as this is required to satisfy the schema mentioned in the `Resumable` struct and pass the file as form-data
 
-* curl -i -X POST -H 'content-type: multipart/form-data' -F file=@README.md http://localhost:25100/upload\?resumableFilename\=README.md\&resumableChunkNumber\=1\&resumableType\=text/plain\&resumableTotalChunks\=1\&resumableIdentifier\=<key_to_match_vault_secret_key>\&resumableChunkSize\=1000000\&aliasName\=somealias
+[Resumable struct](upload/upload.go)
+
+* `curl -i -X POST -H 'content-type: multipart/form-data' -F file=@README.md http://localhost:25100/upload\?resumableFilename=README.md&resumableChunkNumber=1&resumableType=text/plain&resumableTotalChunks=1&resumableIdentifier=<KEY_MATCHING_VAULT_SECRET_KEY>&resumableChunkSize=1000000&aliasName=somealias`
 
 ### Contributing
 
