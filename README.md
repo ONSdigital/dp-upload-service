@@ -28,11 +28,11 @@ Digital Publishing resumable file upload service that handles on-the-fly encrypt
 
 #### To Test using Curl
 
-To test upload functionality using the `curl`, you need to pass the following query string paramenters in the url as this is required to satisfy the schema mentioned in the `Resumable` struct and pass the file as form-data
+To test upload functionality using `curl`, you need to pass the following query string parameters in the URL -  to satisfy the schema mentioned in the `Resumable` struct and pass the file as form-data
 
-[Resumable struct](upload/upload.go)
+Please refer [Resumable struct](upload/upload.go).
 
-* `curl -i -X POST -H 'content-type: multipart/form-data' -F file=@README.md http://localhost:25100/upload\?resumableFilename=README.md&resumableChunkNumber=1&resumableType=text/plain&resumableTotalChunks=1&resumableIdentifier=<KEY_MATCHING_VAULT_SECRET_KEY>&resumableChunkSize=1000000&aliasName=somealias`
+* `curl -i -X POST -H 'content-type: multipart/form-data' -F file=@README.md 'http://localhost:25100/upload\?resumableFilename=README.md&resumableChunkNumber=1&resumableType=text/plain&resumableTotalChunks=1&resumableIdentifier=<KEY_MATCHING_VAULT_SECRET_KEY>&resumableChunkSize=1000000&aliasName=somealias'`
 
 ### Contributing
 

@@ -13,9 +13,12 @@ import (
 	"github.com/gorilla/schema"
 )
 
+var decoder = schema.NewDecoder()
+
 // Resumable represents resumable js upload query pararmeters
 type Resumable struct {
 	ChunkNumber      int    `schema:"resumableChunkNumber"`
+	TotalChunks      int    `schema:"resumableTotalChunks"`
 	ChunkSize        int    `schema:"resumableChunkSize"`
 	CurrentChunkSize int    `schema:"resumableCurrentChunkSize"`
 	TotalSize        int    `schema:"resumableTotalSize"`
@@ -23,12 +26,11 @@ type Resumable struct {
 	Identifier       string `schema:"resumableIdentifier"`
 	FileName         string `schema:"resumableFilename"`
 	RelativePath     string `schema:"resumableRelativePath"`
-	TotalChunks      int    `schema:"resumableTotalChunks"`
 	AliasName        string `schema:"aliasName"`
 }
 
-// s3Request creates a S3 UploadRequest struct from a Resumable struct
-func (resum *Resumable) s3Request() *s3client.UploadPartRequest {
+// createS3Request creates a S3 UploadRequest struct from a Resumable struct
+func (resum *Resumable) createS3Request() *s3client.UploadPartRequest {
 	log.Event(nil, "calling function s3 request", log.Data{"resumeidentifier": resum.Identifier})
 	return &s3client.UploadPartRequest{
 		UploadKey:   resum.Identifier,
@@ -50,7 +52,13 @@ type Uploader struct {
 
 // New returns a new Uploader from the provided clients and vault path
 func New(s3 api.S3Clienter, vc api.VaultClienter, vaultPath, s3Region, s3Bucket string) *Uploader {
-	return &Uploader{s3, vc, vaultPath, s3Region, s3Bucket}
+	return &Uploader{
+		s3Client:    s3,
+		vaultClient: vc,
+		vaultPath:   vaultPath,
+		s3Region:    s3Region,
+		s3Bucket:    s3Bucket,
+	}
 }
 
 // CheckUploaded checks to see if a chunk has been uploaded
@@ -64,13 +72,13 @@ func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 
 	resum := new(Resumable)
 
-	if err := schema.NewDecoder().Decode(resum, req.Form); err != nil {
+	if err := decoder.Decode(resum, req.Form); err != nil {
 		log.Event(req.Context(), "error decoding form", log.ERROR, log.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	ok, err := u.s3Client.CheckPartUploaded(req.Context(), resum.s3Request())
+	ok, err := u.s3Client.CheckPartUploaded(req.Context(), resum.createS3Request())
 	if err != nil {
 		w.WriteHeader(statusCodeFromError(err))
 		return
@@ -96,7 +104,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 
 	resum := new(Resumable)
 
-	if err := schema.NewDecoder().Decode(resum, req.Form); err != nil {
+	if err := decoder.Decode(resum, req.Form); err != nil {
 		log.Event(req.Context(), "error decoding form", log.WARN, log.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -120,7 +128,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 
 	if u.vaultClient == nil {
 		// Perform upload without PSK
-		if err := u.s3Client.UploadPart(req.Context(), resum.s3Request(), payload); err != nil {
+		if err := u.s3Client.UploadPart(req.Context(), resum.createS3Request(), payload); err != nil {
 			w.WriteHeader(statusCodeFromError(err))
 			return
 		}
@@ -129,15 +137,15 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	vaultKey := "key"
-	vaultPath := u.vaultPath + "/" + resum.Identifier
+	vaultKeyPath := u.vaultPath + "/" + resum.Identifier
 
 	// Get PSK from Vault. If the vault PSK is not found for this file, then create one and use it
 	var psk []byte
-	pskStr, err := u.vaultClient.ReadKey(vaultPath, vaultKey)
+	pskStr, err := u.vaultClient.ReadKey(vaultKeyPath, vaultKey)
 	if err != nil {
 		// Create PSK and write it to Vault
 		psk = createPSK()
-		if err := u.vaultClient.WriteKey(vaultPath, vaultKey, hex.EncodeToString(psk)); err != nil {
+		if err := u.vaultClient.WriteKey(vaultKeyPath, vaultKey, hex.EncodeToString(psk)); err != nil {
 			log.Event(req.Context(), "error writing key to vault", log.ERROR, log.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -153,7 +161,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Perform upload using vault PSK
-	if err = u.s3Client.UploadPartWithPsk(req.Context(), resum.s3Request(), payload, psk); err != nil {
+	if err = u.s3Client.UploadPartWithPsk(req.Context(), resum.createS3Request(), payload, psk); err != nil {
 		w.WriteHeader(statusCodeFromError(err))
 		return
 	}

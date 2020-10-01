@@ -48,7 +48,7 @@ var funcDoGetHTTPServerNil = func(bindAddr string, router http.Handler) HTTPServ
 
 func TestRun(t *testing.T) {
 
-	Convey("Having a set of mocked dependencies", t, func() {
+	Convey("Given a set of mocked dependencies", t, func() {
 
 		funcHasRoute := func(r *mux.Router, method, path string) bool {
 			req := httptest.NewRequest(method, path, nil)
@@ -93,7 +93,7 @@ func TestRun(t *testing.T) {
 			return serverMock
 		}
 
-		Convey("Given that initialising s3 uploaded bucket returns an error", func() {
+		Convey("When initialising s3 uploaded bucket that returns an error", func() {
 			initMock := &InitialiserMock{
 				DoGetHTTPServerFunc:  funcDoGetHTTPServerNil,
 				DoGetS3UploadedFunc:  funcDoS3UploadedErr,
@@ -112,7 +112,7 @@ func TestRun(t *testing.T) {
 			})
 		})
 
-		Convey("Given that initialising vault returns an error", func() {
+		Convey("When initialising vault returns an error", func() {
 			initMock := &InitialiserMock{
 				DoGetHTTPServerFunc:  funcDoGetHTTPServerNil,
 				DoGetVaultFunc:       funcDoGetVaultErr,
@@ -131,7 +131,7 @@ func TestRun(t *testing.T) {
 			})
 		})
 
-		Convey("Given that initialising healthcheck returns an error", func() {
+		Convey("When initialising healthcheck that returns an error", func() {
 			initMock := &InitialiserMock{
 				DoGetHTTPServerFunc:  funcDoGetHTTPServerNil,
 				DoGetHealthCheckFunc: funcDoGetHealthcheckErr,
@@ -142,7 +142,7 @@ func TestRun(t *testing.T) {
 			svcList := NewServiceList(initMock)
 			_, err := Run(ctx, svcList, testBuildTime, testGitCommit, testVersion, svcErrors)
 
-			Convey("Then service Run fails with the same error and the flag is not set", func() {
+			Convey("Then service Run fails with healthcheck error and HealthCheck flag is not set", func() {
 				So(err, ShouldResemble, errHealthcheck)
 				So(svcList.S3Uploaded, ShouldBeTrue)
 				So(svcList.HealthCheck, ShouldBeFalse)
@@ -150,7 +150,7 @@ func TestRun(t *testing.T) {
 			})
 		})
 
-		Convey("Given that all dependencies are successfully initialised", func() {
+		Convey("When all dependencies are successfully initialised", func() {
 
 			initMock := &InitialiserMock{
 				DoGetHTTPServerFunc:  funcDoGetHTTPServer,
@@ -165,7 +165,7 @@ func TestRun(t *testing.T) {
 
 			s, err := Run(ctx, svcList, testBuildTime, testGitCommit, testVersion, svcErrors)
 
-			Convey("Then service Run succeeds and all the flags are set", func() {
+			Convey("Then service Run succeeds with no eror and all the flags are set", func() {
 				So(err, ShouldBeNil)
 				So(svcList.S3Uploaded, ShouldBeTrue)
 				So(svcList.HealthCheck, ShouldBeTrue)
@@ -173,7 +173,7 @@ func TestRun(t *testing.T) {
 
 			})
 
-			Convey("When created the following routes should have been added", func() {
+			Convey("And the following routes should have been added", func() {
 				So(funcHasRoute(s.api.Router, "GET", "/health"), ShouldBeTrue)
 				So(funcHasRoute(s.api.Router, "GET", "/upload"), ShouldBeTrue)
 				So(funcHasRoute(s.api.Router, "POST", "/upload"), ShouldBeTrue)
@@ -193,11 +193,11 @@ func TestRun(t *testing.T) {
 			})
 		})
 
-		Convey("Given that Checkers cannot be registered", func() {
+		Convey("When the Checkers cannot be registered", func() {
 
-			errAddheckFail := errors.New("Error(s) registering checkers for healthcheck")
+			errAddCheckFail := errors.New("Error(s) registering checkers for healthcheck")
 			hcMockAddFail := &HealthCheckerMock{
-				AddCheckFunc: func(name string, checker healthcheck.Checker) error { return errAddheckFail },
+				AddCheckFunc: func(name string, checker healthcheck.Checker) error { return errAddCheckFail },
 				StartFunc:    func(ctx context.Context) {},
 			}
 
@@ -215,7 +215,7 @@ func TestRun(t *testing.T) {
 
 			Convey("Then service Run fails, but all checks try to register", func() {
 				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldResemble, fmt.Sprintf(errAddheckFail.Error()))
+				So(err.Error(), ShouldResemble, fmt.Sprintf(errAddCheckFail.Error()))
 				So(svcList.HealthCheck, ShouldBeTrue)
 				So(svcList.S3Uploaded, ShouldBeTrue)
 				So(svcList.Vault, ShouldBeTrue)
@@ -229,7 +229,7 @@ func TestRun(t *testing.T) {
 
 func TestClose(t *testing.T) {
 
-	Convey("Having a correctly initialised service", t, func() {
+	Convey("Given the service is correctly initialised", t, func() {
 
 		hcStopped := false
 
@@ -259,7 +259,7 @@ func TestClose(t *testing.T) {
 			},
 		}
 
-		Convey("Closing the service results in all the dependencies being closed in the expected order", func() {
+		Convey("When closing the service", func() {
 
 			initMock := &InitialiserMock{
 				DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) HTTPServer { return serverMock },
@@ -274,14 +274,15 @@ func TestClose(t *testing.T) {
 			svcList := NewServiceList(initMock)
 			svc, err := Run(ctx, svcList, testBuildTime, testGitCommit, testVersion, svcErrors)
 			So(err, ShouldBeNil)
-
 			err = svc.Close(context.Background())
-			So(err, ShouldBeNil)
-			So(len(hcMock.StopCalls()), ShouldEqual, 1)
-			So(len(serverMock.ShutdownCalls()), ShouldEqual, 1)
+			Convey("Then all the dependencies should close", func() {
+				So(err, ShouldBeNil)
+				So(len(hcMock.StopCalls()), ShouldEqual, 1)
+				So(len(serverMock.ShutdownCalls()), ShouldEqual, 1)
+			})
 		})
 
-		Convey("If services fail to stop, the Close operation tries to close all dependencies and returns an error", func() {
+		Convey("When services fail to stop", func() {
 
 			failingserverMock := &HTTPServerMock{
 				ListenAndServeFunc: func() error { return nil },
@@ -305,9 +306,11 @@ func TestClose(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			err = svc.Close(context.Background())
-			So(err, ShouldNotBeNil)
-			So(len(hcMock.StopCalls()), ShouldEqual, 1)
-			So(len(failingserverMock.ShutdownCalls()), ShouldEqual, 1)
+			Convey("Then the Close operation tries to close all dependencies and returns an error", func() {
+				So(err, ShouldNotBeNil)
+				So(len(hcMock.StopCalls()), ShouldEqual, 1)
+				So(len(failingserverMock.ShutdownCalls()), ShouldEqual, 1)
+			})
 
 		})
 	})
