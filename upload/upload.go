@@ -80,6 +80,7 @@ func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 
 	ok, err := u.s3Client.CheckPartUploaded(req.Context(), resum.createS3Request())
 	if err != nil {
+		log.Event(req.Context(), "error returned from check part uploaded", log.ERROR, log.Error(err))
 		w.WriteHeader(statusCodeFromError(err))
 		return
 	}

@@ -19,7 +19,6 @@ var errFunc = func() error {
 }
 
 var cfg, _ = config.Get()
-var err error
 
 func TestGetHTTPServer(t *testing.T) {
 	Convey("Given a service list that includes a mocked server", t, func() {
@@ -52,6 +51,7 @@ func TestGetHTTPServer(t *testing.T) {
 		}
 		svcErrors := make(chan error, 1)
 		r := mux.NewRouter()
+		var err error
 		svcList := NewServiceList(newServiceMock)
 		Convey("When the server is retrieved and started", func() {
 			server := svcList.GetHTTPServer(cfg.BindAddr, r)
@@ -65,9 +65,8 @@ func TestGetHTTPServer(t *testing.T) {
 			select {
 			case err = <-svcErrors:
 				cancel()
-			case errDone := <-ctx.Done():
-				So(errDone, ShouldBeNil)
-				cancel()
+			case <-ctx.Done():
+				t.Fatal("ListenAndServe returned no error")
 				server.Shutdown(context.Background())
 			}
 			Convey("Then the startup has failed and returns the expected error", func() {
@@ -94,22 +93,23 @@ func TestGetHTTPServer(t *testing.T) {
 			server := svcList.GetHTTPServer(cfg.BindAddr, r)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			go func() {
-				if err := server.ListenAndServe(); err == nil {
+				if err := server.ListenAndServe(); err != nil {
 					svcErrors <- err
+				} else {
+					cancel()
 				}
 			}()
 
+			var err error
 			select {
 			case err = <-svcErrors:
 				cancel()
 			case errDone := <-ctx.Done():
-				So(errDone, ShouldBeNil)
-				cancel()
-				server.Shutdown(context.Background())
+				So(errDone, ShouldBeZeroValue)
 			}
 			Convey("Then the server returns nil", func() {
 				So(len(newServiceMock.DoGetHTTPServerCalls()), ShouldEqual, 1)
-				So(serverMock.ListenAndServeFunc(), ShouldBeNil)
+				So(len(serverMock.ListenAndServeCalls()), ShouldEqual, 1)
 				So(err, ShouldBeNil)
 			})
 		})
