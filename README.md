@@ -1,6 +1,7 @@
 dp-upload-service
 ================
-Digital publishing resemable file upload service that handles on the fly encryption and writing to S3. It updates images through the CMS
+
+Digital Publishing resumable file upload service that handles on-the-fly encryption and writing to S3. It updates images through the CMS.
 
 ### Getting started
 
@@ -25,6 +26,14 @@ Digital publishing resemable file upload service that handles on the fly encrypt
 | VAULT_ADDR                   | http://localhost:8200             | The vault address
 | VAULT_PATH                   | secret/shared/psk                 | The path where the psks will be stored in vault
 
+#### To Test using Curl
+
+To test upload functionality using `curl`, you need to pass the following query string parameters in the URL -  to satisfy the schema mentioned in the `Resumable` struct and pass the file as form-data
+
+Please refer [Resumable struct](upload/upload.go).
+
+* `curl -i -X POST -H 'content-type: multipart/form-data' -F file=@README.md 'http://localhost:25100/upload\?resumableFilename=README.md&resumableChunkNumber=1&resumableType=text/plain&resumableTotalChunks=1&resumableIdentifier=<KEY_MATCHING_VAULT_SECRET_KEY>&resumableChunkSize=1000000&aliasName=somealias'`
+
 ### Contributing
 
 See [CONTRIBUTING](CONTRIBUTING.md) for details.
@@ -34,4 +43,3 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details.
 Copyright © 2020, Office for National Statistics (https://www.ons.gov.uk)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.
-

@@ -41,6 +41,7 @@ func run(ctx context.Context) error {
 
 	svc, err := service.Run(ctx, svcList, BuildTime, GitCommit, Version, svcErrors)
 	if err != nil {
+		log.Event(ctx, "failed to run service", log.Error(err), log.FATAL)
 		return errors.Wrap(err, "running service failed")
 	}
 
