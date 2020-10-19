@@ -23,20 +23,6 @@ func TestSetup(t *testing.T) {
 	})
 }
 
-func TestClose(t *testing.T) {
-	Convey("Given an API instance", t, func() {
-		r := mux.NewRouter()
-		ctx := context.Background()
-		a := Setup(ctx, &VaultClienterMock{}, r, &S3ClienterMock{})
-
-		Convey("When the api is closed any dependencies are closed also", func() {
-			err := a.Close(ctx)
-			So(err, ShouldBeNil)
-			// Check that dependencies are closed here
-		})
-	})
-}
-
 func hasRoute(r *mux.Router, path, method string) bool {
 	req := httptest.NewRequest(method, path, nil)
 	match := &mux.RouteMatch{}
