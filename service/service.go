@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
+	"github.com/ONSdigital/dp-upload-service/upload"
 	"github.com/ONSdigital/log.go/log"
 
 	"github.com/gorilla/mux"
@@ -20,6 +22,7 @@ type Service struct {
 	serviceList *ExternalServiceList
 	healthCheck HealthChecker
 	vault       api.VaultClienter
+	uploader    *upload.Uploader
 }
 
 // Run the service
@@ -30,8 +33,10 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	//Read config
 	cfg, err := config.Get()
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to retrieve service configuration")
+		log.Event(ctx, "unable to retrieve service configuration", log.FATAL, log.Error(err))
+		return nil, err
 	}
+
 	log.Event(ctx, "got service configuration", log.Data{"config": cfg}, log.INFO)
 
 	// Get HTTP Server with collectionID checkHeader middleware
@@ -46,12 +51,17 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
+	var vault api.VaultClienter
+
 	// Get Vault client
-	vault, err := serviceList.GetVault(ctx, cfg)
+	vault, err = serviceList.GetVault(ctx, cfg)
 	if err != nil {
 		log.Event(ctx, "failed to initialise Vault client", log.FATAL, log.Error(err))
 		return nil, err
 	}
+
+	// Create Uploader with S3 client and Vault
+	uploader := upload.New(s3Uploaded, vault, cfg.VaultPath, cfg.AwsRegion, cfg.UploadBucketName)
 
 	// Setup the API
 	a := api.Setup(ctx, vault, r, s3Uploaded)
@@ -64,9 +74,14 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	}
 
 	if err := registerCheckers(ctx, hc, vault, s3Uploaded); err != nil {
-		return nil, errors.Wrap(err, "unable to register checkers")
+		log.Event(ctx, "unable to register checkers", log.FATAL, log.Error(err))
+		return nil, err
 	}
-	r.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
+	r.StrictSlash(true).Path("/health").Methods(http.MethodGet).HandlerFunc(hc.Handler)
+	r.Path("/upload").Methods(http.MethodGet).HandlerFunc(uploader.CheckUploaded)
+	r.Path("/upload").Methods(http.MethodPost).HandlerFunc(uploader.Upload)
+	r.Path("/upload/{id}").Methods(http.MethodGet).HandlerFunc(uploader.GetS3URL)
+
 	hc.Start(ctx)
 
 	// Run the http server in a new go-routine
@@ -84,6 +99,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		serviceList: serviceList,
 		server:      s,
 		vault:       vault,
+		uploader:    uploader,
 	}, nil
 }
 
