@@ -2,60 +2,86 @@ package service
 
 import (
 	"context"
+	"net/http"
 
-	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/ONSdigital/go-ns/server"
+	"github.com/ONSdigital/dp-upload-service/upload"
 	"github.com/ONSdigital/log.go/log"
+
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 )
 
 // Service contains all the configs, server and clients to run the dp-upload-service API
 type Service struct {
-	Config      *config.Config
-	server      *server.Server
-	Router      *mux.Router
-	API         *api.API
-	HealthCheck *healthcheck.HealthCheck
+	config      *config.Config
+	server      HTTPServer
+	router      *mux.Router
+	api         *api.API
+	serviceList *ExternalServiceList
+	healthCheck HealthChecker
+	vault       api.VaultClienter
+	uploader    *upload.Uploader
 }
 
 // Run the service
-func Run(buildTime, gitCommit, version string, svcErrors chan error) (*Service, error) {
-	ctx := context.Background()
+func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCommit, version string, svcErrors chan error) (*Service, error) {
+
 	log.Event(ctx, "running service", log.INFO)
 
 	//Read config
 	cfg, err := config.Get()
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to retrieve service configuration")
+		log.Event(ctx, "unable to retrieve service configuration", log.FATAL, log.Error(err))
+		return nil, err
 	}
+
 	log.Event(ctx, "got service configuration", log.Data{"config": cfg}, log.INFO)
 
 	// Get HTTP Server with collectionID checkHeader middleware
 	r := mux.NewRouter()
 
-	s := server.New(cfg.BindAddr, r)
-	s.HandleOSSignals = false
+	s := serviceList.GetHTTPServer(cfg.BindAddr, r)
+
+	// Get S3Uploaded client
+	s3Uploaded, err := serviceList.GetS3Uploaded(ctx, cfg)
+	if err != nil {
+		log.Event(ctx, "failed to initialise S3 client for uploaded bucket", log.FATAL, log.Error(err))
+		return nil, err
+	}
+
+	var vault api.VaultClienter
+
+	// Get Vault client
+	vault, err = serviceList.GetVault(ctx, cfg)
+	if err != nil {
+		log.Event(ctx, "failed to initialise Vault client", log.FATAL, log.Error(err))
+		return nil, err
+	}
+
+	// Create Uploader with S3 client and Vault
+	uploader := upload.New(s3Uploaded, vault, cfg.VaultPath, cfg.AwsRegion, cfg.UploadBucketName)
 
 	// Setup the API
-	a := api.Setup(ctx, r)
+	a := api.Setup(ctx, vault, r, s3Uploaded)
 
-	// Get HealthCheck
-	versionInfo, err := healthcheck.NewVersionInfo(
-		buildTime,
-		gitCommit,
-		version,
-	)
+	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
+
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to parse version information")
+		log.Event(ctx, "could not instantiate healthcheck", log.FATAL, log.Error(err))
+		return nil, err
 	}
-	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
-	if err := registerCheckers(ctx, &hc); err != nil {
-		return nil, errors.Wrap(err, "unable to register checkers")
+
+	if err := registerCheckers(ctx, hc, vault, s3Uploaded); err != nil {
+		log.Event(ctx, "unable to register checkers", log.FATAL, log.Error(err))
+		return nil, err
 	}
-	r.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
+	r.StrictSlash(true).Path("/health").Methods(http.MethodGet).HandlerFunc(hc.Handler)
+	r.Path("/upload").Methods(http.MethodGet).HandlerFunc(uploader.CheckUploaded)
+	r.Path("/upload").Methods(http.MethodPost).HandlerFunc(uploader.Upload)
+	r.Path("/upload/{id}").Methods(http.MethodGet).HandlerFunc(uploader.GetS3URL)
+
 	hc.Start(ctx)
 
 	// Run the http server in a new go-routine
@@ -66,34 +92,86 @@ func Run(buildTime, gitCommit, version string, svcErrors chan error) (*Service, 
 	}()
 
 	return &Service{
-		Config:      cfg,
-		Router:      r,
-		API:         a,
-		HealthCheck: &hc,
+		config:      cfg,
+		router:      r,
+		api:         a,
+		healthCheck: hc,
+		serviceList: serviceList,
 		server:      s,
+		vault:       vault,
+		uploader:    uploader,
 	}, nil
 }
 
 // Close gracefully shuts the service down in the required order, with timeout
-func (svc *Service) Close(ctx context.Context) {
-	timeout := svc.Config.GracefulShutdownTimeout
+func (svc *Service) Close(ctx context.Context) error {
+	timeout := svc.config.GracefulShutdownTimeout
 	log.Event(ctx, "commencing graceful shutdown", log.Data{"graceful_shutdown_timeout": timeout}, log.INFO)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
 
-	// stop any incoming requests before closing any outbound connections
-	if err := svc.server.Shutdown(ctx); err != nil {
-		log.Event(ctx, "failed to shutdown http server", log.Error(err), log.ERROR)
+	// track shutown gracefully closes up
+	var hasShutdownError bool
+
+	go func() {
+		defer cancel()
+
+		// stop healthcheck, as it depends on everything else
+		if svc.serviceList.HealthCheck {
+			svc.healthCheck.Stop()
+		}
+
+		// stop any incoming requests before closing any outbound connections
+		if err := svc.server.Shutdown(ctx); err != nil {
+			log.Event(ctx, "failed to shutdown http server", log.Error(err), log.ERROR)
+			hasShutdownError = true
+		}
+
+		// close API
+		if err := svc.api.Close(ctx); err != nil {
+			log.Event(ctx, "error closing API", log.Error(err), log.ERROR)
+			hasShutdownError = true
+		}
+
+	}()
+
+	// wait for shutdown success (via cancel) or failure (timeout)
+	<-ctx.Done()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		log.Event(ctx, "shutdown timed out", log.ERROR, log.Error(ctx.Err()))
+		return ctx.Err()
+	}
+	if hasShutdownError {
+		err := errors.New("failed to shutdown gracefully")
+		log.Event(ctx, "failed to shutdown gracefully ", log.ERROR, log.Error(err))
+		return err
 	}
 
-	if err := svc.API.Close(ctx); err != nil {
-		log.Event(ctx, "error closing API", log.Error(err), log.ERROR)
-	}
+	log.Event(ctx, "graceful shutdown was successful", log.INFO)
+	return nil
 
-	log.Event(ctx, "graceful shutdown complete", log.INFO)
 }
 
-func registerCheckers(ctx context.Context, hc *healthcheck.HealthCheck) (err error) {
-	// TODO ADD HEALTH CHECKS HERE
-	return
+func registerCheckers(ctx context.Context,
+	hc HealthChecker,
+	vault api.VaultClienter,
+	s3Uploaded api.S3Clienter) (err error) {
+
+	hasErrors := false
+
+	if err = hc.AddCheck("Vault client", vault.Checker); err != nil {
+		hasErrors = true
+		log.Event(ctx, "error adding check for vault", log.ERROR, log.Error(err))
+	}
+
+	if err := hc.AddCheck("S3 uploaded bucket", s3Uploaded.Checker); err != nil {
+		hasErrors = true
+		log.Event(ctx, "error adding check for s3Private uploaded bucket", log.ERROR, log.Error(err))
+	}
+
+	if hasErrors {
+		return errors.New("Error(s) registering checkers for healthcheck")
+	}
+
+	return nil
 }
