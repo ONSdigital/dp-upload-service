@@ -78,21 +78,16 @@ func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ok, err := u.s3Client.CheckPartUploaded(req.Context(), resum.createS3Request())
+	_, err := u.s3Client.CheckPartUploaded(req.Context(), resum.createS3Request())
 	if err != nil {
 		log.Event(req.Context(), "error returned from check part uploaded", log.ERROR, log.Error(err))
 		w.WriteHeader(statusCodeFromError(err))
 		return
 	}
 
-	if ok {
-		log.Event(req.Context(), "uploaded file successfully", log.INFO, log.Data{"file-name": resum.FileName, "uid": resum.Identifier, "size": resum.TotalSize})
-		w.WriteHeader(http.StatusOK)
-		return
-	}
+	log.Event(req.Context(), "uploaded file successfully", log.INFO, log.Data{"file-name": resum.FileName, "uid": resum.Identifier, "size": resum.TotalSize})
+	w.WriteHeader(http.StatusOK)
 
-	log.Event(req.Context(), "chunk number failed to upload", log.WARN, log.Data{"chunk_number": resum.ChunkNumber, "file_name": resum.FileName})
-	w.WriteHeader(http.StatusNotFound)
 }
 
 // Upload handles the uploading of a file to AWS s3
