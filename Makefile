@@ -32,3 +32,8 @@ test:
 convey:
 	goconvey ./...
 
+.PHONY: vault
+vault:
+	@echo "$(VAULT_POLICY)"
+	@echo "$(TOKEN_INFO)"
+	@echo "$(APP_TOKEN)"
