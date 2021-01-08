@@ -7,6 +7,12 @@ Digital Publishing resumable file upload service that handles on-the-fly encrypt
 
 * Run `make debug`
 
+Please note that encryption is enabled by default. To disable it set `ENCRYPTION_DISABLED=true`. If you wish to run with encryption
+enabled, you will need vault running locally:
+
+- Run `brew install vault`
+- Run `vault server -dev`
+
 ### Dependencies
 
 * No further dependencies other than those defined in `go.mod`
