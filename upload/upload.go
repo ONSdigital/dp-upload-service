@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	s3client "github.com/ONSdigital/dp-s3"
-	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/schema"
 )
@@ -43,15 +42,15 @@ func (resum *Resumable) createS3Request() *s3client.UploadPartRequest {
 
 // Uploader represents the necessary configuration for uploading a file
 type Uploader struct {
-	s3Client    api.S3Clienter
-	vaultClient api.VaultClienter
+	s3Client    S3Clienter
+	vaultClient VaultClienter
 	vaultPath   string
 	s3Region    string
 	s3Bucket    string
 }
 
 // New returns a new Uploader from the provided clients and vault path
-func New(s3 api.S3Clienter, vc api.VaultClienter, vaultPath, s3Region, s3Bucket string) *Uploader {
+func New(s3 S3Clienter, vc VaultClienter, vaultPath, s3Region, s3Bucket string) *Uploader {
 	return &Uploader{
 		s3Client:    s3,
 		vaultClient: vc,

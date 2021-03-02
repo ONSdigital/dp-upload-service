@@ -15,6 +15,14 @@ VAULT_POLICY:="$(shell vault policy write -address=$(VAULT_ADDR) read-psk policy
 TOKEN_INFO:="$(shell vault token create -address=$(VAULT_ADDR) -policy=read-psk -period=24h -display-name=dp-upload-service)"
 APP_TOKEN:="$(shell echo $(TOKEN_INFO) | awk '{print $$6}')"
 
+
+.PHONY: all
+all: audit test build
+
+.PHONY: audit
+audit:
+	go list -m all | nancy sleuth
+
 .PHONY: build
 build:
 	go build -tags 'production' $(LDFLAGS) -o $(BINPATH)/dp-upload-service

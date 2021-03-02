@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
+	"github.com/ONSdigital/dp-upload-service/upload"
 )
 
 //go:generate moq -out mock_initialiser.go . Initialiser
@@ -16,9 +16,9 @@ import (
 // Initialiser defines the methods to initialise external services
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
-	DoGetVault(ctx context.Context, cfg *config.Config) (api.VaultClienter, error)
+	DoGetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error)
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
-	DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3Clienter, error)
+	DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error)
 }
 
 // HTTPServer defines the required methods from the HTTP server

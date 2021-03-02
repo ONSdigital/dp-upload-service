@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/upload"
 	"github.com/ONSdigital/log.go/log"
@@ -20,7 +19,7 @@ type Service struct {
 	router      *mux.Router
 	serviceList *ExternalServiceList
 	healthCheck HealthChecker
-	vault       api.VaultClienter
+	vault       upload.VaultClienter
 	uploader    *upload.Uploader
 }
 
@@ -50,7 +49,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	var vault api.VaultClienter
+	var vault upload.VaultClienter
 
 	// Get Vault client
 	vault, err = serviceList.GetVault(ctx, cfg)
@@ -143,8 +142,8 @@ func (svc *Service) Close(ctx context.Context) error {
 
 func registerCheckers(ctx context.Context,
 	hc HealthChecker,
-	vault api.VaultClienter,
-	s3Uploaded api.S3Clienter) (err error) {
+	vault upload.VaultClienter,
+	s3Uploaded upload.S3Clienter) (err error) {
 
 	hasErrors := false
 
