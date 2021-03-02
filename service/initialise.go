@@ -88,6 +88,9 @@ func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3C
 
 // DoGetVault returns a VaultClient
 func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+	if cfg.EncryptionDisabled {
+		return nil, nil
+	}
 	vault, err := dpvault.CreateClient(cfg.VaultToken, cfg.VaultAddress, 3)
 	if err != nil {
 		return nil, err

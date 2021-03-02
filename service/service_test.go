@@ -174,10 +174,10 @@ func TestRun(t *testing.T) {
 			})
 
 			Convey("And the following routes should have been added", func() {
-				So(funcHasRoute(s.api.Router, "GET", "/health"), ShouldBeTrue)
-				So(funcHasRoute(s.api.Router, "GET", "/upload"), ShouldBeTrue)
-				So(funcHasRoute(s.api.Router, "POST", "/upload"), ShouldBeTrue)
-				So(funcHasRoute(s.api.Router, "GET", "/upload/{id}"), ShouldBeTrue)
+				So(funcHasRoute(s.router, "GET", "/health"), ShouldBeTrue)
+				So(funcHasRoute(s.router, "GET", "/upload"), ShouldBeTrue)
+				So(funcHasRoute(s.router, "POST", "/upload"), ShouldBeTrue)
+				So(funcHasRoute(s.router, "GET", "/upload/{id}"), ShouldBeTrue)
 
 			})
 

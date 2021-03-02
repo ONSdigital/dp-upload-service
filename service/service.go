@@ -18,7 +18,6 @@ type Service struct {
 	config      *config.Config
 	server      HTTPServer
 	router      *mux.Router
-	api         *api.API
 	serviceList *ExternalServiceList
 	healthCheck HealthChecker
 	vault       api.VaultClienter
@@ -63,9 +62,6 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	// Create Uploader with S3 client and Vault
 	uploader := upload.New(s3Uploaded, vault, cfg.VaultPath, cfg.AwsRegion, cfg.UploadBucketName)
 
-	// Setup the API
-	a := api.Setup(ctx, vault, r, s3Uploaded)
-
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
 
 	if err != nil {
@@ -94,7 +90,6 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	return &Service{
 		config:      cfg,
 		router:      r,
-		api:         a,
 		healthCheck: hc,
 		serviceList: serviceList,
 		server:      s,
@@ -153,9 +148,11 @@ func registerCheckers(ctx context.Context,
 
 	hasErrors := false
 
-	if err = hc.AddCheck("Vault client", vault.Checker); err != nil {
-		hasErrors = true
-		log.Event(ctx, "error adding check for vault", log.ERROR, log.Error(err))
+	if vault != nil {
+		if err = hc.AddCheck("Vault client", vault.Checker); err != nil {
+			hasErrors = true
+			log.Event(ctx, "error adding check for vault", log.ERROR, log.Error(err))
+		}
 	}
 
 	if err := hc.AddCheck("S3 uploaded bucket", s3Uploaded.Checker); err != nil {
