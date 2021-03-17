@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
+	"github.com/ONSdigital/dp-upload-service/upload"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/http"
@@ -41,7 +41,7 @@ func (e *ExternalServiceList) GetHTTPServer(bindAddr string, router http.Handler
 }
 
 // GetVault creates a Vault client and sets the Vault flag to true
-func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
 	vault, err := e.Init.DoGetVault(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) 
 }
 
 // GetS3Uploaded creates a S3 client and sets the S3Uploaded flag to true
-func (e *ExternalServiceList) GetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+func (e *ExternalServiceList) GetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
 	s3, err := e.Init.DoGetS3Uploaded(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 }
 
 // DoGetS3Uploaded returns a S3Client
-func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
 	s3Client, err := dps3.NewClient(cfg.AwsRegion, cfg.UploadBucketName, true)
 	if err != nil {
 		return nil, err
@@ -86,8 +86,13 @@ func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3C
 	return s3Client, nil
 }
 
-// DoGetVault returns a VaultClient
-func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+// DoGetVault returns a VaultClient unless encryption is disabled
+//
+// If cfg.EncryptionDisabled is true then the function returns nil
+func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+	if cfg.EncryptionDisabled {
+		return nil, nil
+	}
 	vault, err := dpvault.CreateClient(cfg.VaultToken, cfg.VaultAddress, 3)
 	if err != nil {
 		return nil, err

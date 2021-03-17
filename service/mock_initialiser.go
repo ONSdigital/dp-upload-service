@@ -5,8 +5,8 @@ package service
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
+	"github.com/ONSdigital/dp-upload-service/upload"
 	"net/http"
 	"sync"
 )
@@ -47,10 +47,10 @@ type InitialiserMock struct {
 	DoGetHealthCheckFunc func(cfg *config.Config, buildTime string, gitCommit string, version string) (HealthChecker, error)
 
 	// DoGetS3UploadedFunc mocks the DoGetS3Uploaded method.
-	DoGetS3UploadedFunc func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error)
+	DoGetS3UploadedFunc func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error)
 
 	// DoGetVaultFunc mocks the DoGetVault method.
-	DoGetVaultFunc func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error)
+	DoGetVaultFunc func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -172,7 +172,7 @@ func (mock *InitialiserMock) DoGetHealthCheckCalls() []struct {
 }
 
 // DoGetS3Uploaded calls DoGetS3UploadedFunc.
-func (mock *InitialiserMock) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+func (mock *InitialiserMock) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
 	if mock.DoGetS3UploadedFunc == nil {
 		panic("InitialiserMock.DoGetS3UploadedFunc: method is nil but Initialiser.DoGetS3Uploaded was just called")
 	}
@@ -207,7 +207,7 @@ func (mock *InitialiserMock) DoGetS3UploadedCalls() []struct {
 }
 
 // DoGetVault calls DoGetVaultFunc.
-func (mock *InitialiserMock) DoGetVault(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+func (mock *InitialiserMock) DoGetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
 	if mock.DoGetVaultFunc == nil {
 		panic("InitialiserMock.DoGetVaultFunc: method is nil but Initialiser.DoGetVault was just called")
 	}

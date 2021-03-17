@@ -1,4 +1,4 @@
-package api
+package upload
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	s3client "github.com/ONSdigital/dp-s3"
 )
 
-//go:generate moq -out mock_s3.go  . S3Clienter
-//go:generate moq -out mock_vault.go . VaultClienter
+//go:generate moq -out mock/s3.go -pkg mock . S3Clienter
+//go:generate moq -out mock/vault.go -pkg mock . VaultClienter
 
 //VaultClienter defines the required method
 type VaultClienter interface {

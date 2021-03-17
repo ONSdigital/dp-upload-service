@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
+	"github.com/ONSdigital/dp-upload-service/upload"
+	"github.com/ONSdigital/dp-upload-service/upload/mock"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -119,9 +120,9 @@ func TestGetHTTPServer(t *testing.T) {
 
 func TestGetVault(t *testing.T) {
 	Convey("Given a service list that includes a mocked vault", t, func() {
-		vaultMock := &api.VaultClienterMock{}
+		vaultMock := &mock.VaultClienterMock{}
 		newServiceMock := &InitialiserMock{
-			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
 				return vaultMock, nil
 			},
 		}
@@ -138,7 +139,7 @@ func TestGetVault(t *testing.T) {
 
 	Convey("Given a service list that returns nil for vault client", t, func() {
 		newServiceMock := &InitialiserMock{
-			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
 				return nil, errVault
 			},
 		}
@@ -158,9 +159,9 @@ func TestGetS3Uploaded(t *testing.T) {
 
 	Convey("Given a service list that includes a mocked s3Client", t, func() {
 
-		s3UploadedMock := &api.S3ClienterMock{}
+		s3UploadedMock := &mock.S3ClienterMock{}
 		newServiceMock := &InitialiserMock{
-			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
 				return s3UploadedMock, nil
 			},
 		}
@@ -178,7 +179,7 @@ func TestGetS3Uploaded(t *testing.T) {
 
 	Convey("Given a service list returns nil for mocked S3 client", t, func() {
 		newServiceMock := &InitialiserMock{
-			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
 				return nil, errS3Uploaded
 			},
 		}
@@ -231,6 +232,33 @@ func TestGetHealthCheck(t *testing.T) {
 				So(hc, ShouldBeNil)
 				So(err, ShouldResemble, errHealthcheck)
 				So(svcList.HealthCheck, ShouldBeFalse)
+			})
+		})
+	})
+}
+
+func TestInit_DoGetVault(t *testing.T) {
+	Convey("Given a an empty initialiser struct", t, func() {
+		init := Init{}
+		cfg, err := config.Get()
+
+		Convey("When DoGetVault is called with encryption disabled", func() {
+			cfg.EncryptionDisabled = true
+			So(err, ShouldBeNil)
+			vault, err := init.DoGetVault(ctx, cfg)
+			So(err, ShouldBeNil)
+			Convey("Then the returned vault client should be nil", func() {
+				So(vault, ShouldBeNil)
+			})
+		})
+
+		Convey("When DoGetVault is called with encryption enabled", func() {
+			cfg.EncryptionDisabled = false
+			So(err, ShouldBeNil)
+			vault, err := init.DoGetVault(ctx, cfg)
+			So(err, ShouldBeNil)
+			Convey("Then the returned vault client should not be nil", func() {
+				So(vault, ShouldNotBeNil)
 			})
 		})
 	})
