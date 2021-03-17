@@ -86,7 +86,9 @@ func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.
 	return s3Client, nil
 }
 
-// DoGetVault returns a VaultClient
+// DoGetVault returns a VaultClient unless encryption is disabled
+//
+// If cfg.EncryptionDisabled is true then the function returns nil
 func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
 	if cfg.EncryptionDisabled {
 		return nil, nil
