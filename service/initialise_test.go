@@ -240,13 +240,25 @@ func TestGetHealthCheck(t *testing.T) {
 func TestInit_DoGetVault(t *testing.T) {
 	Convey("Given a an empty initialiser struct", t, func() {
 		init := Init{}
+		cfg, err := config.Get()
+
 		Convey("When DoGetVault is called with encryption disabled", func() {
-			cfg, err := config.Get()
+			cfg.EncryptionDisabled = true
 			So(err, ShouldBeNil)
 			vault, err := init.DoGetVault(ctx, cfg)
 			So(err, ShouldBeNil)
 			Convey("Then the returned vault client should be nil", func() {
 				So(vault, ShouldBeNil)
+			})
+		})
+
+		Convey("When DoGetVault is called with encryption enabled", func() {
+			cfg.EncryptionDisabled = false
+			So(err, ShouldBeNil)
+			vault, err := init.DoGetVault(ctx, cfg)
+			So(err, ShouldBeNil)
+			Convey("Then the returned vault client should not be nil", func() {
+				So(vault, ShouldNotBeNil)
 			})
 		})
 	})
