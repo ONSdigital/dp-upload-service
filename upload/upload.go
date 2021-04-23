@@ -80,7 +80,7 @@ func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 	_, err := u.s3Client.CheckPartUploaded(req.Context(), resum.createS3Request())
 	if err != nil {
 		log.Event(req.Context(), "error returned from check part uploaded", log.ERROR, log.Error(err))
-		w.WriteHeader(statusCodeFromError(err))
+		w.WriteHeader(statusCodeFromS3Error(err))
 		return
 	}
 
@@ -124,7 +124,8 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 	if u.vaultClient == nil {
 		// Perform upload without PSK
 		if err := u.s3Client.UploadPart(req.Context(), resum.createS3Request(), payload); err != nil {
-			w.WriteHeader(statusCodeFromError(err))
+			log.Event(req.Context(), "error returned from upload without PSK", log.ERROR, log.Error(err))
+			w.WriteHeader(statusCodeFromS3Error(err))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -157,7 +158,8 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 
 	// Perform upload using vault PSK
 	if err = u.s3Client.UploadPartWithPsk(req.Context(), resum.createS3Request(), payload, psk); err != nil {
-		w.WriteHeader(statusCodeFromError(err))
+		log.Event(req.Context(), "error returned from upload using vault PSK", log.ERROR, log.Error(err))
+		w.WriteHeader(statusCodeFromS3Error(err))
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -165,7 +167,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 }
 
 // handleError decides the HTTP status according to the provided error
-func statusCodeFromError(err error) int {
+func statusCodeFromS3Error(err error) int {
 	switch err.(type) {
 	case *s3client.ErrNotUploaded:
 		return http.StatusNotFound
