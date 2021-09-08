@@ -7,7 +7,7 @@ require (
 	github.com/ONSdigital/dp-net v1.0.7
 	github.com/ONSdigital/dp-s3 v1.5.1
 	github.com/ONSdigital/dp-vault v1.1.2
-	github.com/ONSdigital/log.go v1.0.1
+	github.com/ONSdigital/log.go/v2 v2.0.9
 	github.com/aws/aws-sdk-go v1.29.9 // indirect
 	github.com/frankban/quicktest v1.9.0 // indirect
 	github.com/gorilla/mux v1.7.4
@@ -15,7 +15,6 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.6.4 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/pierrec/lz4 v2.4.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/smartystreets/goconvey v1.6.4

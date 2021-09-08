@@ -1,6 +1,7 @@
 package upload
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -8,7 +9,7 @@ import (
 	"net/http"
 
 	s3client "github.com/ONSdigital/dp-s3"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/schema"
 )
 
@@ -30,7 +31,7 @@ type Resumable struct {
 
 // createS3Request creates a S3 UploadRequest struct from a Resumable struct
 func (resum *Resumable) createS3Request() *s3client.UploadPartRequest {
-	log.Event(nil, "calling function s3 request", log.Data{"resumeidentifier": resum.Identifier})
+	log.Info(context.Background(), "calling function s3 request", log.Data{"resumeidentifier": resum.Identifier})
 	return &s3client.UploadPartRequest{
 		UploadKey:   resum.Identifier,
 		Type:        resum.Type,
@@ -64,7 +65,7 @@ func New(s3 S3Clienter, vc VaultClienter, vaultPath, s3Region, s3Bucket string) 
 func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 
 	if err := req.ParseForm(); err != nil {
-		log.Event(req.Context(), "error parsing form", log.ERROR, log.Error(err))
+		log.Error(req.Context(), "error parsing form", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -72,19 +73,19 @@ func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 	resum := new(Resumable)
 
 	if err := decoder.Decode(resum, req.Form); err != nil {
-		log.Event(req.Context(), "error decoding form", log.ERROR, log.Error(err))
+		log.Error(req.Context(), "error decoding form", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	_, err := u.s3Client.CheckPartUploaded(req.Context(), resum.createS3Request())
 	if err != nil {
-		log.Event(req.Context(), "error returned from check part uploaded", log.ERROR, log.Error(err))
+		log.Error(req.Context(), "error returned from check part uploaded", err)
 		w.WriteHeader(statusCodeFromS3Error(err))
 		return
 	}
 
-	log.Event(req.Context(), "uploaded file successfully", log.INFO, log.Data{"file-name": resum.FileName, "uid": resum.Identifier, "size": resum.TotalSize})
+	log.Info(req.Context(), "uploaded file successfully", log.Data{"file-name": resum.FileName, "uid": resum.Identifier, "size": resum.TotalSize})
 	w.WriteHeader(http.StatusOK)
 
 }
@@ -92,7 +93,7 @@ func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 // Upload handles the uploading of a file to AWS s3
 func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
-		log.Event(req.Context(), "error parsing form", log.ERROR, log.Error(err))
+		log.Error(req.Context(), "error parsing form", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -100,14 +101,14 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 	resum := new(Resumable)
 
 	if err := decoder.Decode(resum, req.Form); err != nil {
-		log.Event(req.Context(), "error decoding form", log.WARN, log.Error(err))
+		log.Warn(req.Context(), "error decoding form", log.FormatErrors([]error{err}))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	content, _, err := req.FormFile("file")
 	if err != nil {
-		log.Event(req.Context(), "error getting file from form", log.ERROR, log.Error(err))
+		log.Error(req.Context(), "error getting file from form", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -116,7 +117,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 
 	payload, err := ioutil.ReadAll(content)
 	if err != nil {
-		log.Event(req.Context(), "error reading file", log.ERROR, log.Error(err))
+		log.Error(req.Context(), "error reading file", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -124,7 +125,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 	if u.vaultClient == nil {
 		// Perform upload without PSK
 		if err := u.s3Client.UploadPart(req.Context(), resum.createS3Request(), payload); err != nil {
-			log.Event(req.Context(), "error returned from upload without PSK", log.ERROR, log.Error(err))
+			log.Error(req.Context(), "error returned from upload without PSK", err)
 			w.WriteHeader(statusCodeFromS3Error(err))
 			return
 		}
@@ -142,7 +143,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 		// Create PSK and write it to Vault
 		psk = createPSK()
 		if err := u.vaultClient.WriteKey(vaultKeyPath, vaultKey, hex.EncodeToString(psk)); err != nil {
-			log.Event(req.Context(), "error writing key to vault", log.ERROR, log.Error(err))
+			log.Error(req.Context(), "error writing key to vault", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -150,7 +151,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 		// Use existing PSK found in Vault
 		psk, err = hex.DecodeString(pskStr)
 		if err != nil {
-			log.Event(req.Context(), "error decoding key", log.ERROR, log.Error(err))
+			log.Error(req.Context(), "error decoding key", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -158,7 +159,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 
 	// Perform upload using vault PSK
 	if err = u.s3Client.UploadPartWithPsk(req.Context(), resum.createS3Request(), payload, psk); err != nil {
-		log.Event(req.Context(), "error returned from upload using vault PSK", log.ERROR, log.Error(err))
+		log.Error(req.Context(), "error returned from upload using vault PSK", err)
 		w.WriteHeader(statusCodeFromS3Error(err))
 		return
 	}
@@ -189,14 +190,14 @@ func (u *Uploader) GetS3URL(w http.ResponseWriter, req *http.Request) {
 	// Generate URL from region, bucket and S3 key defined by query
 	s3Url, err := s3client.NewURL(u.s3Region, u.s3Bucket, path)
 	if err != nil {
-		log.Event(req.Context(), "error generating S3 URL from bucket and path", log.ERROR, log.Error(err),
+		log.Error(req.Context(), "error generating S3 URL from bucket and path", err,
 			log.Data{"bucket": u.s3Bucket, "region": u.s3Region, "path": path})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	url, err := s3Url.String(s3client.PathStyle)
 	if err != nil {
-		log.Event(req.Context(), "error getting path-style S3 URL", log.ERROR, log.Error(err))
+		log.Error(req.Context(), "error getting path-style S3 URL", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -209,7 +210,7 @@ func (u *Uploader) GetS3URL(w http.ResponseWriter, req *http.Request) {
 
 	b, err := json.Marshal(body)
 	if err != nil {
-		log.Event(req.Context(), "error marshalling json", log.ERROR, log.Error(err))
+		log.Error(req.Context(), "error marshalling json", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
