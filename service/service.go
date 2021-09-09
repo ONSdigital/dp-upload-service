@@ -28,7 +28,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 
 	log.Info(ctx, "running service")
 
-	//Read config
+	// Read config
 	cfg, err := config.Get()
 	if err != nil {
 		log.Fatal(ctx, "unable to retrieve service configuration", err)
