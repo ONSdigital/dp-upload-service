@@ -1,0 +1,46 @@
+version: "3"
+
+services:
+  http:
+    image: template_test
+    ports:
+      - "25100:25100"
+    environment:
+      BIND_ADDR: ':25100'
+      AWS_REGION: 'eu-west1' # http://localstack:4572
+      UPLOAD_BUCKET_NAME: 'testing'
+      ENCRYPTION_DISABLED: 'false'
+      GRACEFUL_SHUTDOWN_TIMEOUT: '5s'
+      HEALTHCHECK_INTERVAL: '5s'
+      HEALTHCHECK_CRITICAL_TIMEOUT: '5s'
+      VAULT_TOKEN: 'root'
+      VAULT_ADDR: 'http://vault:8200'
+      VAULT_PATH: 'testing'
+#      GOPROXY: 'direct'
+
+  vault:
+    image: hashicorp/vault:latest
+    restart: always
+    ports:
+      - "8200:8200/tcp"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: 'root'
+      VAULT_DEV_LISTEN_ADDRESS: '0.0.0.0:8200'
+
+  localstack:
+    image: localstack/localstack
+    ports:
+      - '4566-4583'
+    environment:
+      - SERVICES=s3
+      - DEBUG=0
+      - AWS_DEFAULT_REGION=eu-west-1
+      - EDGE_PORT=4566
+    #      - DATA_DIR=${DATA_DIR-}
+    #      - LAMBDA_EXECUTOR=local
+    #      - HOST_TMP_FOLDER=${TMPDIR:-/tmp/}localstack
+    #      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./aws:/docker-entrypoint-initaws.d
+      - "${TMPDIR:-/tmp}/localstack:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"

@@ -68,7 +68,7 @@ func TestGetHTTPServer(t *testing.T) {
 				cancel()
 			case <-ctx.Done():
 				t.Fatal("ListenAndServe returned no error")
-				server.Shutdown(context.Background())
+				server.Shutdown(context.Background()) //nolint
 			}
 			Convey("Then the startup has failed and returns the expected error", func() {
 				So(err.Error(), ShouldEqual, "Server error")

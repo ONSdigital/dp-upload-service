@@ -2,11 +2,10 @@ package service
 
 import (
 	"context"
-	"net/http"
-
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/upload"
 	"github.com/ONSdigital/log.go/v2/log"
+	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -35,11 +34,8 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	log.Info(ctx, "got service configuration", log.Data{"config": cfg})
-
 	// Get HTTP Server with collectionID checkHeader middleware
 	r := mux.NewRouter()
-
 	s := serviceList.GetHTTPServer(cfg.BindAddr, r)
 
 	// Get S3Uploaded client

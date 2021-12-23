@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -216,7 +215,7 @@ func TestRun(t *testing.T) {
 
 			Convey("Then service Run fails, but all checks try to register", func() {
 				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldResemble, fmt.Sprintf(errAddCheckFail.Error()))
+				So(err.Error(), ShouldResemble, errAddCheckFail.Error())
 				So(svcList.HealthCheck, ShouldBeTrue)
 				So(svcList.S3Uploaded, ShouldBeTrue)
 				So(svcList.Vault, ShouldBeTrue)

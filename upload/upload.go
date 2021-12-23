@@ -164,7 +164,6 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	return
 }
 
 // handleError decides the HTTP status according to the provided error
@@ -217,12 +216,12 @@ func (u *Uploader) GetS3URL(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(b)
+	w.Write(b) //nolint
 }
 
 func createPSK() []byte {
 	key := make([]byte, 16)
-	rand.Read(key)
+	rand.Read(key) //nolint
 
 	return key
 }

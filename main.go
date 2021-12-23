@@ -33,7 +33,7 @@ func main() {
 
 func run(ctx context.Context) error {
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, os.Kill)
+	signal.Notify(signals, os.Interrupt, os.Kill) //nolint
 
 	// Run the service, providing an error channel for fatal errors
 	svcErrors := make(chan error, 1)

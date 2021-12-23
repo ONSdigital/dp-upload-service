@@ -18,7 +18,6 @@ import (
 
 var (
 	vaultRootPath = "secret/path"
-	vaultKey      = "key"
 
 	s3Region = "eu-west-1"
 	s3Bucket = "test-bucket"
