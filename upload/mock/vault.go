@@ -16,25 +16,25 @@ var _ upload.VaultClienter = &VaultClienterMock{}
 
 // VaultClienterMock is a mock implementation of upload.VaultClienter.
 //
-//     func TestSomethingThatUsesVaultClienter(t *testing.T) {
+// 	func TestSomethingThatUsesVaultClienter(t *testing.T) {
 //
-//         // make and configure a mocked upload.VaultClienter
-//         mockedVaultClienter := &VaultClienterMock{
-//             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
-// 	               panic("mock out the Checker method")
-//             },
-//             ReadKeyFunc: func(path string, key string) (string, error) {
-// 	               panic("mock out the ReadKey method")
-//             },
-//             WriteKeyFunc: func(path string, key string, value string) error {
-// 	               panic("mock out the WriteKey method")
-//             },
-//         }
+// 		// make and configure a mocked upload.VaultClienter
+// 		mockedVaultClienter := &VaultClienterMock{
+// 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+// 				panic("mock out the Checker method")
+// 			},
+// 			ReadKeyFunc: func(path string, key string) (string, error) {
+// 				panic("mock out the ReadKey method")
+// 			},
+// 			WriteKeyFunc: func(path string, key string, value string) error {
+// 				panic("mock out the WriteKey method")
+// 			},
+// 		}
 //
-//         // use mockedVaultClienter in code that requires upload.VaultClienter
-//         // and then make assertions.
+// 		// use mockedVaultClienter in code that requires upload.VaultClienter
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type VaultClienterMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error

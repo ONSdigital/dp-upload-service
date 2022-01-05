@@ -3,9 +3,12 @@ package steps
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/http"
-	s3client "github.com/ONSdigital/dp-s3"
+	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/service"
 	"github.com/ONSdigital/dp-upload-service/upload"
@@ -13,8 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"net/http"
-	"time"
 )
 
 type external struct {
@@ -44,10 +45,8 @@ func (e external) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, ver
 }
 
 func (e external) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
-	ls := "http://localstack:4566"
-
 	s, err := session.NewSession(&aws.Config{
-		Endpoint:         aws.String(ls),
+		Endpoint:         aws.String(localStackHost),
 		Region:           aws.String(cfg.AwsRegion),
 		S3ForcePathStyle: aws.Bool(true),
 		Credentials:      credentials.NewStaticCredentials("test", "test", ""),
@@ -57,5 +56,5 @@ func (e external) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (uplo
 		fmt.Println("S3 ERROR: " + err.Error())
 	}
 
-	return s3client.NewClientWithSession(cfg.UploadBucketName, false, s), nil
+	return s3client.NewClientWithSession(cfg.UploadBucketName, s), nil
 }

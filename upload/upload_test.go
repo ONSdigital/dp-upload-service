@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"github.com/ONSdigital/dp-upload-service/upload"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	s3client "github.com/ONSdigital/dp-s3"
+	"github.com/ONSdigital/dp-upload-service/upload"
+
+	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/upload/mock"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -40,7 +41,7 @@ func TestGetUpload(t *testing.T) {
 			// S3 client returns ErrNotUploaded if uploadID cannot be found
 			s3 := &mock.S3ClienterMock{
 				CheckPartUploadedFunc: func(ctx context.Context, req *s3client.UploadPartRequest) (bool, error) {
-					return false, &s3client.ErrNotUploaded{UploadKey: req.UploadKey}
+					return false, s3client.NewErrNotUploaded(errors.New("Not working"), nil)
 				},
 			}
 
@@ -130,8 +131,8 @@ func TestPostUpload(t *testing.T) {
 
 			// S3 client returns generic error if ListMultipartUploads fails
 			s3 := &mock.S3ClienterMock{
-				UploadPartFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) error {
-					return nil
+				UploadPartFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
+					return s3client.MultipartUploadResponse{}, nil
 				},
 			}
 
@@ -159,8 +160,8 @@ func TestPostUpload(t *testing.T) {
 
 			// S3 client returns generic error if ListMultipartUploads fails
 			s3 := &mock.S3ClienterMock{
-				UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) error {
-					return nil
+				UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
+					return s3client.MultipartUploadResponse{}, nil
 				},
 			}
 
@@ -200,8 +201,8 @@ func TestPostUpload(t *testing.T) {
 
 			// S3 client returns generic error if ListMultipartUploads fails
 			s3 := &mock.S3ClienterMock{
-				UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) error {
-					return nil
+				UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
+					return s3client.MultipartUploadResponse{}, nil
 				},
 			}
 
@@ -244,8 +245,8 @@ func TestPostUpload(t *testing.T) {
 
 			// S3 client returns generic error if ListMultipartUploads fails
 			s3 := &mock.S3ClienterMock{
-				UploadPartFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) error {
-					return errors.New("could not list uploads")
+				UploadPartFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
+					return s3client.MultipartUploadResponse{}, errors.New("could not list uploads")
 				},
 			}
 

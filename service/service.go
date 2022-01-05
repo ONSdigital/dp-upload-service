@@ -2,10 +2,14 @@ package service
 
 import (
 	"context"
+	"net/http"
+	"os"
+
+	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
+	"github.com/ONSdigital/dp-upload-service/files"
 	"github.com/ONSdigital/dp-upload-service/upload"
 	"github.com/ONSdigital/log.go/v2/log"
-	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -72,6 +76,9 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	r.Path("/upload").Methods(http.MethodGet).HandlerFunc(uploader.CheckUploaded)
 	r.Path("/upload").Methods(http.MethodPost).HandlerFunc(uploader.Upload)
 	r.Path("/upload/{id}").Methods(http.MethodGet).HandlerFunc(uploader.GetS3URL)
+
+	// v1 DO NOT USE IN PRODUCTION YET!
+	r.Path("/v1/upload").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(files.NewStore(os.Getenv("FILES_API_URL"), s3Uploaded).UploadFile))
 
 	hc.Start(ctx)
 

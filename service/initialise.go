@@ -9,7 +9,7 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/http"
-	dps3 "github.com/ONSdigital/dp-s3"
+	dps3 "github.com/ONSdigital/dp-s3/v2"
 	dpvault "github.com/ONSdigital/dp-vault"
 )
 
@@ -79,7 +79,7 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 
 // DoGetS3Uploaded returns a S3Client
 func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
-	s3Client, err := dps3.NewClient(cfg.AwsRegion, cfg.UploadBucketName, true)
+	s3Client, err := dps3.NewClient(cfg.AwsRegion, cfg.UploadBucketName)
 	if err != nil {
 		return nil, err
 	}

@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	s3client "github.com/ONSdigital/dp-s3"
+	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/schema"
 )
@@ -124,7 +124,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 
 	if u.vaultClient == nil {
 		// Perform upload without PSK
-		if err := u.s3Client.UploadPart(req.Context(), resum.createS3Request(), payload); err != nil {
+		if _, err := u.s3Client.UploadPart(req.Context(), resum.createS3Request(), payload); err != nil {
 			log.Error(req.Context(), "error returned from upload without PSK", err)
 			w.WriteHeader(statusCodeFromS3Error(err))
 			return
@@ -158,7 +158,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Perform upload using vault PSK
-	if err = u.s3Client.UploadPartWithPsk(req.Context(), resum.createS3Request(), payload, psk); err != nil {
+	if _, err = u.s3Client.UploadPartWithPsk(req.Context(), resum.createS3Request(), payload, psk); err != nil {
 		log.Error(req.Context(), "error returned from upload using vault PSK", err)
 		w.WriteHeader(statusCodeFromS3Error(err))
 		return

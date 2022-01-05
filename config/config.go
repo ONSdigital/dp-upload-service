@@ -18,6 +18,7 @@ type Config struct {
 	VaultToken                 string        `envconfig:"VAULT_TOKEN"                   json:"-"`
 	VaultAddress               string        `envconfig:"VAULT_ADDR"`
 	VaultPath                  string        `envconfig:"VAULT_PATH"`
+	FilesAPIURL                string        `envconfig:"FILE_API_URL"`
 }
 
 var cfg *Config

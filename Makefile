@@ -56,4 +56,4 @@ docker-test-component:
 
 .PHONY: lint
 lint:
-	golangci-lint run ./... --timeout 2m
+	golangci-lint run ./... --timeout 2m --tests=false --skip-dirs=features

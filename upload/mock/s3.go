@@ -6,7 +6,7 @@ package mock
 import (
 	"context"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	"github.com/ONSdigital/dp-s3"
+	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/upload"
 	"sync"
 )
@@ -17,28 +17,28 @@ var _ upload.S3Clienter = &S3ClienterMock{}
 
 // S3ClienterMock is a mock implementation of upload.S3Clienter.
 //
-//     func TestSomethingThatUsesS3Clienter(t *testing.T) {
+// 	func TestSomethingThatUsesS3Clienter(t *testing.T) {
 //
-//         // make and configure a mocked upload.S3Clienter
-//         mockedS3Clienter := &S3ClienterMock{
-//             CheckPartUploadedFunc: func(ctx context.Context, req *s3client.UploadPartRequest) (bool, error) {
-// 	               panic("mock out the CheckPartUploaded method")
-//             },
-//             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
-// 	               panic("mock out the Checker method")
-//             },
-//             UploadPartFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) error {
-// 	               panic("mock out the UploadPart method")
-//             },
-//             UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) error {
-// 	               panic("mock out the UploadPartWithPsk method")
-//             },
-//         }
+// 		// make and configure a mocked upload.S3Clienter
+// 		mockedS3Clienter := &S3ClienterMock{
+// 			CheckPartUploadedFunc: func(ctx context.Context, req *s3client.UploadPartRequest) (bool, error) {
+// 				panic("mock out the CheckPartUploaded method")
+// 			},
+// 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+// 				panic("mock out the Checker method")
+// 			},
+// 			UploadPartFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
+// 				panic("mock out the UploadPart method")
+// 			},
+// 			UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
+// 				panic("mock out the UploadPartWithPsk method")
+// 			},
+// 		}
 //
-//         // use mockedS3Clienter in code that requires upload.S3Clienter
-//         // and then make assertions.
+// 		// use mockedS3Clienter in code that requires upload.S3Clienter
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type S3ClienterMock struct {
 	// CheckPartUploadedFunc mocks the CheckPartUploaded method.
 	CheckPartUploadedFunc func(ctx context.Context, req *s3client.UploadPartRequest) (bool, error)
@@ -47,10 +47,10 @@ type S3ClienterMock struct {
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
 
 	// UploadPartFunc mocks the UploadPart method.
-	UploadPartFunc func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) error
+	UploadPartFunc func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error)
 
 	// UploadPartWithPskFunc mocks the UploadPartWithPsk method.
-	UploadPartWithPskFunc func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) error
+	UploadPartWithPskFunc func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -166,7 +166,7 @@ func (mock *S3ClienterMock) CheckerCalls() []struct {
 }
 
 // UploadPart calls UploadPartFunc.
-func (mock *S3ClienterMock) UploadPart(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) error {
+func (mock *S3ClienterMock) UploadPart(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
 	if mock.UploadPartFunc == nil {
 		panic("S3ClienterMock.UploadPartFunc: method is nil but S3Clienter.UploadPart was just called")
 	}
@@ -205,7 +205,7 @@ func (mock *S3ClienterMock) UploadPartCalls() []struct {
 }
 
 // UploadPartWithPsk calls UploadPartWithPskFunc.
-func (mock *S3ClienterMock) UploadPartWithPsk(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) error {
+func (mock *S3ClienterMock) UploadPartWithPsk(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
 	if mock.UploadPartWithPskFunc == nil {
 		panic("S3ClienterMock.UploadPartWithPskFunc: method is nil but S3Clienter.UploadPartWithPsk was just called")
 	}
