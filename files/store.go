@@ -22,6 +22,7 @@ var (
 	ErrS3Upload                 = errors.New("uploading part failed")
 	ErrFileNotFound             = errors.New("file not found")
 	ErrFileStateConflict        = errors.New("file was not in the expected state")
+	ErrChunkTooSmall		    = errors.New("chunk size below minimum 5MB")
 )
 
 type Store struct {
@@ -34,7 +35,7 @@ func NewStore(hostname string, s3 upload.S3Clienter) Store {
 }
 
 type Metadata struct {
-	Path          string `schema:"path" json:"path" validate:"required,uri"`
+	Path          string `schema:"path" json:"path" validate:"required,aws-upload-key"`
 	IsPublishable bool   `schema:"isPublishable" json:"is_publishable" validate:"required"`
 	CollectionId  string `schema:"collectionId" json:"collection_id" validate:"required"`
 	Title         string `schema:"title" json:"title"`
@@ -42,6 +43,13 @@ type Metadata struct {
 	Type          string `schema:"type" json:"type" validate:"required,mime-type"`
 	Licence       string `schema:"licence" json:"licence" validate:"required"`
 	LicenceUrl    string `schema:"licenceUrl" json:"licence_url" validate:"required"`
+}
+
+type Resumable struct {
+	Path         string `schema:"path"`
+	Type         string `schema:"type"`
+	CurrentChunk int64  `schema:"currentChunk"`
+	TotalChunks  int    `schema:"totalChunks"`
 }
 
 type uploadComplete struct {
@@ -58,7 +66,62 @@ type jsonErrors struct {
 	Error []jsonError `json:"errors"`
 }
 
-func (s Store) UploadFile(ctx context.Context, metadata Metadata, content []byte) error {
+func firstChunk (currentChunk int64) bool { return currentChunk == 1 }
+
+func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resumable, content []byte) (bool, error) {
+
+	if firstChunk(resumable.CurrentChunk) {
+		if err := s.registerFileUpload(metadata); err != nil { return false, err }
+	}
+
+	upr := s3client.UploadPartRequest{
+		UploadKey:   resumable.Path,
+		Type:        resumable.Type,
+		ChunkNumber: resumable.CurrentChunk,
+		TotalChunks: resumable.TotalChunks,
+		FileName:    resumable.Path,
+	}
+
+	response, err := s.s3.UploadPart(ctx, &upr, content)
+	if err != nil {
+		if _, ok := err.(*s3client.ErrChunkTooSmall); ok {
+			return false, ErrChunkTooSmall
+		}
+		return false, ErrS3Upload
+	}
+
+	uc := uploadComplete{
+		Path: metadata.Path,
+		ETag: strings.Trim(response.Etag, "\""),
+	}
+
+	if response.AllPartsUploaded {
+		if err := s.markUploadComplete(uc); err != nil {
+			return true, err
+		}
+	}
+
+	return response.AllPartsUploaded, nil
+}
+
+func (s Store) markUploadComplete(uc uploadComplete) error {
+	resp, err := http.Post(fmt.Sprintf("%s/v1/files/upload-complete", s.hostname), "application/json", jsonEncode(uc))
+	if err != nil {
+		return ErrConnectingToFilesApi
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return ErrFileNotFound
+	} else if resp.StatusCode == http.StatusConflict {
+		return ErrFileStateConflict
+	} else if resp.StatusCode != http.StatusCreated {
+		return ErrUnknownError
+	}
+
+	return nil
+}
+
+func (s Store) registerFileUpload(metadata Metadata) error {
 	resp, err := http.Post(fmt.Sprintf("%s/v1/files/register", s.hostname), "application/json", jsonEncode(metadata))
 	if err != nil {
 		return ErrConnectingToFilesApi
@@ -84,34 +147,6 @@ func (s Store) UploadFile(ctx context.Context, metadata Metadata, content []byte
 
 		return err
 	}
-
-	upr := s3client.UploadPartRequest{
-		UploadKey:   metadata.Path,
-		Type:        metadata.Type,
-		ChunkNumber: 1,
-		TotalChunks: 1,
-		FileName:    metadata.Path,
-	}
-
-	response, err := s.s3.UploadPart(ctx, &upr, content)
-	if err != nil {
-		return ErrS3Upload
-	}
-
-	uc := uploadComplete{
-		Path: metadata.Path,
-		ETag: strings.Trim(response.Etag, "\""),
-	}
-
-	resp, _ = http.Post(fmt.Sprintf("%s/v1/files/upload-complete", s.hostname), "application/json", jsonEncode(uc))
-	if resp.StatusCode == http.StatusNotFound {
-		return ErrFileNotFound
-	} else if resp.StatusCode == http.StatusConflict {
-		return ErrFileStateConflict
-	} else if resp.StatusCode != http.StatusCreated {
-		return ErrUnknownError
-	}
-
 	return nil
 }
 

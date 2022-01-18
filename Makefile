@@ -54,6 +54,11 @@ docker-test-component:
 	docker-compose -f docker-compose.yml exec -T http go test -component
 	docker-compose -f docker-compose.yml down
 
+docker-local:
+	docker-compose -f docker-compose-local.yml down
+	docker-compose -f docker-compose-local.yml up -d
+	docker-compose -f docker-compose-local.yml exec upload-service bash
+
 .PHONY: lint
 lint:
 	golangci-lint run ./... --timeout 2m --tests=false --skip-dirs=features

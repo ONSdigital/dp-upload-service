@@ -25,10 +25,11 @@ const (
 )
 
 type UploadComponent struct {
-	server     *dphttp.Server
-	svc        *service.Service
-	svcList    *service.ExternalServiceList
-	ApiFeature *componenttest.APIFeature
+	server       *dphttp.Server
+	svc          *service.Service
+	svcList      *service.ExternalServiceList
+	ApiFeature   *componenttest.APIFeature
+	fileMetadata map[string]string
 
 	errChan chan error
 }

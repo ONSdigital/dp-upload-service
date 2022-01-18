@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 
 	"github.com/ONSdigital/dp-upload-service/files"
 
@@ -21,7 +22,14 @@ func mimeValidator(fl validator.FieldLevel) bool {
 	return mtype != nil
 }
 
-type StoreFile func(ctx context.Context, uf files.Metadata, content []byte) error
+func awsUploadKeyValidator(fl validator.FieldLevel) bool {
+	path := fl.Field().String()
+	matched, _ := regexp.MatchString("^[a-zA-Z]{1}", path)
+
+	return matched
+}
+
+type StoreFile func(ctx context.Context, uf files.Metadata, r files.Resumable, content []byte) (bool, error)
 
 func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -33,14 +41,24 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 
 		metadata := files.Metadata{}
 
-		if err := schema.NewDecoder().Decode(&metadata, req.Form); err != nil {
-			log.Error(req.Context(), "error decoding form", err)
-			writeError(w, buildErrors(err, "error decoding form"), http.StatusBadRequest)
+		d := schema.NewDecoder()
+		d.IgnoreUnknownKeys(true)
+		if err := d.Decode(&metadata, req.Form); err != nil {
+			log.Error(req.Context(), "error decoding metadata form", err)
+			writeError(w, buildErrors(err, "error decoding metadata form"), http.StatusBadRequest)
+			return
+		}
+
+		resumable := files.Resumable{}
+		if err := d.Decode(&resumable, req.Form); err != nil {
+			log.Error(req.Context(), "error decoding resumable form", err)
+			writeError(w, buildErrors(err, "error decoding resumable form"), http.StatusBadRequest)
 			return
 		}
 
 		v := validator.New()
 		v.RegisterValidation("mime-type", mimeValidator) // nolint // Only fails due to coding error
+		v.RegisterValidation("aws-upload-key", awsUploadKeyValidator) // nolint // Only fails due to coding error
 		if err := v.Struct(metadata); err != nil {
 			if validationErrs, ok := err.(validator.ValidationErrors); ok {
 				writeError(w, buildValidationErrors(validationErrs), http.StatusBadRequest)
@@ -63,16 +81,22 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			return
 		}
 
-		err = storeFile(req.Context(), metadata, payload)
+		allPartsUploaded, err := storeFile(req.Context(), metadata, resumable, payload)
 		if err != nil {
 			switch err {
 			case files.ErrFilesAPIDuplicateFile:
 				writeError(w, buildErrors(err, "DuplicateFile"), http.StatusBadRequest)
 			case files.ErrFileAPICreateInvalidData:
 				writeError(w, buildErrors(err, "RemoteValidationError"), http.StatusInternalServerError)
+			case files.ErrChunkTooSmall:
+				writeError(w, buildErrors(err, "ChunkTooSmall"), http.StatusBadRequest)
 			default:
 				writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 			}
+		}
+
+		if !allPartsUploaded {
+			w.WriteHeader(http.StatusContinue)
 		}
 	}
 }

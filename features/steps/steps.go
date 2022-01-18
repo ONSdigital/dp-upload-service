@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/aws/aws-sdk-go/aws"
@@ -27,14 +28,21 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	// Givens
 	ctx.Step(`^dp-files-api does not have a file "([^"]*)" registered$`, c.dpfilesapiDoesNotHaveAFileRegistered)
 	ctx.Step(`^the data file "([^"]*)" with content:$`, c.theDataFile)
+	ctx.Step(`^the file meta-data is:$`, c.theFileMetadataIs)
+	ctx.Step(`^the 1st part of the file "([^"]*)" has been uploaded with resumable parameters:$`, c.the1StPartOfTheFileHasBeenUploaded)
 
 	// Whens
-	ctx.Step(`^I upload the file "([^"]*)" with the following form meta-data:$`, c.iUploadTheFileWithMetaData)
+	ctx.Step(`^I upload the file "([^"]*)" with the following form resumable parameters:$`, c.iUploadTheFileWithTheFollowingFormResumableParameters)
 
 	// Thens
 	ctx.Step(`^the path "([^"]*)" should be available in the S3 bucket matching content:`, c.theFileShouldBeAvailableInTheSBucketMatchingContent)
 	ctx.Step(`^the file upload should be marked as started using payload:$`, c.theFileUploadOfShouldBeMarkedAsStartedUsingPayload)
 	ctx.Step(`^the file should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
+
+	// Buts
+	ctx.Step(`^the file should not be marked as uploaded$`, c.theFileShouldNotBeMarkedAsUploaded)
+	ctx.Step(`^the file upload should not have been registered again$`, c.theFileUploadShouldNotHaveBeenRegisteredAgain)
+
 }
 
 // ------
@@ -70,10 +78,73 @@ func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) 
 	return nil
 }
 
+func (c *UploadComponent) theFileMetadataIs(table *godog.Table) error {
+	assist := assistdog.NewDefault()
+	c.fileMetadata, _ = assist.ParseMap(table)
+	return nil
+}
+
 // -----
 // Whens
 // -----
 
+func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParameters(filename string, table *godog.Table) error {
+	b := &bytes.Buffer{}
+	formWriter := multipart.NewWriter(b)
+
+	for key, value := range c.fileMetadata {
+		formWriter.WriteField(key, value)
+	}
+
+	part, _ := formWriter.CreateFormFile("file", filename)
+
+	testPayload, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	assist := assistdog.NewDefault()
+	queryParams, _ := assist.ParseMap(table)
+
+	total, _ := strconv.ParseInt(queryParams["totalChunks"], 10, 32)
+	current, _ := strconv.ParseInt(queryParams["currentChunk"], 10, 32)
+
+	if total > 1 {
+		if current == 1 {
+			b := testPayload[:(5 * 1024 * 1024)]
+			part.Write(b)
+		} else if total > 1 {
+			b := testPayload[(5 * 1024 * 1024):]
+			part.Write(b)
+		}
+	} else {
+		part.Write(testPayload)
+	}
+
+	formWriter.Close()
+
+	handler, err := c.ApiFeature.Initialiser()
+	if err != nil {
+		return err
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://foo/v1/upload", b)
+	req.Header.Set("Content-Type", formWriter.FormDataContentType())
+
+	q := req.URL.Query()
+	for key, value := range queryParams {
+		q.Add(key, value)
+	}
+	req.URL.RawQuery = q.Encode()
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	c.ApiFeature.HttpResponse = w.Result()
+
+	return nil
+}
+
+// deprecated
 func (c *UploadComponent) iUploadTheFileWithMetaData(filename string, table *godog.Table) error {
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
@@ -163,5 +234,22 @@ func (c *UploadComponent) theFileUploadOfShouldBeMarkedAsStartedUsingPayload(exp
 
 func (c *UploadComponent) theFileUploadOfShouldBeMarkedAsUploadedUsingPayload(expectedFilesPayload *godog.DocString) error {
 	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests["/v1/files/upload-complete"])
+	return c.ApiFeature.StepError()
+}
+
+func (c *UploadComponent) theFileShouldNotBeMarkedAsUploaded() error {
+	assert.NotContains(c.ApiFeature, requests, "/v1/files/upload-complete")
+	return c.ApiFeature.StepError()
+}
+func(c *UploadComponent) the1StPartOfTheFileHasBeenUploaded(filename string, table *godog.Table) error {
+	err := c.iUploadTheFileWithTheFollowingFormResumableParameters(filename, table)
+
+	requests = make(map[string]string)
+
+	return err
+}
+
+func(c *UploadComponent) theFileUploadShouldNotHaveBeenRegisteredAgain() error {
+	assert.NotContains(c.ApiFeature, requests, "/v1/files/register")
 	return c.ApiFeature.StepError()
 }

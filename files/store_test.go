@@ -36,6 +36,11 @@ func (s *StoreSuite) SetupTest() {
 	}
 }
 
+var (
+	firstResumable = files.Resumable{CurrentChunk: 1}
+	lastResumable  = files.Resumable{CurrentChunk: 2}
+)
+
 // afterEach
 func (s *StoreSuite) TearDownTest() {
 	s.fakeFilesApi.Close()
@@ -47,7 +52,8 @@ func (s *StoreSuite) TestFileUploadIsRegisteredWithFilesApi() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3)
 
-	s.NoError(store.UploadFile(context.Background(), files.Metadata{}, []byte("CONTENT")))
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	s.NoError(err)
 }
 
 func (s *StoreSuite) TestFileAlreadyRegisteredWithFilesApi() {
@@ -58,7 +64,8 @@ func (s *StoreSuite) TestFileAlreadyRegisteredWithFilesApi() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3)
 
-	s.Equal(files.ErrFilesAPIDuplicateFile, store.UploadFile(context.Background(), files.Metadata{}, []byte("CONTENT")))
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	s.Equal(files.ErrFilesAPIDuplicateFile, err)
 }
 
 func (s *StoreSuite) TestFileRegisteredWithInvalidContent() {
@@ -69,7 +76,8 @@ func (s *StoreSuite) TestFileRegisteredWithInvalidContent() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3)
 
-	s.Equal(files.ErrFileAPICreateInvalidData, store.UploadFile(context.Background(), files.Metadata{}, []byte("CONTENT")))
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	s.Equal(files.ErrFileAPICreateInvalidData, err)
 }
 
 func (s *StoreSuite) TestFileRegisterReturnsUnknownError() {
@@ -80,7 +88,8 @@ func (s *StoreSuite) TestFileRegisterReturnsUnknownError() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3)
 
-	s.Equal(files.ErrUnknownError, store.UploadFile(context.Background(), files.Metadata{}, []byte("CONTENT")))
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	s.Equal(files.ErrUnknownError, err)
 }
 
 func (s *StoreSuite) TestFileRegisterReturnsMalformedJSON() {
@@ -91,49 +100,70 @@ func (s *StoreSuite) TestFileRegisterReturnsMalformedJSON() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3)
 
-	s.Error(store.UploadFile(context.Background(), files.Metadata{}, []byte("CONTENT")))
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+
+	s.Error(err)
 }
 
 func (s *StoreSuite) TestErrorConnectingToRegisterFiles() {
 	store := files.NewStore("does.not.work", s.mockS3)
 
-	s.Equal(files.ErrConnectingToFilesApi, store.UploadFile(context.Background(), files.Metadata{}, []byte("CONTENT")))
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	s.Equal(files.ErrConnectingToFilesApi, err)
 }
 
 func (s StoreSuite) TestUploadPartReturnsAnError() {
-	s.fakeFilesApi.NewHandler().Post("/v1/files/register").Reply(http.StatusCreated)
 	s.mockS3.UploadPartFunc = func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
 		return s3client.MultipartUploadResponse{}, s3client.NewError(errors.New("broken"), nil)
 	}
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3)
 
-	s.Equal(files.ErrS3Upload, store.UploadFile(context.Background(), files.Metadata{}, []byte("CONTENT")))
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	s.Equal(files.ErrS3Upload, err)
+}
+
+func (s StoreSuite) TestUploadChunkTooSmallReturnsErrChuckTooSmall() {
+	s.mockS3.UploadPartFunc = func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
+		return s3client.MultipartUploadResponse{}, s3client.NewChunkTooSmallError(errors.New("chunk size below minimum 5MB"), nil)
+	}
+
+	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3)
+
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	s.Equal(files.ErrChunkTooSmall, err)
 }
 
 func (s StoreSuite) TestFileNotFoundWhenMarkedAsUploaded() {
-	s.fakeFilesApi.NewHandler().Post("/v1/files/register").Reply(http.StatusCreated)
 	s.fakeFilesApi.NewHandler().Post("/v1/files/upload-complete").Reply(http.StatusNotFound)
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3)
 
-	s.Equal(files.ErrFileNotFound, store.UploadFile(context.Background(), files.Metadata{}, []byte("CONTENT")))
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	s.Equal(files.ErrFileNotFound, err)
 }
 
 func (s StoreSuite) TestReturnsConflictWhenFileInUnexpectedState() {
-	s.fakeFilesApi.NewHandler().Post("/v1/files/register").Reply(http.StatusCreated)
 	s.fakeFilesApi.NewHandler().Post("/v1/files/upload-complete").Reply(http.StatusConflict)
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3)
 
-	s.Equal(files.ErrFileStateConflict, store.UploadFile(context.Background(), files.Metadata{}, []byte("CONTENT")))
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	s.Equal(files.ErrFileStateConflict, err)
 }
 
 func (s StoreSuite) TestUploadCompleteUnknownError() {
-	s.fakeFilesApi.NewHandler().Post("/v1/files/register").Reply(http.StatusCreated)
 	s.fakeFilesApi.NewHandler().Post("/v1/files/upload-complete").Reply(http.StatusTeapot)
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3)
 
-	s.Equal(files.ErrUnknownError, store.UploadFile(context.Background(), files.Metadata{}, []byte("CONTENT")))
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	s.Equal(files.ErrUnknownError, err)
+}
+
+func (s *StoreSuite) TestErrorConnectingToUploadComplete() {
+	store := files.NewStore("does.not.work", s.mockS3)
+
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	s.Equal(files.ErrConnectingToFilesApi, err)
 }
