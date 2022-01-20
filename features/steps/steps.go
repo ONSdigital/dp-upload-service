@@ -38,6 +38,7 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the path "([^"]*)" should be available in the S3 bucket matching content:`, c.theFileShouldBeAvailableInTheSBucketMatchingContent)
 	ctx.Step(`^the file upload should be marked as started using payload:$`, c.theFileUploadOfShouldBeMarkedAsStartedUsingPayload)
 	ctx.Step(`^the file should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
+	ctx.Step(`^the stored file "([^"]*)" should match the sent file "([^"]*)"$`, c.theStoredFileShouldMatchTheSentFile)
 
 	// Buts
 	ctx.Step(`^the file should not be marked as uploaded$`, c.theFileShouldNotBeMarkedAsUploaded)
@@ -192,6 +193,15 @@ func (c *UploadComponent) iUploadTheFileWithMetaData(filename string, table *god
 // Thens
 // -----
 
+func (c *UploadComponent) theStoredFileShouldMatchTheSentFile(s3Filename, localFilename string) error {
+	expectedPayload, err := os.ReadFile(localFilename)
+	if err != nil {
+		return err
+	}
+
+	return c.theFileShouldBeAvailableInTheSBucketMatchingContent(s3Filename, &godog.DocString{Content: string(expectedPayload)})
+}
+
 func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(filename string, expectedFileContent *godog.DocString) error {
 	assert.Equal(c.ApiFeature, http.StatusOK, c.ApiFeature.HttpResponse.StatusCode)
 
@@ -241,7 +251,7 @@ func (c *UploadComponent) theFileShouldNotBeMarkedAsUploaded() error {
 	assert.NotContains(c.ApiFeature, requests, "/v1/files/upload-complete")
 	return c.ApiFeature.StepError()
 }
-func(c *UploadComponent) the1StPartOfTheFileHasBeenUploaded(filename string, table *godog.Table) error {
+func (c *UploadComponent) the1StPartOfTheFileHasBeenUploaded(filename string, table *godog.Table) error {
 	err := c.iUploadTheFileWithTheFollowingFormResumableParameters(filename, table)
 
 	requests = make(map[string]string)
@@ -249,7 +259,7 @@ func(c *UploadComponent) the1StPartOfTheFileHasBeenUploaded(filename string, tab
 	return err
 }
 
-func(c *UploadComponent) theFileUploadShouldNotHaveBeenRegisteredAgain() error {
+func (c *UploadComponent) theFileUploadShouldNotHaveBeenRegisteredAgain() error {
 	assert.NotContains(c.ApiFeature, requests, "/v1/files/register")
 	return c.ApiFeature.StepError()
 }

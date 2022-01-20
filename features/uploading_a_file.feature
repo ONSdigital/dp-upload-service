@@ -92,6 +92,7 @@ Feature: Uploading a file
           "etag": "d73ab646c2c25b580bb0f7f7dbd3d454"
         }
         """
+        And the stored file "data/countries.csv" should match the sent file "features/countries.csv"
         But the file upload should not have been registered again
 
 
