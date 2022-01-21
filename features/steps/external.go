@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ONSdigital/dp-upload-service/encryption"
+
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	s3client "github.com/ONSdigital/dp-s3/v2"
@@ -19,7 +21,8 @@ import (
 )
 
 type external struct {
-	Server *dphttp.Server
+	Server        *dphttp.Server
+	EncryptionKey []byte
 }
 
 func (e external) DoGetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
@@ -57,4 +60,8 @@ func (e external) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (uplo
 	}
 
 	return s3client.NewClientWithSession(cfg.UploadBucketName, s), nil
+}
+
+func (e external) DoGetEncryptionKeyGenerator() encryption.GenerateKey {
+	return func() []byte { return e.EncryptionKey }
 }

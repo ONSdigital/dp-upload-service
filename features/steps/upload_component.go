@@ -31,7 +31,8 @@ type UploadComponent struct {
 	ApiFeature   *componenttest.APIFeature
 	fileMetadata map[string]string
 
-	errChan chan error
+	errChan       chan error
+	EncryptionKey []byte
 }
 
 func NewUploadComponent() *UploadComponent {
@@ -41,12 +42,13 @@ func NewUploadComponent() *UploadComponent {
 	return &UploadComponent{
 		server:  s,
 		errChan: make(chan error),
-		svcList: service.NewServiceList(external{s}),
+		svcList: service.NewServiceList(external{Server: s}),
 	}
 }
 
 func (c *UploadComponent) Initialiser() (http.Handler, error) {
 	var err error
+	c.svcList = service.NewServiceList(external{Server: c.server, EncryptionKey: c.EncryptionKey})
 	c.svc, err = service.Run(context.Background(), c.svcList, "1", "1", "1", c.errChan)
 	time.Sleep(1 * time.Second) // Wait for healthchecks to run before executing tests. TODO consider moving to a Given step for healthchecks
 	return c.server.Handler, err

@@ -62,9 +62,14 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	uploader := upload.New(s3Uploaded, vault, cfg.VaultPath, cfg.AwsRegion, cfg.UploadBucketName)
 
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
-
 	if err != nil {
 		log.Fatal(ctx, "could not instantiate healthcheck", err)
+		return nil, err
+	}
+
+	vaultClient, err := serviceList.GetVault(ctx, cfg)
+	if err != nil {
+		log.Fatal(ctx, "could not connect to Vault", err)
 		return nil, err
 	}
 
@@ -78,7 +83,14 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	r.Path("/upload/{id}").Methods(http.MethodGet).HandlerFunc(uploader.GetS3URL)
 
 	// v1 DO NOT USE IN PRODUCTION YET!
-	r.Path("/v1/upload").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(files.NewStore(os.Getenv("FILES_API_URL"), s3Uploaded).UploadFile))
+	r.Path("/v1/upload").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(files.NewStore(
+		os.Getenv("FILES_API_URL"),
+		s3Uploaded,
+		serviceList.GetEncryptionKeyGenerator(),
+		vaultClient,
+		cfg.VaultPath,
+	).UploadFile),
+	)
 
 	hc.Start(ctx)
 

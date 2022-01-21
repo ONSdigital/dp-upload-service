@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/ONSdigital/dp-upload-service/encryption"
+
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/upload"
 
@@ -70,6 +72,10 @@ func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitC
 	return hc, nil
 }
 
+func (e *ExternalServiceList) GetEncryptionKeyGenerator() encryption.GenerateKey {
+	return e.Init.DoGetEncryptionKeyGenerator()
+}
+
 // DoGetHTTPServer creates an HTTP Server with the provided bind address and router
 func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer {
 	s := dphttp.NewServer(bindAddr, router)
@@ -108,4 +114,8 @@ func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, versio
 	}
 	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
 	return &hc, nil
+}
+
+func (e *Init) DoGetEncryptionKeyGenerator() encryption.GenerateKey {
+	return encryption.CreateKey
 }

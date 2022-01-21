@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ONSdigital/dp-upload-service/encryption"
+
 	s3client "github.com/ONSdigital/dp-s3/v2"
 
 	"github.com/ONSdigital/dp-upload-service/upload"
@@ -22,16 +24,19 @@ var (
 	ErrS3Upload                 = errors.New("uploading part failed")
 	ErrFileNotFound             = errors.New("file not found")
 	ErrFileStateConflict        = errors.New("file was not in the expected state")
-	ErrChunkTooSmall		    = errors.New("chunk size below minimum 5MB")
+	ErrChunkTooSmall            = errors.New("chunk size below minimum 5MB")
 )
 
 type Store struct {
-	hostname string
-	s3       upload.S3Clienter
+	hostname     string
+	s3           upload.S3Clienter
+	keyGenerator encryption.GenerateKey
+	vault        upload.VaultClienter
+	vaultPath    string
 }
 
-func NewStore(hostname string, s3 upload.S3Clienter) Store {
-	return Store{hostname, s3}
+func NewStore(hostname string, s3 upload.S3Clienter, keyGenerator encryption.GenerateKey, vault upload.VaultClienter, vaultPath string) Store {
+	return Store{hostname, s3, keyGenerator, vault, vaultPath}
 }
 
 type Metadata struct {
@@ -66,12 +71,20 @@ type jsonErrors struct {
 	Error []jsonError `json:"errors"`
 }
 
-func firstChunk (currentChunk int64) bool { return currentChunk == 1 }
+func firstChunk(currentChunk int64) bool { return currentChunk == 1 }
 
 func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resumable, content []byte) (bool, error) {
 
+	var key []byte
 	if firstChunk(resumable.CurrentChunk) {
-		if err := s.registerFileUpload(metadata); err != nil { return false, err }
+		key = s.keyGenerator()
+		s.vault.WriteKey(fmt.Sprintf("%s/%s", s.vaultPath, metadata.Path), "key", string(key)) // nolint error handling in next ticket
+		if err := s.registerFileUpload(metadata); err != nil {
+			return false, err
+		}
+	} else {
+		strKey, _ := s.vault.ReadKey(fmt.Sprintf("%s/%s", s.vaultPath, metadata.Path), "key") // notlint error handling in next ticket
+		key = []byte(strKey)
 	}
 
 	upr := s3client.UploadPartRequest{
@@ -82,7 +95,7 @@ func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resu
 		FileName:    resumable.Path,
 	}
 
-	response, err := s.s3.UploadPart(ctx, &upr, content)
+	response, err := s.s3.UploadPartWithPsk(ctx, &upr, content, key)
 	if err != nil {
 		if _, ok := err.(*s3client.ErrChunkTooSmall); ok {
 			return false, ErrChunkTooSmall

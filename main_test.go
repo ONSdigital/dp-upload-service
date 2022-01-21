@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -21,8 +22,8 @@ type ComponentTest struct {
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
-	//buf := bytes.NewBufferString("")
-	//log.SetDestination(buf, buf)
+	buf := bytes.NewBufferString("")
+	log.SetDestination(buf, buf)
 	log.Namespace = "dp-upload-service"
 
 	component := steps.NewUploadComponent()

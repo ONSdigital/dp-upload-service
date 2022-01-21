@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/ONSdigital/dp-upload-service/encryption"
+
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/upload"
@@ -19,6 +21,7 @@ type Initialiser interface {
 	DoGetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error)
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
 	DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error)
+	DoGetEncryptionKeyGenerator() encryption.GenerateKey
 }
 
 // HTTPServer defines the required methods from the HTTP server

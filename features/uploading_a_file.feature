@@ -9,6 +9,7 @@ Feature: Uploading a file
             | sizeInBytes   | 14794                                                                     |
             | licence       | OGL v3                                                                    |
             | licenceUrl    | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+        And encryption key will be "abcdef123456789z"
 
     Scenario: File ends up in bucket as result of uploading in a single chunk
         Given the data file "populations.csv" with content:
@@ -23,7 +24,7 @@ Feature: Uploading a file
             | totalChunks  | 1                    |
             | currentChunk | 1                    |
         Then the HTTP status code should be "200"
-        And the path "/data/populations.csv" should be available in the S3 bucket matching content:
+        And the path "/data/populations.csv" should be available in the S3 bucket matching content using encryption key "abcdef123456789z":
         """
         mark,1
         jon,2
@@ -46,9 +47,32 @@ Feature: Uploading a file
         """
         {
           "path": "data/populations.csv",
-          "etag": "94f986e8a3806737648dff3aaa84f57f"
+          "etag": "5efb5b786de7942b02fb4bfd63c5715d"
         }
         """
+        And the encryption key "abcdef123456789z" should be stored against file "data/populations.csv"
+
+    Scenario: File upload is marked as started when first chunk is uploaded
+        When I upload the file "features/countries.csv" with the following form resumable parameters:
+            | path         | data/countries.csv |
+            | type         | text/csv           |
+            | totalChunks  | 2                  |
+            | currentChunk | 1                  |
+        Then the HTTP status code should be "100"
+        And the file upload should be marked as started using payload:
+        """
+        {
+        "path": "data/countries.csv",
+        "is_publishable": true,
+        "collection_id": "1234-asdfg-54321-qwerty",
+        "title": "The number of people",
+        "size_in_bytes": 14794,
+        "type": "text/csv",
+        "licence": "OGL v3",
+        "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+        }
+        """
+        But the file should not be marked as uploaded
 
     Scenario: File upload is marked as started when first chunk is uploaded
         When I upload the file "features/countries.csv" with the following form resumable parameters:
@@ -89,14 +113,9 @@ Feature: Uploading a file
         """
         {
           "path": "data/countries.csv",
-          "etag": "d73ab646c2c25b580bb0f7f7dbd3d454"
+          "etag": "714df73fd9a27da75dc6c2d16765e868"
         }
         """
-        And the stored file "data/countries.csv" should match the sent file "features/countries.csv"
+        And the stored file "data/countries.csv" should match the sent file "features/countries.csv" using encryption key "abcdef123456789z"
         But the file upload should not have been registered again
-
-
-
-
-
 

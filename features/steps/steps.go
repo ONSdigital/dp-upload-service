@@ -2,7 +2,9 @@ package steps
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -30,15 +32,17 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the data file "([^"]*)" with content:$`, c.theDataFile)
 	ctx.Step(`^the file meta-data is:$`, c.theFileMetadataIs)
 	ctx.Step(`^the 1st part of the file "([^"]*)" has been uploaded with resumable parameters:$`, c.the1StPartOfTheFileHasBeenUploaded)
+	ctx.Step(`^encryption key will be "([^"]*)"$`, c.encryptionKeyWillBe)
 
 	// Whens
 	ctx.Step(`^I upload the file "([^"]*)" with the following form resumable parameters:$`, c.iUploadTheFileWithTheFollowingFormResumableParameters)
 
 	// Thens
-	ctx.Step(`^the path "([^"]*)" should be available in the S3 bucket matching content:`, c.theFileShouldBeAvailableInTheSBucketMatchingContent)
+	ctx.Step(`^the path "([^"]*)" should be available in the S3 bucket matching content using encryption key "([^"]*)":`, c.theFileShouldBeAvailableInTheSBucketMatchingContent)
 	ctx.Step(`^the file upload should be marked as started using payload:$`, c.theFileUploadOfShouldBeMarkedAsStartedUsingPayload)
 	ctx.Step(`^the file should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
-	ctx.Step(`^the stored file "([^"]*)" should match the sent file "([^"]*)"$`, c.theStoredFileShouldMatchTheSentFile)
+	ctx.Step(`^the stored file "([^"]*)" should match the sent file "([^"]*)" using encryption key "([^"]*)"$`, c.theStoredFileShouldMatchTheSentFile)
+	ctx.Step(`^the encryption key "([^"]*)" should be stored against file "([^"]*)"$`, c.theEncryptionKeyShouldBeStored)
 
 	// Buts
 	ctx.Step(`^the file should not be marked as uploaded$`, c.theFileShouldNotBeMarkedAsUploaded)
@@ -49,6 +53,11 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 // ------
 // Givens
 // ------
+
+func (c *UploadComponent) encryptionKeyWillBe(key string) error {
+	c.EncryptionKey = []byte(key)
+	return nil
+}
 
 func (c *UploadComponent) theDataFile(filename string, fileContent *godog.DocString) error {
 	file, err := os.Create(fmt.Sprintf("%s/%s", testFilePath, filename))
@@ -193,16 +202,16 @@ func (c *UploadComponent) iUploadTheFileWithMetaData(filename string, table *god
 // Thens
 // -----
 
-func (c *UploadComponent) theStoredFileShouldMatchTheSentFile(s3Filename, localFilename string) error {
+func (c *UploadComponent) theStoredFileShouldMatchTheSentFile(s3Filename, localFilename, encryptionKey string) error {
 	expectedPayload, err := os.ReadFile(localFilename)
 	if err != nil {
 		return err
 	}
 
-	return c.theFileShouldBeAvailableInTheSBucketMatchingContent(s3Filename, &godog.DocString{Content: string(expectedPayload)})
+	return c.theFileShouldBeAvailableInTheSBucketMatchingContent(s3Filename, encryptionKey, &godog.DocString{Content: string(expectedPayload)})
 }
 
-func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(filename string, expectedFileContent *godog.DocString) error {
+func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(filename, encryptionKey string, expectedFileContent *godog.DocString) error {
 	assert.Equal(c.ApiFeature, http.StatusOK, c.ApiFeature.HttpResponse.StatusCode)
 
 	cfg, _ := config.Get()
@@ -231,7 +240,17 @@ func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(fi
 	})
 
 	assert.NoError(c.ApiFeature, err)
-	assert.Equal(c.ApiFeature, expectedFileContent.Content, string(buf.Bytes()))
+
+	reader := &cryptoReader{
+		reader:    ioutil.NopCloser(bytes.NewReader(buf.Bytes())),
+		psk:       []byte(encryptionKey),
+		chunkSize: 5 * 1024 * 1024,
+		currChunk: nil,
+	}
+
+	unencryptedBytes, _ := io.ReadAll(reader)
+
+	assert.Equal(c.ApiFeature, expectedFileContent.Content, string(unencryptedBytes))
 
 	return c.ApiFeature.StepError()
 }
@@ -261,5 +280,17 @@ func (c *UploadComponent) the1StPartOfTheFileHasBeenUploaded(filename string, ta
 
 func (c *UploadComponent) theFileUploadShouldNotHaveBeenRegisteredAgain() error {
 	assert.NotContains(c.ApiFeature, requests, "/v1/files/register")
+	return c.ApiFeature.StepError()
+}
+
+func (c *UploadComponent) theEncryptionKeyShouldBeStored(expectedEncryptionKey, filepath string) error {
+	cfg, _ := config.Get()
+
+	vault, _ := c.svcList.GetVault(context.Background(), cfg)
+	actualEncryptionKey, err := vault.ReadKey(fmt.Sprintf("%s/%s", cfg.VaultPath, filepath), "key")
+
+	assert.NoError(c.ApiFeature, err)
+	assert.Equal(c.ApiFeature, expectedEncryptionKey, actualEncryptionKey)
+
 	return c.ApiFeature.StepError()
 }

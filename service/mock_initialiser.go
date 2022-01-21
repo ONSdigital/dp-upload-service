@@ -5,10 +5,12 @@ package service
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/ONSdigital/dp-upload-service/upload"
 	"net/http"
 	"sync"
+
+	"github.com/ONSdigital/dp-upload-service/config"
+	"github.com/ONSdigital/dp-upload-service/encryption"
+	"github.com/ONSdigital/dp-upload-service/upload"
 )
 
 // Ensure, that InitialiserMock does implement Initialiser.
@@ -21,6 +23,9 @@ var _ Initialiser = &InitialiserMock{}
 //
 // 		// make and configure a mocked Initialiser
 // 		mockedInitialiser := &InitialiserMock{
+// 			DoGetEncryptionKeyGeneratorFunc: func() encryption.GenerateKey {
+// 				panic("mock out the GetEncryptionKeyGenerator method")
+// 			},
 // 			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) HTTPServer {
 // 				panic("mock out the DoGetHTTPServer method")
 // 			},
@@ -40,6 +45,9 @@ var _ Initialiser = &InitialiserMock{}
 //
 // 	}
 type InitialiserMock struct {
+	// DoGetEncryptionKeyGeneratorFunc mocks the GetEncryptionKeyGenerator method.
+	DoGetEncryptionKeyGeneratorFunc func() encryption.GenerateKey
+
 	// DoGetHTTPServerFunc mocks the DoGetHTTPServer method.
 	DoGetHTTPServerFunc func(bindAddr string, router http.Handler) HTTPServer
 
@@ -54,6 +62,9 @@ type InitialiserMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// GetEncryptionKeyGenerator holds details about calls to the GetEncryptionKeyGenerator method.
+		DoGetEncryptionKeyGenerator []struct {
+		}
 		// DoGetHTTPServer holds details about calls to the DoGetHTTPServer method.
 		DoGetHTTPServer []struct {
 			// BindAddr is the bindAddr argument value.
@@ -87,10 +98,37 @@ type InitialiserMock struct {
 			Cfg *config.Config
 		}
 	}
-	lockDoGetHTTPServer  sync.RWMutex
-	lockDoGetHealthCheck sync.RWMutex
-	lockDoGetS3Uploaded  sync.RWMutex
-	lockDoGetVault       sync.RWMutex
+	lockDoGetEncryptionKeyGenerator sync.RWMutex
+	lockDoGetHTTPServer             sync.RWMutex
+	lockDoGetHealthCheck            sync.RWMutex
+	lockDoGetS3Uploaded             sync.RWMutex
+	lockDoGetVault                  sync.RWMutex
+}
+
+// GetEncryptionKeyGenerator calls DoGetEncryptionKeyGeneratorFunc.
+func (mock *InitialiserMock) DoGetEncryptionKeyGenerator() encryption.GenerateKey {
+	if mock.DoGetEncryptionKeyGeneratorFunc == nil {
+		panic("InitialiserMock.DoGetEncryptionKeyGeneratorFunc: method is nil but Initialiser.GetEncryptionKeyGenerator was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockDoGetEncryptionKeyGenerator.Lock()
+	mock.calls.DoGetEncryptionKeyGenerator = append(mock.calls.DoGetEncryptionKeyGenerator, callInfo)
+	mock.lockDoGetEncryptionKeyGenerator.Unlock()
+	return mock.DoGetEncryptionKeyGeneratorFunc()
+}
+
+// DoGetEncryptionKeyGeneratorCalls gets all the calls that were made to GetEncryptionKeyGenerator.
+// Check the length with:
+//     len(mockedInitialiser.DoGetEncryptionKeyGeneratorCalls())
+func (mock *InitialiserMock) DoGetEncryptionKeyGeneratorCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockDoGetEncryptionKeyGenerator.RLock()
+	calls = mock.calls.DoGetEncryptionKeyGenerator
+	mock.lockDoGetEncryptionKeyGenerator.RUnlock()
+	return calls
 }
 
 // DoGetHTTPServer calls DoGetHTTPServerFunc.
