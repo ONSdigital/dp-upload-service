@@ -1,0 +1,97 @@
+swagger: "2.0"
+info:
+  title: "dp-upload-service"
+  description: "Digital Publishing resumable file upload service that handles on-the-fly encryption and writing to S3. It updates images through the CMS."
+  version: 1.0.0
+  license:
+    name: "Open Government Licence v3.0"
+    url: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+
+schemes:
+  - http
+
+host: localhost:25100
+
+tags:
+  - name: "private"
+
+paths:
+  /v1/upload:
+    post:
+      tags:
+         - Upload file and provide metadata
+      summary: POST's form with file to be uploaded and metadata
+      consumes:
+         - multipart/form-data
+      parameters:
+        - name: resumableFilename
+          type: string
+          in: formData
+        - name: isPublishable
+          type: boolean
+          in: formData
+        - name: collectionId
+          type: string
+          in: formData
+        - name: title
+          type: string
+          in: formData
+        - name: resumableTotalSize
+          type: integer
+          in: formData
+        - name: resumableType
+          type: string
+          in: formData
+        - name: licence
+          type: string
+          in: formData
+        - name: licenceUrl
+          type: string
+          in: formData
+        - name: resumableChunkNumber
+          type: integer
+          in: formData
+        - name: resumableTotalChunks
+          type: integer
+          in: formData
+        - name: file
+          type: string
+          in: formData
+          format: binary
+      produces:
+         - application/json
+      responses:
+        100:
+          description: Continue sending file chucks
+        200:
+          description: Created complete file
+        400:
+          $ref: '#/responses/JsonErrors'
+        404:
+          $ref: '#/responses/JsonErrors'
+        500:
+          $ref: '#/responses/InternalError'
+
+responses:
+  InternalError:
+    description: "Failed to process the request due to an internal error"
+  JsonErrors:
+    description: "Common error response format"
+    schema:
+      $ref: "#/definitions/Error"
+
+definitions:
+    Error:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                example: BadJson
+              description:
+                type: string
+                example: The JSON is not in a valid format
