@@ -116,8 +116,8 @@ func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParameters(
 	assist := assistdog.NewDefault()
 	queryParams, _ := assist.ParseMap(table)
 
-	total, _ := strconv.ParseInt(queryParams["totalChunks"], 10, 32)
-	current, _ := strconv.ParseInt(queryParams["currentChunk"], 10, 32)
+	total, _ := strconv.ParseInt(queryParams["resumableTotalChunks"], 10, 32)
+	current, _ := strconv.ParseInt(queryParams["resumableChunkNumber"], 10, 32)
 
 	if total > 1 {
 		if current == 1 {

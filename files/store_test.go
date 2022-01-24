@@ -126,6 +126,31 @@ func (s *StoreSuite) TestErrorConnectingToRegisterFiles() {
 	s.Equal(files.ErrConnectingToFilesApi, err)
 }
 
+func (s *StoreSuite) TestErrorStoringEncryptionKeyInVault() {
+	s.fakeFilesApi.NewHandler().Post("/v1/files/register").Reply(http.StatusCreated)
+	s.mockVault.WriteKeyFunc = func(path string, key string, value string) error {
+		return errors.New("failed writing to vault")
+	}
+
+	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+
+	s.Equal(files.ErrVaultWrite, err)
+}
+
+func (s *StoreSuite) TestErrorReadingEncryptionKeyFromValue() {
+	s.mockVault.ReadKeyFunc = func(path string, key string) (string, error) {
+		return "", errors.New("failed writing to vault")
+	}
+
+	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+
+	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+
+	s.Equal(files.ErrVaultRead, err)
+}
+
 func (s StoreSuite) TestUploadPartReturnsAnError() {
 	s.mockS3.UploadPartWithPskFunc = func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
 		return s3client.MultipartUploadResponse{}, s3client.NewError(errors.New("broken"), nil)

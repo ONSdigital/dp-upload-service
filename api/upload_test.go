@@ -16,7 +16,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var stubStoreFunction = func(ctx context.Context, uf files.Metadata, r files.Resumable, c []byte) (bool, error) { return false, nil }
+var stubStoreFunction = func(ctx context.Context, uf files.Metadata, r files.Resumable, c []byte) (bool, error) {
+	return false, nil
+}
 
 func TestJsonProvidedRatherThanMultiPartFrom(t *testing.T) {
 	buf := bytes.NewBufferString(`{"key": "value"}`)
@@ -90,12 +92,12 @@ func TestRequiredFields(t *testing.T) {
 func TestPathValid(t *testing.T) {
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("path", "/invalid/upload-key/file.csv")
+	formWriter.WriteField("resumableFilename", "/invalid/upload-key/file.csv")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("sizeInBytes", "1478")
-	formWriter.WriteField("type", "text/csv")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
 	formWriter.WriteField("licence", "OGL v3")
 	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
 	formWriter.Close()
@@ -116,12 +118,12 @@ func TestPathValid(t *testing.T) {
 func TestTypeValid(t *testing.T) {
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("path", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "valid/path.csv")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("sizeInBytes", "1478")
-	formWriter.WriteField("type", "INVALID")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "INVALID")
 	formWriter.WriteField("licence", "OGL v3")
 	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
 	formWriter.Close()
@@ -142,12 +144,12 @@ func TestTypeValid(t *testing.T) {
 func TestFileWasSupplied(t *testing.T) {
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("path", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "valid/path.csv")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("sizeInBytes", "1478")
-	formWriter.WriteField("type", "text/csv")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
 	formWriter.WriteField("licence", "OGL v3")
 	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
 	formWriter.Close()
@@ -176,12 +178,12 @@ func TestSuccessfulStorageOfCompleteFileReturns200(t *testing.T) {
 
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("path", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "valid/path.csv")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("sizeInBytes", "1478")
-	formWriter.WriteField("type", "text/csv")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
 	formWriter.WriteField("licence", "OGL v3")
 	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
 	part, _ := formWriter.CreateFormFile("file", "testing.csv")
@@ -208,12 +210,12 @@ func TestChunkTooSmallReturns400(t *testing.T) {
 
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("path", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "valid/path.csv")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("sizeInBytes", "1478")
-	formWriter.WriteField("type", "text/csv")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
 	formWriter.WriteField("licence", "OGL v3")
 	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
 	part, _ := formWriter.CreateFormFile("file", "testing.csv")
@@ -238,12 +240,12 @@ func TestFilePathExistsInFilesAPIReturns409(t *testing.T) {
 
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("path", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "valid/path.csv")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("sizeInBytes", "1478")
-	formWriter.WriteField("type", "text/csv")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
 	formWriter.WriteField("licence", "OGL v3")
 	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
 	part, _ := formWriter.CreateFormFile("file", "testing.csv")
@@ -265,17 +267,17 @@ func TestFilePathExistsInFilesAPIReturns409(t *testing.T) {
 
 func TestInvalidContentReturns500(t *testing.T) {
 	st := func(ctx context.Context, uf files.Metadata, r files.Resumable, fileContent []byte) (bool, error) {
-		return false,files.ErrFileAPICreateInvalidData
+		return false, files.ErrFileAPICreateInvalidData
 	}
 
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("path", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "valid/path.csv")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("sizeInBytes", "1478")
-	formWriter.WriteField("type", "text/csv")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
 	formWriter.WriteField("licence", "OGL v3")
 	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
 	part, _ := formWriter.CreateFormFile("file", "testing.csv")
@@ -302,12 +304,12 @@ func TestUnexpectedErrorReturns500(t *testing.T) {
 
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("path", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "valid/path.csv")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("sizeInBytes", "1478")
-	formWriter.WriteField("type", "text/csv")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
 	formWriter.WriteField("licence", "OGL v3")
 	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
 	part, _ := formWriter.CreateFormFile("file", "testing.csv")

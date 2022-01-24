@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ONSdigital/log.go/v2/log"
+
 	"github.com/ONSdigital/dp-upload-service/encryption"
 
 	s3client "github.com/ONSdigital/dp-s3/v2"
@@ -25,6 +27,12 @@ var (
 	ErrFileNotFound             = errors.New("file not found")
 	ErrFileStateConflict        = errors.New("file was not in the expected state")
 	ErrChunkTooSmall            = errors.New("chunk size below minimum 5MB")
+	ErrVaultWrite               = errors.New("failed to write to vault")
+	ErrVaultRead                = errors.New("failed to read from vault")
+)
+
+const (
+	vaultKey = "key"
 )
 
 type Store struct {
@@ -40,21 +48,21 @@ func NewStore(hostname string, s3 upload.S3Clienter, keyGenerator encryption.Gen
 }
 
 type Metadata struct {
-	Path          string `schema:"path" json:"path" validate:"required,aws-upload-key"`
+	Path          string `schema:"resumableFilename" json:"path" validate:"required,aws-upload-key"`
 	IsPublishable bool   `schema:"isPublishable" json:"is_publishable" validate:"required"`
 	CollectionId  string `schema:"collectionId" json:"collection_id" validate:"required"`
 	Title         string `schema:"title" json:"title"`
-	SizeInBytes   int    `schema:"sizeInBytes" json:"size_in_bytes" validate:"required"`
-	Type          string `schema:"type" json:"type" validate:"required,mime-type"`
+	SizeInBytes   int    `schema:"resumableTotalSize" json:"size_in_bytes" validate:"required"`
+	Type          string `schema:"resumableType" json:"type" validate:"required,mime-type"`
 	Licence       string `schema:"licence" json:"licence" validate:"required"`
 	LicenceUrl    string `schema:"licenceUrl" json:"licence_url" validate:"required"`
 }
 
 type Resumable struct {
-	Path         string `schema:"path"`
-	Type         string `schema:"type"`
-	CurrentChunk int64  `schema:"currentChunk"`
-	TotalChunks  int    `schema:"totalChunks"`
+	Path         string `schema:"resumableFilename"`
+	Type         string `schema:"resumableType"`
+	CurrentChunk int64  `schema:"resumableChunkNumber"`
+	TotalChunks  int    `schema:"resumableTotalChunks"`
 }
 
 type uploadComplete struct {
@@ -75,16 +83,26 @@ func firstChunk(currentChunk int64) bool { return currentChunk == 1 }
 
 func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resumable, content []byte) (bool, error) {
 
-	var key []byte
+	var encryptionkey []byte
+	vaultPath := fmt.Sprintf("%s/%s", s.vaultPath, metadata.Path)
 	if firstChunk(resumable.CurrentChunk) {
-		key = s.keyGenerator()
-		s.vault.WriteKey(fmt.Sprintf("%s/%s", s.vaultPath, metadata.Path), "key", string(key)) // nolint error handling in next ticket
+		encryptionkey = s.keyGenerator()
 		if err := s.registerFileUpload(metadata); err != nil {
+			log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
 			return false, err
 		}
+
+		if err := s.vault.WriteKey(vaultPath, vaultKey, string(encryptionkey)); err != nil {
+			log.Error(ctx, "failed to write encryption encryptionkey to vault", err, log.Data{"vault-path": vaultPath, "vault-encryptionkey": vaultKey})
+			return false, ErrVaultWrite
+		}
 	} else {
-		strKey, _ := s.vault.ReadKey(fmt.Sprintf("%s/%s", s.vaultPath, metadata.Path), "key") // notlint error handling in next ticket
-		key = []byte(strKey)
+		strKey, err := s.vault.ReadKey(vaultPath, vaultKey)
+		if err != nil {
+			log.Error(ctx, "failed to read encryption encryptionkey from vault", err, log.Data{"vault-path": vaultPath, "vault-encryptionkey": vaultKey})
+			return false, ErrVaultRead
+		}
+		encryptionkey = []byte(strKey)
 	}
 
 	upr := s3client.UploadPartRequest{
@@ -95,8 +113,9 @@ func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resu
 		FileName:    resumable.Path,
 	}
 
-	response, err := s.s3.UploadPartWithPsk(ctx, &upr, content, key)
+	response, err := s.s3.UploadPartWithPsk(ctx, &upr, content, encryptionkey)
 	if err != nil {
+		log.Error(ctx, "failed to write chuck to s3", err, log.Data{"s3-upload-part": upr})
 		if _, ok := err.(*s3client.ErrChunkTooSmall); ok {
 			return false, ErrChunkTooSmall
 		}
@@ -110,6 +129,7 @@ func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resu
 
 	if response.AllPartsUploaded {
 		if err := s.markUploadComplete(uc); err != nil {
+			log.Error(ctx, "failed to mark upload complete with dp-files-api", err, log.Data{"upload-complete": uc})
 			return true, err
 		}
 	}
