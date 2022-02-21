@@ -11,9 +11,9 @@ VAULT_ADDR?='http://127.0.0.1:8200'
 # The following variables are used to generate a vault token for the app. The reason for declaring variables, is that
 # its difficult to move the token code in a Makefile action. Doing so makes the Makefile more difficult to
 # read and starts introduction if/else statements.
-#VAULT_POLICY:="$(shell vault policy write -address=$(VAULT_ADDR) read-psk policy.hcl)"
-#TOKEN_INFO:="$(shell vault token create -address=$(VAULT_ADDR) -policy=read-psk -period=24h -display-name=dp-upload-service)"
-#APP_TOKEN:="$(shell echo $(TOKEN_INFO) | awk '{print $$6}')"
+VAULT_POLICY:="$(shell vault policy write -address=$(VAULT_ADDR) read-psk policy.hcl)"
+TOKEN_INFO:="$(shell vault token create -address=$(VAULT_ADDR) -policy=read-psk -period=24h -display-name=dp-upload-service)"
+APP_TOKEN:="$(shell echo $(TOKEN_INFO) | awk '{print $$6}')"
 
 
 .PHONY: all
@@ -51,7 +51,7 @@ docker-test-component:
 	docker-compose -f docker-compose.yml down
 	docker build -f Dockerfile . -t template_test --target=test
 	docker-compose -f docker-compose.yml up -d
-	docker-compose -f docker-compose.yml exec -T http go test -component
+	docker-compose -f docker-compose.yml exec -T http go test -component -cover
 	docker-compose -f docker-compose.yml down
 
 docker-local:

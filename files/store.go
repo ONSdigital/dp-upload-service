@@ -53,7 +53,7 @@ type Metadata struct {
 	CollectionId  string `schema:"collectionId" json:"collection_id" validate:"required"`
 	Title         string `schema:"title" json:"title"`
 	SizeInBytes   int    `schema:"resumableTotalSize" json:"size_in_bytes" validate:"required"`
-	Type          string `schema:"resumableType" json:"type" validate:"required,mime-type"`
+	Type          string `schema:"resumableType" json:"type" validate:""`
 	Licence       string `schema:"licence" json:"licence" validate:"required"`
 	LicenceUrl    string `schema:"licenceUrl" json:"licence_url" validate:"required"`
 }
@@ -84,7 +84,8 @@ func firstChunk(currentChunk int64) bool { return currentChunk == 1 }
 func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resumable, content []byte) (bool, error) {
 
 	var encryptionkey []byte
-	vaultPath := fmt.Sprintf("%s/%s", s.vaultPath, metadata.Path)
+	//vaultPath := fmt.Sprintf("%s/%s", s.vaultPath, metadata.Path)
+	vaultPath := s.vaultPath
 	if firstChunk(resumable.CurrentChunk) {
 		encryptionkey = s.keyGenerator()
 		if err := s.registerFileUpload(metadata); err != nil {
@@ -93,13 +94,13 @@ func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resu
 		}
 
 		if err := s.vault.WriteKey(vaultPath, vaultKey, string(encryptionkey)); err != nil {
-			log.Error(ctx, "failed to write encryption encryptionkey to vault", err, log.Data{"vault-path": vaultPath, "vault-encryptionkey": vaultKey})
+			log.Error(ctx, "failed to write encryption encryptionkey to vault", err, log.Data{"vault-path": vaultPath, "vault-key": vaultKey, "encryptionkey": string(encryptionkey)})
 			return false, ErrVaultWrite
 		}
 	} else {
 		strKey, err := s.vault.ReadKey(vaultPath, vaultKey)
 		if err != nil {
-			log.Error(ctx, "failed to read encryption encryptionkey from vault", err, log.Data{"vault-path": vaultPath, "vault-encryptionkey": vaultKey})
+			log.Error(ctx, "failed to read encryption encryptionkey from vault", err, log.Data{"vault-path": vaultPath, "vault-key": vaultKey})
 			return false, ErrVaultRead
 		}
 		encryptionkey = []byte(strKey)
@@ -138,7 +139,7 @@ func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resu
 }
 
 func (s Store) markUploadComplete(uc uploadComplete) error {
-	resp, err := http.Post(fmt.Sprintf("%s/v1/files/upload-complete", s.hostname), "application/json", jsonEncode(uc))
+	resp, err := http.Post(fmt.Sprintf("%s/files/upload-complete", s.hostname), "application/json", jsonEncode(uc))
 	if err != nil {
 		return ErrConnectingToFilesApi
 	}
@@ -155,8 +156,9 @@ func (s Store) markUploadComplete(uc uploadComplete) error {
 }
 
 func (s Store) registerFileUpload(metadata Metadata) error {
-	resp, err := http.Post(fmt.Sprintf("%s/v1/files/register", s.hostname), "application/json", jsonEncode(metadata))
+	resp, err := http.Post(fmt.Sprintf("%s/files/register", s.hostname), "application/json", jsonEncode(metadata))
 	if err != nil {
+		log.Error(context.Background(), "failed to connect to files api", err)
 		return ErrConnectingToFilesApi
 	}
 
