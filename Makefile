@@ -30,7 +30,7 @@ build:
 .PHONY: debug
 debug:
 	go build -tags 'debug' $(LDFLAGS) -o $(BINPATH)/dp-upload-service
-	VAULT_TOKEN=$(APP_TOKEN) VAULT_ADDR=$(VAULT_ADDR) HUMAN_LOG=1 DEBUG=1 $(BINPATH)/dp-upload-service
+	HUMAN_LOG=1 DEBUG=1 $(BINPATH)/dp-upload-service
 
 .PHONY: test
 test:
