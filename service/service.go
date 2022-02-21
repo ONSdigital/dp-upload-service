@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"net/http"
-	"os"
 
 	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/config"
@@ -84,7 +83,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 
 	// v1 DO NOT USE IN PRODUCTION YET!
 	r.Path("/v1/upload").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(files.NewStore(
-		os.Getenv("FILES_API_URL"),
+		cfg.FilesAPIURL,
 		s3Uploaded,
 		serviceList.GetEncryptionKeyGenerator(),
 		vaultClient,
