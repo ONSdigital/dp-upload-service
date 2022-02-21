@@ -48,16 +48,16 @@ vault:
 
 .PHONY: docker-test
 docker-test-component:
-	docker-compose -f docker-compose.yml down
+	docker-compose  -f docker-compose-services.yml -f docker-compose.yml down
 	docker build -f Dockerfile . -t template_test --target=test
-	docker-compose -f docker-compose.yml up -d
-	docker-compose -f docker-compose.yml exec -T http go test -component
-	docker-compose -f docker-compose.yml down
+	docker-compose  -f docker-compose-services.yml -f docker-compose.yml up -d
+	docker-compose  -f docker-compose-services.yml -f docker-compose.yml exec -T http go test -component
+	docker-compose  -f docker-compose-services.yml -f docker-compose.yml down
 
 docker-local:
-	docker-compose -f docker-compose-local.yml down
-	docker-compose -f docker-compose-local.yml up -d
-	docker-compose -f docker-compose-local.yml exec upload-service bash
+	docker-compose -f docker-compose-services.yml -f docker-compose-local.yml down
+	docker-compose -f docker-compose-services.yml -f docker-compose-local.yml up -d
+	docker-compose -f docker-compose-services.yml -f docker-compose-local.yml exec upload-service bash
 
 .PHONY: lint
 lint:

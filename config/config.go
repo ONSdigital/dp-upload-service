@@ -10,6 +10,7 @@ import (
 type Config struct {
 	BindAddr                   string        `envconfig:"BIND_ADDR"`
 	AwsRegion                  string        `envconfig:"AWS_REGION"`
+	LocalstackHost             string        `envconfig:"LOCALSTACK_HOST"`
 	UploadBucketName           string        `envconfig:"UPLOAD_BUCKET_NAME"`
 	EncryptionDisabled         bool          `envconfig:"ENCRYPTION_DISABLED"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`

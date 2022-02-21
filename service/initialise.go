@@ -4,6 +4,10 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/ONSdigital/dp-upload-service/encryption"
 
 	"github.com/ONSdigital/dp-upload-service/config"
@@ -85,11 +89,27 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 
 // DoGetS3Uploaded returns a S3Client
 func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+	if cfg.LocalstackHost != "" {
+		s, err := session.NewSession(&aws.Config{
+			Endpoint:         aws.String(cfg.LocalstackHost),
+			Region:           aws.String(cfg.AwsRegion),
+			S3ForcePathStyle: aws.Bool(true),
+			Credentials:      credentials.NewStaticCredentials("test", "test", ""),
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		return dps3.NewClientWithSession(cfg.UploadBucketName, s), nil
+	}
+
 	s3Client, err := dps3.NewClient(cfg.AwsRegion, cfg.UploadBucketName)
 	if err != nil {
 		return nil, err
 	}
 	return s3Client, nil
+
 }
 
 // DoGetVault returns a VaultClient unless encryption is disabled
