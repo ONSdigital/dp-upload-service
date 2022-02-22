@@ -6,16 +6,6 @@ VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
 
 LDFLAGS = -ldflags "-X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT) -X main.Version=$(VERSION)"
 
-VAULT_ADDR?='http://127.0.0.1:8200'
-
-# The following variables are used to generate a vault token for the app. The reason for declaring variables, is that
-# its difficult to move the token code in a Makefile action. Doing so makes the Makefile more difficult to
-# read and starts introduction if/else statements.
-#VAULT_POLICY:="$(shell vault policy write -address=$(VAULT_ADDR) read-psk policy.hcl)"
-#TOKEN_INFO:="$(shell vault token create -address=$(VAULT_ADDR) -policy=read-psk -period=24h -display-name=dp-upload-service)"
-#APP_TOKEN:="$(shell echo $(TOKEN_INFO) | awk '{print $$6}')"
-
-
 .PHONY: all
 all: audit test build
 
@@ -35,16 +25,6 @@ debug:
 .PHONY: test
 test:
 	go test -count=1 -race -cover ./...
-
-.PHONY: convey
-convey:
-	goconvey ./...
-
-.PHONY: vault
-vault:
-	@echo "$(VAULT_POLICY)"
-	@echo "$(TOKEN_INFO)"
-	@echo "$(APP_TOKEN)"
 
 .PHONY: docker-test
 docker-test-component:
