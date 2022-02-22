@@ -20,11 +20,13 @@ var stubStoreFunction = func(ctx context.Context, uf files.Metadata, r files.Res
 	return false, nil
 }
 
+const UploadURI = "/upload-new"
+
 func TestJsonProvidedRatherThanMultiPartFrom(t *testing.T) {
 	buf := bytes.NewBufferString(`{"key": "value"}`)
 
 	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", buf)
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, buf)
 
 	h := api.CreateV1UploadHandler(stubStoreFunction)
 
@@ -54,7 +56,7 @@ func TestFailureToWriteErrorToResponse(t *testing.T) {
 	buf := bytes.NewBufferString(`{"key": "value"}`)
 
 	rec := &ErrorWriter{}
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", buf)
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, buf)
 
 	h := api.CreateV1UploadHandler(stubStoreFunction)
 
@@ -70,7 +72,7 @@ func TestRequiredFields(t *testing.T) {
 	formWriter.Close()
 
 	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", b)
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	h := api.CreateV1UploadHandler(stubStoreFunction)
@@ -103,7 +105,7 @@ func TestPathValid(t *testing.T) {
 	formWriter.Close()
 
 	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", b)
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	h := api.CreateV1UploadHandler(stubStoreFunction)
@@ -129,7 +131,7 @@ func TestTypeValid(t *testing.T) {
 	formWriter.Close()
 
 	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", b)
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	h := api.CreateV1UploadHandler(stubStoreFunction)
@@ -157,7 +159,7 @@ func TestFileWasSupplied(t *testing.T) {
 	h := api.CreateV1UploadHandler(stubStoreFunction)
 
 	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", b)
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	h.ServeHTTP(rec, req)
@@ -193,7 +195,7 @@ func TestSuccessfulStorageOfCompleteFileReturns200(t *testing.T) {
 	h := api.CreateV1UploadHandler(st)
 
 	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", b)
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	h.ServeHTTP(rec, req)
@@ -225,7 +227,7 @@ func TestChunkTooSmallReturns400(t *testing.T) {
 	h := api.CreateV1UploadHandler(st)
 
 	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", b)
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	h.ServeHTTP(rec, req)
@@ -255,7 +257,7 @@ func TestFilePathExistsInFilesAPIReturns409(t *testing.T) {
 	h := api.CreateV1UploadHandler(st)
 
 	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", b)
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	h.ServeHTTP(rec, req)
@@ -287,7 +289,8 @@ func TestInvalidContentReturns500(t *testing.T) {
 	h := api.CreateV1UploadHandler(st)
 
 	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", b)
+
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	h.ServeHTTP(rec, req)
@@ -319,7 +322,7 @@ func TestUnexpectedErrorReturns500(t *testing.T) {
 	h := api.CreateV1UploadHandler(st)
 
 	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/v1/upload", b)
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	h.ServeHTTP(rec, req)

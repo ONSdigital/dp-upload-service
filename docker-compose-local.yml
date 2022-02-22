@@ -17,6 +17,6 @@ services:
       HEALTHCHECK_CRITICAL_TIMEOUT: '5s'
       VAULT_TOKEN: '0000-0000-0000-0000'
       VAULT_ADDR: 'http://vault:8200'
-      VAULT_PATH': 'secret/shared/psk'
+      VAULT_PATH: 'secret/shared/psk'
     volumes:
       - ./:/service

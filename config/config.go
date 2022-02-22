@@ -22,16 +22,10 @@ type Config struct {
 	FilesAPIURL                string        `envconfig:"FILES_API_URL"`
 }
 
-var cfg *Config
-
 // Get returns the default config with any modifications through environment
 // variables
 func Get() (*Config, error) {
-	if cfg != nil {
-		return cfg, nil
-	}
-
-	cfg = &Config{
+	cfg := &Config{
 		BindAddr:                   "localhost:25100",
 		AwsRegion:                  "eu-west-1",
 		UploadBucketName:           "dp-frontend-florence-file-uploads",

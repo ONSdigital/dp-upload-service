@@ -137,7 +137,7 @@ func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParameters(
 	if err != nil {
 		return err
 	}
-	req := httptest.NewRequest(http.MethodPost, "http://foo/v1/upload", b)
+	req := httptest.NewRequest(http.MethodPost, "http://foo/upload-new", b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	q := req.URL.Query()
@@ -187,7 +187,7 @@ func (c *UploadComponent) iUploadTheFileWithMetaData(filename string, table *god
 	if err != nil {
 		return err
 	}
-	req := httptest.NewRequest(http.MethodPost, "http://foo/v1/upload", b)
+	req := httptest.NewRequest(http.MethodPost, "http://foo/upload-new", b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	w := httptest.NewRecorder()

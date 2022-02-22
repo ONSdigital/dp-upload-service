@@ -82,7 +82,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	r.Path("/upload/{id}").Methods(http.MethodGet).HandlerFunc(uploader.GetS3URL)
 
 	// v1 DO NOT USE IN PRODUCTION YET!
-	r.Path("/v1/upload").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(files.NewStore(
+	r.Path("/upload-new").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(files.NewStore(
 		cfg.FilesAPIURL,
 		s3Uploaded,
 		serviceList.GetEncryptionKeyGenerator(),

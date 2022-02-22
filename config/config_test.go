@@ -8,14 +8,6 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestConfigNil(t *testing.T) {
-	Convey("Given an environment with no environment variables set", t, func() {
-		Convey("Then cfg should be nil", func() {
-			So(cfg, ShouldBeNil)
-		})
-	})
-}
-
 func TestConfig(t *testing.T) {
 	os.Clearenv()
 	testCfg, err := Get()
