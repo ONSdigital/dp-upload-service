@@ -19,10 +19,11 @@ Feature: Uploading a file
         russ,3
         """
     When I upload the file "test-data/populations.csv" with the following form resumable parameters:
-      | resumableFilename    | data/populations.csv |
+      | resumableFilename    | populations.csv      |
       | resumableType        | text/csv             |
       | resumableTotalChunks | 1                    |
       | resumableChunkNumber | 1                    |
+      | path                 | data                 |
     Then the HTTP status code should be "200"
     And the path "/data/populations.csv" should be available in the S3 bucket matching content using encryption key "abcdef123456789z":
         """
@@ -54,10 +55,11 @@ Feature: Uploading a file
 
   Scenario: File upload is marked as started when first chunk is uploaded
     When I upload the file "features/countries.csv" with the following form resumable parameters:
-      | resumableFilename    | data/countries.csv |
+      | resumableFilename    | countries.csv      |
       | resumableType        | text/csv           |
       | resumableTotalChunks | 2                  |
       | resumableChunkNumber | 1                  |
+      | path                 | data               |
     Then the HTTP status code should be "100"
     And the file upload should be marked as started using payload:
         """
@@ -76,10 +78,11 @@ Feature: Uploading a file
 
   Scenario: File upload is marked as started when first chunk is uploaded
     When I upload the file "features/countries.csv" with the following form resumable parameters:
-      | resumableFilename    | data/countries.csv |
+      | resumableFilename    | countries.csv      |
       | resumableType        | text/csv           |
       | resumableTotalChunks | 2                  |
       | resumableChunkNumber | 1                  |
+      | path                 | data               |
     Then the HTTP status code should be "100"
     And the file upload should be marked as started using payload:
         """
@@ -99,15 +102,17 @@ Feature: Uploading a file
 
   Scenario: File ends up in bucket as result of uploading second chunk
     Given the 1st part of the file "features/countries.csv" has been uploaded with resumable parameters:
-      | resumableFilename    | data/countries.csv |
+      | resumableFilename    | countries.csv      |
       | resumableType        | text/csv           |
       | resumableTotalChunks | 2                  |
       | resumableChunkNumber | 1                  |
+      | path                 | data               |
     When I upload the file "features/countries.csv" with the following form resumable parameters:
-      | resumableFilename    | data/countries.csv |
+      | resumableFilename    | countries.csv      |
       | resumableType        | text/csv           |
       | resumableTotalChunks | 2                  |
       | resumableChunkNumber | 2                  |
+      | path                 | data               |
     Then the HTTP status code should be "200"
     And the file should be marked as uploaded using payload:
         """
