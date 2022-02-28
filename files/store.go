@@ -156,7 +156,7 @@ func (s Store) markUploadComplete(uc uploadComplete) error {
 
 func (s Store) registerFileUpload(metadata StoreMetadata) error {
 	log.Info(context.Background(), "Register files API Call", log.Data{"hostname": s.hostname})
-	resp, err := http.Post(fmt.Sprintf("%s/v1/files/register", s.hostname), "application/json", jsonEncode(metadata))
+	resp, err := http.Post(fmt.Sprintf("%s/files", s.hostname), "application/json", jsonEncode(metadata))
 	if err != nil {
 		log.Error(context.Background(), "failed to connect to file API", err, log.Data{"hostname": s.hostname})
 		return ErrConnectingToFilesApi

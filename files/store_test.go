@@ -17,6 +17,10 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+const (
+	filesApiRegister = "/files"
+)
+
 type StoreSuite struct {
 	suite.Suite
 
@@ -61,7 +65,7 @@ func (s *StoreSuite) TearDownTest() {
 }
 
 func (s *StoreSuite) TestFileUploadIsRegisteredWithFilesApi() {
-	s.fakeFilesApi.NewHandler().Post("/v1/files/register").Reply(http.StatusCreated)
+	s.fakeFilesApi.NewHandler().Post(filesApiRegister).Reply(http.StatusCreated)
 	s.fakeFilesApi.NewHandler().Post("/v1/files/upload-complete").Reply(http.StatusCreated)
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
@@ -72,7 +76,7 @@ func (s *StoreSuite) TestFileUploadIsRegisteredWithFilesApi() {
 
 func (s *StoreSuite) TestFileAlreadyRegisteredWithFilesApi() {
 	s.fakeFilesApi.NewHandler().
-		Post("/v1/files/register").
+		Post(filesApiRegister).
 		Reply(http.StatusBadRequest).
 		Body([]byte(`{"errors": [{"code": "DuplicateFileError", "description": "file already exists"}]}`))
 
@@ -84,7 +88,7 @@ func (s *StoreSuite) TestFileAlreadyRegisteredWithFilesApi() {
 
 func (s *StoreSuite) TestFileRegisteredWithInvalidContent() {
 	s.fakeFilesApi.NewHandler().
-		Post("/v1/files/register").
+		Post("/files").
 		Reply(http.StatusBadRequest).
 		Body([]byte(`{"errors": [{"code": "ValidationError", "description": "fields were invalid"}]}`))
 
@@ -96,7 +100,7 @@ func (s *StoreSuite) TestFileRegisteredWithInvalidContent() {
 
 func (s *StoreSuite) TestFileRegisterReturnsUnknownError() {
 	s.fakeFilesApi.NewHandler().
-		Post("/v1/files/register").
+		Post("/files").
 		Reply(http.StatusBadRequest).
 		Body([]byte(`{"errors": [{"code": "SpecialError", "description": "fields were invalid"}]}`))
 
@@ -108,7 +112,7 @@ func (s *StoreSuite) TestFileRegisterReturnsUnknownError() {
 
 func (s *StoreSuite) TestFileRegisterReturnsMalformedJSON() {
 	s.fakeFilesApi.NewHandler().
-		Post("/v1/files/register").
+		Post("/files").
 		Reply(http.StatusBadRequest).
 		Body([]byte(`<json>Error occurred</json>`))
 
@@ -127,7 +131,7 @@ func (s *StoreSuite) TestErrorConnectingToRegisterFiles() {
 }
 
 func (s *StoreSuite) TestErrorStoringEncryptionKeyInVault() {
-	s.fakeFilesApi.NewHandler().Post("/v1/files/register").Reply(http.StatusCreated)
+	s.fakeFilesApi.NewHandler().Post("/files").Reply(http.StatusCreated)
 	s.mockVault.WriteKeyFunc = func(path string, key string, value string) error {
 		return errors.New("failed writing to vault")
 	}

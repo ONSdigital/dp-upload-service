@@ -256,7 +256,7 @@ func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(fi
 }
 
 func (c *UploadComponent) theFileUploadOfShouldBeMarkedAsStartedUsingPayload(expectedFilesPayload *godog.DocString) error {
-	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests["/v1/files/register"])
+	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests["/files"])
 
 	return c.ApiFeature.StepError()
 }
@@ -279,7 +279,7 @@ func (c *UploadComponent) the1StPartOfTheFileHasBeenUploaded(filename string, ta
 }
 
 func (c *UploadComponent) theFileUploadShouldNotHaveBeenRegisteredAgain() error {
-	assert.NotContains(c.ApiFeature, requests, "/v1/files/register")
+	assert.NotContains(c.ApiFeature, requests, "/files")
 	return c.ApiFeature.StepError()
 }
 
