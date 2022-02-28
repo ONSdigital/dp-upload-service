@@ -36,7 +36,7 @@ func mimeValidator(fl validator.FieldLevel) bool {
 
 func awsUploadKeyValidator(fl validator.FieldLevel) bool {
 	path := fl.Field().String()
-	matched, _ := regexp.MatchString("^[a-z\\.\\-0-9]{3,63}$", path)
+	matched, _ := regexp.MatchString("^[a-z0-9A-Z\\/\\!\\*\\_\\'\\(\\)\\.\\-]*$", path)
 
 	return matched
 }
@@ -91,16 +91,7 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			return
 		}
 
-		storeMetadata := files.StoreMetadata{
-			Path:          fmt.Sprintf("%s/%s", resumable.Path, resumable.FileName),
-			IsPublishable: metadata.IsPublishable,
-			CollectionId:  metadata.CollectionId,
-			Title:         metadata.Title,
-			SizeInBytes:   metadata.SizeInBytes,
-			Type:          metadata.Type,
-			Licence:       metadata.Licence,
-			LicenceUrl:    metadata.LicenceUrl,
-		}
+		storeMetadata := getStoreMetadata(metadata, resumable)
 
 		allPartsUploaded, err := storeFile(req.Context(), storeMetadata, resumable, payload)
 		if err != nil {
@@ -119,6 +110,19 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 		if !allPartsUploaded {
 			w.WriteHeader(http.StatusContinue)
 		}
+	}
+}
+
+func getStoreMetadata(metadata Metadata, resumable files.Resumable) files.StoreMetadata {
+	return files.StoreMetadata{
+		Path:          fmt.Sprintf("%s/%s", metadata.Path, resumable.FileName),
+		IsPublishable: metadata.IsPublishable,
+		CollectionId:  metadata.CollectionId,
+		Title:         metadata.Title,
+		SizeInBytes:   metadata.SizeInBytes,
+		Type:          metadata.Type,
+		Licence:       metadata.Licence,
+		LicenceUrl:    metadata.LicenceUrl,
 	}
 }
 

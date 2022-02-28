@@ -59,7 +59,6 @@ type StoreMetadata struct {
 }
 
 type Resumable struct {
-	Path         string `schema:"path"`
 	FileName     string `schema:"resumableFilename"`
 	Type         string `schema:"resumableType"`
 	CurrentChunk int64  `schema:"resumableChunkNumber"`
@@ -111,7 +110,7 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 		Type:        resumable.Type,
 		ChunkNumber: resumable.CurrentChunk,
 		TotalChunks: resumable.TotalChunks,
-		FileName:    resumable.Path,
+		FileName:    resumable.FileName,
 	}
 
 	response, err := s.s3.UploadPartWithPsk(ctx, &upr, content, encryptionkey)

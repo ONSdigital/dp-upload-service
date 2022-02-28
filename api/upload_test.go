@@ -95,7 +95,7 @@ func TestPathValid(t *testing.T) {
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
 	formWriter.WriteField("resumableFilename", "file.csv")
-	formWriter.WriteField("path", "UploadKey")
+	formWriter.WriteField("path", "\\x")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
