@@ -84,11 +84,8 @@ func firstChunk(currentChunk int64) bool { return currentChunk == 1 }
 
 func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable Resumable, content []byte) (bool, error) {
 
-	fullPath := fmt.Sprintf("%s/%s",resumable.Path, resumable.FileName)
-	metadata.Path = fullPath
-
 	var encryptionkey []byte
-	vaultPath := fmt.Sprintf("%s/%s", s.vaultPath, fullPath)
+	vaultPath := fmt.Sprintf("%s/%s", s.vaultPath, metadata.Path)
 	if firstChunk(resumable.CurrentChunk) {
 		encryptionkey = s.keyGenerator()
 		if err := s.registerFileUpload(metadata); err != nil {
@@ -110,7 +107,7 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 	}
 
 	upr := s3client.UploadPartRequest{
-		UploadKey:   fullPath,
+		UploadKey:   metadata.Path,
 		Type:        resumable.Type,
 		ChunkNumber: resumable.CurrentChunk,
 		TotalChunks: resumable.TotalChunks,
@@ -127,7 +124,7 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 	}
 
 	uc := uploadComplete{
-		Path: fullPath,
+		Path: metadata.Path,
 		ETag: strings.Trim(response.Etag, "\""),
 	}
 

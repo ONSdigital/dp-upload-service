@@ -94,7 +94,8 @@ func TestRequiredFields(t *testing.T) {
 func TestPathValid(t *testing.T) {
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "/invalid/upload-key/file.csv")
+	formWriter.WriteField("resumableFilename", "file.csv")
+	formWriter.WriteField("path", "UploadKey")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
@@ -120,7 +121,8 @@ func TestPathValid(t *testing.T) {
 func TestTypeValid(t *testing.T) {
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "path.csv")
+	formWriter.WriteField("path", "valid")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
@@ -146,7 +148,8 @@ func TestTypeValid(t *testing.T) {
 func TestFileWasSupplied(t *testing.T) {
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "path.csv")
+	formWriter.WriteField("path", "valid")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
@@ -180,7 +183,8 @@ func TestSuccessfulStorageOfCompleteFileReturns200(t *testing.T) {
 
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "path.csv")
+	formWriter.WriteField("path", "valid")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
@@ -212,7 +216,8 @@ func TestChunkTooSmallReturns400(t *testing.T) {
 
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "path.csv")
+	formWriter.WriteField("path", "valid")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
@@ -242,7 +247,8 @@ func TestFilePathExistsInFilesAPIReturns409(t *testing.T) {
 
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "path.csv")
+	formWriter.WriteField("path", "valid")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
@@ -274,7 +280,8 @@ func TestInvalidContentReturns500(t *testing.T) {
 
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "path.csv")
+	formWriter.WriteField("path", "valid")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
@@ -307,7 +314,8 @@ func TestUnexpectedErrorReturns500(t *testing.T) {
 
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "valid/path.csv")
+	formWriter.WriteField("resumableFilename", "path.csv")
+	formWriter.WriteField("path", "valid")
 	formWriter.WriteField("isPublishable", "true")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
