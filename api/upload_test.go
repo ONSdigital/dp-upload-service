@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var stubStoreFunction = func(ctx context.Context, uf files.Metadata, r files.Resumable, c []byte) (bool, error) {
+var stubStoreFunction = func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, c []byte) (bool, error) {
 	return false, nil
 }
 
@@ -172,7 +172,7 @@ func TestFileWasSupplied(t *testing.T) {
 func TestSuccessfulStorageOfCompleteFileReturns200(t *testing.T) {
 	payload := "TEST DATA"
 	funcCalled := false
-	st := func(ctx context.Context, uf files.Metadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
 		funcCalled = true
 		assert.Equal(t, payload, string(fileContent))
 		return true, nil
@@ -206,7 +206,7 @@ func TestSuccessfulStorageOfCompleteFileReturns200(t *testing.T) {
 
 func TestChunkTooSmallReturns400(t *testing.T) {
 	payload := "TEST DATA"
-	st := func(ctx context.Context, uf files.Metadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
 		return true, files.ErrChunkTooSmall
 	}
 
@@ -236,7 +236,7 @@ func TestChunkTooSmallReturns400(t *testing.T) {
 }
 
 func TestFilePathExistsInFilesAPIReturns409(t *testing.T) {
-	st := func(ctx context.Context, uf files.Metadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFilesAPIDuplicateFile
 	}
 
@@ -268,7 +268,7 @@ func TestFilePathExistsInFilesAPIReturns409(t *testing.T) {
 }
 
 func TestInvalidContentReturns500(t *testing.T) {
-	st := func(ctx context.Context, uf files.Metadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFileAPICreateInvalidData
 	}
 
@@ -301,7 +301,7 @@ func TestInvalidContentReturns500(t *testing.T) {
 }
 
 func TestUnexpectedErrorReturns500(t *testing.T) {
-	st := func(ctx context.Context, uf files.Metadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, errors.New("its broken")
 	}
 

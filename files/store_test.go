@@ -66,7 +66,7 @@ func (s *StoreSuite) TestFileUploadIsRegisteredWithFilesApi() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
 	s.NoError(err)
 }
 
@@ -78,7 +78,7 @@ func (s *StoreSuite) TestFileAlreadyRegisteredWithFilesApi() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
 	s.Equal(files.ErrFilesAPIDuplicateFile, err)
 }
 
@@ -90,7 +90,7 @@ func (s *StoreSuite) TestFileRegisteredWithInvalidContent() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
 	s.Equal(files.ErrFileAPICreateInvalidData, err)
 }
 
@@ -102,7 +102,7 @@ func (s *StoreSuite) TestFileRegisterReturnsUnknownError() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
 	s.Equal(files.ErrUnknownError, err)
 }
 
@@ -114,7 +114,7 @@ func (s *StoreSuite) TestFileRegisterReturnsMalformedJSON() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
 
 	s.Error(err)
 }
@@ -122,7 +122,7 @@ func (s *StoreSuite) TestFileRegisterReturnsMalformedJSON() {
 func (s *StoreSuite) TestErrorConnectingToRegisterFiles() {
 	store := files.NewStore("does.not.work", s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
 	s.Equal(files.ErrConnectingToFilesApi, err)
 }
 
@@ -134,7 +134,7 @@ func (s *StoreSuite) TestErrorStoringEncryptionKeyInVault() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, firstResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
 
 	s.Equal(files.ErrVaultWrite, err)
 }
@@ -146,7 +146,7 @@ func (s *StoreSuite) TestErrorReadingEncryptionKeyFromValue() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
 
 	s.Equal(files.ErrVaultRead, err)
 }
@@ -158,7 +158,7 @@ func (s StoreSuite) TestUploadPartReturnsAnError() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
 	s.Equal(files.ErrS3Upload, err)
 }
 
@@ -169,7 +169,7 @@ func (s StoreSuite) TestUploadChunkTooSmallReturnsErrChuckTooSmall() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
 	s.Equal(files.ErrChunkTooSmall, err)
 }
 
@@ -178,7 +178,7 @@ func (s StoreSuite) TestFileNotFoundWhenMarkedAsUploaded() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
 	s.Equal(files.ErrFileNotFound, err)
 }
 
@@ -187,7 +187,7 @@ func (s StoreSuite) TestReturnsConflictWhenFileInUnexpectedState() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
 	s.Equal(files.ErrFileStateConflict, err)
 }
 
@@ -196,13 +196,13 @@ func (s StoreSuite) TestUploadCompleteUnknownError() {
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
 	s.Equal(files.ErrUnknownError, err)
 }
 
 func (s *StoreSuite) TestErrorConnectingToUploadComplete() {
 	store := files.NewStore("does.not.work", s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.Metadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
 	s.Equal(files.ErrConnectingToFilesApi, err)
 }

@@ -47,19 +47,20 @@ func NewStore(hostname string, s3 upload.S3Clienter, keyGenerator encryption.Gen
 	return Store{hostname, s3, keyGenerator, vault, vaultPath}
 }
 
-type Metadata struct {
-	Path          string `schema:"resumableFilename" json:"path" validate:"required,aws-upload-key"`
-	IsPublishable bool   `schema:"isPublishable" json:"is_publishable" validate:"required"`
-	CollectionId  string `schema:"collectionId" json:"collection_id" validate:"required"`
-	Title         string `schema:"title" json:"title"`
-	SizeInBytes   int    `schema:"resumableTotalSize" json:"size_in_bytes" validate:"required"`
-	Type          string `schema:"resumableType" json:"type" validate:"required,mime-type"`
-	Licence       string `schema:"licence" json:"licence" validate:"required"`
-	LicenceUrl    string `schema:"licenceUrl" json:"licence_url" validate:"required"`
+type StoreMetadata struct {
+	Path          string `json:"path"`
+	IsPublishable bool   `json:"is_publishable"`
+	CollectionId  string `json:"collection_id"`
+	Title         string `json:"title"`
+	SizeInBytes   int    `json:"size_in_bytes"`
+	Type          string `json:"type"`
+	Licence       string `json:"licence"`
+	LicenceUrl    string `json:"licence_url"`
 }
 
 type Resumable struct {
-	Path         string `schema:"resumableFilename"`
+	Path         string `schema:"path"`
+	FileName     string `schema:"resumableFilename"`
 	Type         string `schema:"resumableType"`
 	CurrentChunk int64  `schema:"resumableChunkNumber"`
 	TotalChunks  int    `schema:"resumableTotalChunks"`
@@ -81,10 +82,13 @@ type jsonErrors struct {
 
 func firstChunk(currentChunk int64) bool { return currentChunk == 1 }
 
-func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resumable, content []byte) (bool, error) {
+func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable Resumable, content []byte) (bool, error) {
+
+	fullPath := fmt.Sprintf("%s/%s",resumable.Path, resumable.FileName)
+	metadata.Path = fullPath
 
 	var encryptionkey []byte
-	vaultPath := fmt.Sprintf("%s/%s", s.vaultPath, metadata.Path)
+	vaultPath := fmt.Sprintf("%s/%s", s.vaultPath, fullPath)
 	if firstChunk(resumable.CurrentChunk) {
 		encryptionkey = s.keyGenerator()
 		if err := s.registerFileUpload(metadata); err != nil {
@@ -106,7 +110,7 @@ func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resu
 	}
 
 	upr := s3client.UploadPartRequest{
-		UploadKey:   resumable.Path,
+		UploadKey:   fullPath,
 		Type:        resumable.Type,
 		ChunkNumber: resumable.CurrentChunk,
 		TotalChunks: resumable.TotalChunks,
@@ -123,7 +127,7 @@ func (s Store) UploadFile(ctx context.Context, metadata Metadata, resumable Resu
 	}
 
 	uc := uploadComplete{
-		Path: metadata.Path,
+		Path: fullPath,
 		ETag: strings.Trim(response.Etag, "\""),
 	}
 
@@ -154,7 +158,7 @@ func (s Store) markUploadComplete(uc uploadComplete) error {
 	return nil
 }
 
-func (s Store) registerFileUpload(metadata Metadata) error {
+func (s Store) registerFileUpload(metadata StoreMetadata) error {
 	log.Info(context.Background(), "Register files API Call", log.Data{"hostname": s.hostname})
 	resp, err := http.Post(fmt.Sprintf("%s/v1/files/register", s.hostname), "application/json", jsonEncode(metadata))
 	if err != nil {
