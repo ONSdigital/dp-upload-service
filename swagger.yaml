@@ -16,7 +16,7 @@ tags:
   - name: "private"
 
 paths:
-  /v1/upload:
+  /upload-new:
     post:
       tags:
          - Upload file and provide metadata
@@ -25,6 +25,9 @@ paths:
          - multipart/form-data
       parameters:
         - name: resumableFilename
+          type: string
+          in: formData
+        - name: path
           type: string
           in: formData
         - name: isPublishable

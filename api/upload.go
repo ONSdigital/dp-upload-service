@@ -15,7 +15,7 @@ import (
 )
 
 type Metadata struct {
-	Path    string `schema:"path" validate:"required,aws-upload-key"`
+	Path          string `schema:"path" validate:"required,aws-upload-key"`
 	IsPublishable bool   `schema:"isPublishable" validate:"required"`
 	CollectionId  string `schema:"collectionId" validate:"required"`
 	Title         string `schema:"title"`
