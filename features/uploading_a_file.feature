@@ -44,10 +44,10 @@ Feature: Uploading a file
           "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
         }
         """
-    And the file should be marked as uploaded using payload:
+    And the file "data/populations.csv" should be marked as uploaded using payload:
         """
         {
-          "path": "data/populations.csv",
+          "state": "UPLOADED",
           "etag": "5efb5b786de7942b02fb4bfd63c5715d"
         }
         """
@@ -114,10 +114,10 @@ Feature: Uploading a file
       | resumableChunkNumber | 2                  |
       | path                 | data               |
     Then the HTTP status code should be "200"
-    And the file should be marked as uploaded using payload:
+    And the file "data/countries.csv" should be marked as uploaded using payload:
         """
         {
-          "path": "data/countries.csv",
+          "state": "UPLOADED",
           "etag": "714df73fd9a27da75dc6c2d16765e868"
         }
         """

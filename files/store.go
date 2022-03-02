@@ -66,7 +66,7 @@ type Resumable struct {
 }
 
 type uploadComplete struct {
-	Path string `json:"path"`
+	State string `json:"state"`
 	ETag string `json:"etag"`
 }
 
@@ -123,12 +123,12 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 	}
 
 	uc := uploadComplete{
-		Path: metadata.Path,
+		State: "UPLOADED",
 		ETag: strings.Trim(response.Etag, "\""),
 	}
 
 	if response.AllPartsUploaded {
-		if err := s.markUploadComplete(uc); err != nil {
+		if err := s.markUploadComplete(metadata.Path, uc); err != nil {
 			log.Error(ctx, "failed to mark upload complete with dp-files-api", err, log.Data{"upload-complete": uc})
 			return true, err
 		}
@@ -137,11 +137,21 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 	return response.AllPartsUploaded, nil
 }
 
-func (s Store) markUploadComplete(uc uploadComplete) error {
-	resp, err := http.Post(fmt.Sprintf("%s/v1/files/upload-complete", s.hostname), "application/json", jsonEncode(uc))
+func (s Store) markUploadComplete(path string, uc uploadComplete) error {
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("%s/files/%s", s.hostname, path), jsonEncode(uc))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return ErrConnectingToFilesApi
 	}
+
+	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return ErrFileNotFound
@@ -156,7 +166,7 @@ func (s Store) markUploadComplete(uc uploadComplete) error {
 
 func (s Store) registerFileUpload(metadata StoreMetadata) error {
 	log.Info(context.Background(), "Register files API Call", log.Data{"hostname": s.hostname})
-	resp, err := http.Post(fmt.Sprintf("%s/v1/files/register", s.hostname), "application/json", jsonEncode(metadata))
+	resp, err := http.Post(fmt.Sprintf("%s/files", s.hostname), "application/json", jsonEncode(metadata))
 	if err != nil {
 		log.Error(context.Background(), "failed to connect to file API", err, log.Data{"hostname": s.hostname})
 		return ErrConnectingToFilesApi

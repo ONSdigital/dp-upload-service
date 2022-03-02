@@ -26,6 +26,8 @@ import (
 
 var requests map[string]string
 
+const filesURI = "/files"
+
 func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	// Givens
 	ctx.Step(`^dp-files-api does not have a file "([^"]*)" registered$`, c.dpfilesapiDoesNotHaveAFileRegistered)
@@ -40,7 +42,7 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	// Thens
 	ctx.Step(`^the path "([^"]*)" should be available in the S3 bucket matching content using encryption key "([^"]*)":`, c.theFileShouldBeAvailableInTheSBucketMatchingContent)
 	ctx.Step(`^the file upload should be marked as started using payload:$`, c.theFileUploadOfShouldBeMarkedAsStartedUsingPayload)
-	ctx.Step(`^the file should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
+	ctx.Step(`^the file "([^"]*)" should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
 	ctx.Step(`^the stored file "([^"]*)" should match the sent file "([^"]*)" using encryption key "([^"]*)"$`, c.theStoredFileShouldMatchTheSentFile)
 	ctx.Step(`^the encryption key "([^"]*)" should be stored against file "([^"]*)"$`, c.theEncryptionKeyShouldBeStored)
 
@@ -79,7 +81,7 @@ func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) 
 	requests = make(map[string]string)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
-		requests[r.URL.Path] = string(body)
+		requests[fmt.Sprintf("%s|%s",r.URL.Path, r.Method)] = string(body)
 		w.WriteHeader(http.StatusCreated)
 	}))
 
@@ -256,18 +258,20 @@ func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(fi
 }
 
 func (c *UploadComponent) theFileUploadOfShouldBeMarkedAsStartedUsingPayload(expectedFilesPayload *godog.DocString) error {
-	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests["/v1/files/register"])
+	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests[fmt.Sprintf("%s|%s",filesURI, http.MethodPost)])
 
 	return c.ApiFeature.StepError()
 }
 
-func (c *UploadComponent) theFileUploadOfShouldBeMarkedAsUploadedUsingPayload(expectedFilesPayload *godog.DocString) error {
-	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests["/v1/files/upload-complete"])
+func (c *UploadComponent) theFileUploadOfShouldBeMarkedAsUploadedUsingPayload(filepath string, expectedFilesPayload *godog.DocString) error {
+	fmt.Printf("requests: %v", requests)
+
+	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests[fmt.Sprintf("%s/%s|%s", filesURI, filepath, http.MethodPatch)])
 	return c.ApiFeature.StepError()
 }
 
 func (c *UploadComponent) theFileShouldNotBeMarkedAsUploaded() error {
-	assert.NotContains(c.ApiFeature, requests, "/v1/files/upload-complete")
+	assert.NotContains(c.ApiFeature, requests, fmt.Sprintf("%s|%s", filesURI, http.MethodPatch))
 	return c.ApiFeature.StepError()
 }
 func (c *UploadComponent) the1StPartOfTheFileHasBeenUploaded(filename string, table *godog.Table) error {
@@ -279,7 +283,7 @@ func (c *UploadComponent) the1StPartOfTheFileHasBeenUploaded(filename string, ta
 }
 
 func (c *UploadComponent) theFileUploadShouldNotHaveBeenRegisteredAgain() error {
-	assert.NotContains(c.ApiFeature, requests, "/v1/files/register")
+	assert.NotContains(c.ApiFeature, requests, "/files")
 	return c.ApiFeature.StepError()
 }
 
