@@ -157,7 +157,7 @@ func (s Store) markUploadComplete(path string, uc uploadComplete) error {
 		return ErrFileNotFound
 	} else if resp.StatusCode == http.StatusConflict {
 		return ErrFileStateConflict
-	} else if resp.StatusCode != http.StatusCreated {
+	} else if resp.StatusCode != http.StatusOK {
 		return ErrUnknownError
 	}
 

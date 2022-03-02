@@ -62,7 +62,7 @@ func (s *StoreSuite) TearDownTest() {
 
 func (s *StoreSuite) TestFileUploadIsRegisteredWithFilesApi() {
 	s.fakeFilesApi.NewHandler().Post("/files").Reply(http.StatusCreated)
-	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusCreated)
+	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusOK)
 
 	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 

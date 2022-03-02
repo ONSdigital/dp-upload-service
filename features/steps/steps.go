@@ -82,7 +82,7 @@ func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) 
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
 		requests[fmt.Sprintf("%s|%s",r.URL.Path, r.Method)] = string(body)
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusOK)
 	}))
 
 	os.Setenv("FILES_API_URL", s.URL)
