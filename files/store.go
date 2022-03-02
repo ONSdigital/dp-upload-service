@@ -3,6 +3,7 @@ package files
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -87,12 +88,13 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 	vaultPath := fmt.Sprintf("%s/%s", s.vaultPath, metadata.Path)
 	if firstChunk(resumable.CurrentChunk) {
 		encryptionkey = s.keyGenerator()
+
 		if err := s.registerFileUpload(metadata); err != nil {
 			log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
 			return false, err
 		}
 
-		if err := s.vault.WriteKey(vaultPath, vaultKey, string(encryptionkey)); err != nil {
+		if err := s.vault.WriteKey(vaultPath, vaultKey, hex.EncodeToString(encryptionkey)); err != nil {
 			log.Error(ctx, "failed to write encryption encryptionkey to vault", err, log.Data{"vault-path": vaultPath, "vault-encryptionkey": vaultKey})
 			return false, ErrVaultWrite
 		}
@@ -102,7 +104,8 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 			log.Error(ctx, "failed to read encryption encryptionkey from vault", err, log.Data{"vault-path": vaultPath, "vault-encryptionkey": vaultKey})
 			return false, ErrVaultRead
 		}
-		encryptionkey = []byte(strKey)
+
+		encryptionkey, _ = hex.DecodeString(strKey)
 	}
 
 	upr := s3client.UploadPartRequest{
@@ -115,7 +118,7 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 
 	response, err := s.s3.UploadPartWithPsk(ctx, &upr, content, encryptionkey)
 	if err != nil {
-		log.Error(ctx, "failed to write chuck to s3", err, log.Data{"s3-upload-part": upr})
+		log.Error(ctx, "failed to write chunk to s3", err, log.Data{"s3-upload-part": upr})
 		if _, ok := err.(*s3client.ErrChunkTooSmall); ok {
 			return false, ErrChunkTooSmall
 		}
