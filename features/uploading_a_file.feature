@@ -9,7 +9,7 @@ Feature: Uploading a file
       | resumableTotalSize | 14794                                                                     |
       | licence            | OGL v3                                                                    |
       | licenceUrl         | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
-    And encryption key will be "abcdef123456789z"
+    And encryption key will be "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf"
 
   Scenario: File ends up in bucket as result of uploading in a single chunk
     Given the data file "populations.csv" with content:
@@ -25,7 +25,7 @@ Feature: Uploading a file
       | resumableChunkNumber | 1                    |
       | path                 | data                 |
     Then the HTTP status code should be "200"
-    And the path "/data/populations.csv" should be available in the S3 bucket matching content using encryption key "abcdef123456789z":
+    And the path "/data/populations.csv" should be available in the S3 bucket matching content using encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf":
         """
         mark,1
         jon,2
@@ -48,10 +48,10 @@ Feature: Uploading a file
         """
         {
           "state": "UPLOADED",
-          "etag": "5efb5b786de7942b02fb4bfd63c5715d"
+          "etag": "014e5ce3eb6d33344da544b0831140b4"
         }
         """
-    And the encryption key "abcdef123456789z" should be stored against file "data/populations.csv"
+    And the encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf" should be stored against file "data/populations.csv"
 
   Scenario: File upload is marked as started when first chunk is uploaded
     When I upload the file "features/countries.csv" with the following form resumable parameters:
@@ -118,9 +118,9 @@ Feature: Uploading a file
         """
         {
           "state": "UPLOADED",
-          "etag": "714df73fd9a27da75dc6c2d16765e868"
+          "etag": "014e5ce3eb6d33344da544b0831140b4"
         }
         """
-    And the stored file "data/countries.csv" should match the sent file "features/countries.csv" using encryption key "abcdef123456789z"
+    And the stored file "data/countries.csv" should match the sent file "features/countries.csv" using encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf"
     But the file upload should not have been registered again
 

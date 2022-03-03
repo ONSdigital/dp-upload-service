@@ -3,6 +3,7 @@ package steps
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -57,7 +58,12 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 // ------
 
 func (c *UploadComponent) encryptionKeyWillBe(key string) error {
-	c.EncryptionKey = []byte(key)
+	bytes, err := hex.DecodeString(key)
+	if err != nil {
+		return err
+	}
+
+	c.EncryptionKey = bytes
 	return nil
 }
 
@@ -243,9 +249,31 @@ func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(fi
 
 	assert.NoError(c.ApiFeature, err)
 
+	//fmt.Printf("string of bytes from chars: %v", []byte(encryptionKey))
+	//generated := encryption.CreateKey()
+	//fmt.Printf("string of bytes from generator: %v", generated)
+	//
+	//fmt.Printf("string conversion: %s", string(generated))
+	//hexString := hex.EncodeToString(generated)
+	//fmt.Printf("hex string conversion: %s", hexString)
+	//fmt.Printf("converted back from string: %v", []byte(string(generated)))
+	////fmt.Printf("string of bytes from chars with hex: %v", dec)
+	//
+	//vault, _ := c.svcList.GetVault(context.Background(), cfg)
+	//err = vault.WriteKey("secret/shared/psk", "test", string(generated))
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//readback, err := vault.ReadKey("secret/shared/psk", "test")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//fmt.Printf("read back from vault: %v", []byte(readback))
+	d, _ := hex.DecodeString(encryptionKey)
 	reader := &cryptoReader{
 		reader:    ioutil.NopCloser(bytes.NewReader(buf.Bytes())),
-		psk:       []byte(encryptionKey),
+		psk:       d,
 		chunkSize: 5 * 1024 * 1024,
 		currChunk: nil,
 	}
@@ -264,8 +292,6 @@ func (c *UploadComponent) theFileUploadOfShouldBeMarkedAsStartedUsingPayload(exp
 }
 
 func (c *UploadComponent) theFileUploadOfShouldBeMarkedAsUploadedUsingPayload(filepath string, expectedFilesPayload *godog.DocString) error {
-	fmt.Printf("requests: %v", requests)
-
 	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests[fmt.Sprintf("%s/%s|%s", filesURI, filepath, http.MethodPatch)])
 	return c.ApiFeature.StepError()
 }
