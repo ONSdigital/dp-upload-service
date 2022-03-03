@@ -105,13 +105,13 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			default:
 				writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 			}
+
 			return
 		}
 
 		if !allPartsUploaded {
 			w.WriteHeader(http.StatusContinue)
 		}
-
 	}
 }
 

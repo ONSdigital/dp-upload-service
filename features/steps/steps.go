@@ -249,27 +249,6 @@ func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(fi
 
 	assert.NoError(c.ApiFeature, err)
 
-	//fmt.Printf("string of bytes from chars: %v", []byte(encryptionKey))
-	//generated := encryption.CreateKey()
-	//fmt.Printf("string of bytes from generator: %v", generated)
-	//
-	//fmt.Printf("string conversion: %s", string(generated))
-	//hexString := hex.EncodeToString(generated)
-	//fmt.Printf("hex string conversion: %s", hexString)
-	//fmt.Printf("converted back from string: %v", []byte(string(generated)))
-	////fmt.Printf("string of bytes from chars with hex: %v", dec)
-	//
-	//vault, _ := c.svcList.GetVault(context.Background(), cfg)
-	//err = vault.WriteKey("secret/shared/psk", "test", string(generated))
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//readback, err := vault.ReadKey("secret/shared/psk", "test")
-	//if err != nil {
-	//	panic(err)
-	//}
-	//fmt.Printf("read back from vault: %v", []byte(readback))
 	d, _ := hex.DecodeString(encryptionKey)
 	reader := &cryptoReader{
 		reader:    ioutil.NopCloser(bytes.NewReader(buf.Bytes())),
