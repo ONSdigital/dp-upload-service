@@ -118,7 +118,7 @@ Feature: Uploading a file
         """
         {
           "state": "UPLOADED",
-          "etag": "014e5ce3eb6d33344da544b0831140b4"
+          "etag": "2da887c94287adc1d46fdc336f8d7852"
         }
         """
     And the stored file "data/countries.csv" should match the sent file "features/countries.csv" using encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf"

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -16,13 +17,17 @@ import (
 )
 
 var componentFlag = flag.Bool("component", false, "perform component tests")
+var loggingFlag   = flag.Bool("logging", false, "print logging")
 
 type ComponentTest struct {
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
-	//buf := bytes.NewBufferString("")
-	//log.SetDestination(buf, buf)
+	if !*loggingFlag {
+		buf := bytes.NewBufferString("")
+		log.SetDestination(buf, buf)
+	}
+
 	log.Namespace = "dp-upload-service"
 
 	component := steps.NewUploadComponent()
