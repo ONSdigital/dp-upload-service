@@ -109,16 +109,19 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			return
 		}
 
-		if !allPartsUploaded {
-			if req.Header.Get("Expect") == "100-continue" {
-				w.WriteHeader(http.StatusContinue)
-				return
-			}
+		var header int
 
-			w.WriteHeader(http.StatusOK)
+		if allPartsUploaded {
+			header = http.StatusCreated
 		} else {
-			w.WriteHeader(http.StatusCreated)
+			if req.Header.Get("Expect") == "100-continue" {
+				header = http.StatusContinue
+			} else {
+				header = http.StatusOK
+			}
 		}
+
+		w.WriteHeader(header)
 	}
 }
 
