@@ -24,7 +24,7 @@ Feature: Uploading a file
       | resumableTotalChunks | 1                    |
       | resumableChunkNumber | 1                    |
       | path                 | data                 |
-    Then the HTTP status code should be "200"
+    Then the HTTP status code should be "201"
     And the path "/data/populations.csv" should be available in the S3 bucket matching content using encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf":
         """
         mark,1
@@ -60,7 +60,7 @@ Feature: Uploading a file
       | resumableTotalChunks | 2                  |
       | resumableChunkNumber | 1                  |
       | path                 | data               |
-    Then the HTTP status code should be "100"
+    Then the HTTP status code should be "200"
     And the file upload should be marked as started using payload:
         """
         {
@@ -83,7 +83,7 @@ Feature: Uploading a file
       | resumableTotalChunks | 2                  |
       | resumableChunkNumber | 1                  |
       | path                 | data               |
-    Then the HTTP status code should be "100"
+    Then the HTTP status code should be "200"
     And the file upload should be marked as started using payload:
         """
         {
@@ -113,7 +113,7 @@ Feature: Uploading a file
       | resumableTotalChunks | 2                  |
       | resumableChunkNumber | 2                  |
       | path                 | data               |
-    Then the HTTP status code should be "200"
+    Then the HTTP status code should be "201"
     And the file "data/countries.csv" should be marked as uploaded using payload:
         """
         {

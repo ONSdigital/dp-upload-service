@@ -220,8 +220,6 @@ func (c *UploadComponent) theStoredFileShouldMatchTheSentFile(s3Filename, localF
 }
 
 func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(filename, encryptionKey string, expectedFileContent *godog.DocString) error {
-	assert.Equal(c.ApiFeature, http.StatusOK, c.ApiFeature.HttpResponse.StatusCode)
-
 	cfg, _ := config.Get()
 	s, _ := session.NewSession(&aws.Config{
 		Endpoint:         aws.String(localStackHost),
