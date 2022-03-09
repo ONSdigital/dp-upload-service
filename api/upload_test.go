@@ -86,6 +86,7 @@ func TestRequiredFields(t *testing.T) {
 	assert.Contains(t, string(response), "IsPublishable required")
 	assert.Contains(t, string(response), "CollectionId required")
 	assert.Contains(t, string(response), "SizeInBytes required")
+	assert.Contains(t, string(response), "SizeInBytes required")
 	assert.Contains(t, string(response), "Type required")
 	assert.Contains(t, string(response), "Licence required")
 	assert.Contains(t, string(response), "LicenceUrl required")
@@ -143,33 +144,6 @@ func TestIsPublishableSetToFalseInNotARequireFailure(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	response, _ := ioutil.ReadAll(rec.Body)
 	assert.NotContains(t, string(response), "IsPublishable required")
-}
-
-func TestTypeValid(t *testing.T) {
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "path.csv")
-	formWriter.WriteField("path", "valid")
-	formWriter.WriteField("isPublishable", "true")
-	formWriter.WriteField("collectionId", "1234567890")
-	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("resumableTotalSize", "1478")
-	formWriter.WriteField("resumableType", "INVALID")
-	formWriter.WriteField("licence", "OGL v3")
-	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
-	formWriter.Close()
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-
-	h := api.CreateV1UploadHandler(stubStoreFunction)
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
-	assert.Contains(t, string(response), "Type mime-type")
 }
 
 func TestFileWasSupplied(t *testing.T) {

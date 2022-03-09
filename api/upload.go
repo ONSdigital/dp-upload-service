@@ -10,7 +10,6 @@ import (
 	"github.com/ONSdigital/dp-upload-service/files"
 
 	"github.com/ONSdigital/log.go/v2/log"
-	"github.com/gabriel-vasile/mimetype"
 	"github.com/go-playground/validator"
 	"github.com/gorilla/schema"
 )
@@ -21,19 +20,12 @@ type Metadata struct {
 	CollectionId  string `schema:"collectionId" validate:"required"`
 	Title         string `schema:"title"`
 	SizeInBytes   int    `schema:"resumableTotalSize" validate:"required"`
-	Type          string `schema:"resumableType" validate:"required,mime-type"`
+	Type          string `schema:"resumableType" validate:"required"`
 	Licence       string `schema:"licence" validate:"required"`
 	LicenceUrl    string `schema:"licenceUrl" validate:"required"`
 }
 
 type StoreFile func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, content []byte) (bool, error)
-
-func mimeValidator(fl validator.FieldLevel) bool {
-	mt := fl.Field().String()
-	mtype := mimetype.Lookup(mt)
-
-	return mtype != nil
-}
 
 func awsUploadKeyValidator(fl validator.FieldLevel) bool {
 	path := fl.Field().String()
@@ -68,7 +60,6 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 		}
 
 		v := validator.New()
-		v.RegisterValidation("mime-type", mimeValidator)              // nolint // Only fails due to coding error
 		v.RegisterValidation("aws-upload-key", awsUploadKeyValidator) // nolint // Only fails due to coding error
 		if err := v.Struct(metadata); err != nil {
 			if validationErrs, ok := err.(validator.ValidationErrors); ok {
