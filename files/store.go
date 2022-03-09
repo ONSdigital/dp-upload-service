@@ -49,14 +49,14 @@ func NewStore(hostname string, s3 upload.S3Clienter, keyGenerator encryption.Gen
 }
 
 type StoreMetadata struct {
-	Path          string `json:"path"`
-	IsPublishable bool   `json:"is_publishable"`
-	CollectionId  string `json:"collection_id"`
-	Title         string `json:"title"`
-	SizeInBytes   int    `json:"size_in_bytes"`
-	Type          string `json:"type"`
-	Licence       string `json:"licence"`
-	LicenceUrl    string `json:"licence_url"`
+	Path          string  `json:"path"`
+	IsPublishable bool    `json:"is_publishable"`
+	CollectionId  *string `json:"collection_id,omitempty"`
+	Title         string  `json:"title"`
+	SizeInBytes   int     `json:"size_in_bytes"`
+	Type          string  `json:"type"`
+	Licence       string  `json:"licence"`
+	LicenceUrl    string  `json:"licence_url"`
 }
 
 type Resumable struct {
@@ -68,7 +68,7 @@ type Resumable struct {
 
 type uploadComplete struct {
 	State string `json:"state"`
-	ETag string `json:"etag"`
+	ETag  string `json:"etag"`
 }
 
 type jsonError struct {
@@ -127,7 +127,7 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 
 	uc := uploadComplete{
 		State: "UPLOADED",
-		ETag: strings.Trim(response.Etag, "\""),
+		ETag:  strings.Trim(response.Etag, "\""),
 	}
 
 	if response.AllPartsUploaded {

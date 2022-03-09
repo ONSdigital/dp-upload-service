@@ -15,14 +15,14 @@ import (
 )
 
 type Metadata struct {
-	Path          string `schema:"path" validate:"required,aws-upload-key"`
-	IsPublishable *bool  `schema:"isPublishable,omitempty" validate:"required"`
-	CollectionId  string `schema:"collectionId" validate:"required"`
-	Title         string `schema:"title"`
-	SizeInBytes   int    `schema:"resumableTotalSize" validate:"required"`
-	Type          string `schema:"resumableType" validate:"required"`
-	Licence       string `schema:"licence" validate:"required"`
-	LicenceUrl    string `schema:"licenceUrl" validate:"required"`
+	Path          string  `schema:"path" validate:"required,aws-upload-key"`
+	IsPublishable *bool   `schema:"isPublishable,omitempty" validate:"required"`
+	CollectionId  *string `schema:"collectionId,omitempty"`
+	Title         string  `schema:"title"`
+	SizeInBytes   int     `schema:"resumableTotalSize" validate:"required"`
+	Type          string  `schema:"resumableType" validate:"required"`
+	Licence       string  `schema:"licence" validate:"required"`
+	LicenceUrl    string  `schema:"licenceUrl" validate:"required"`
 }
 
 type StoreFile func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, content []byte) (bool, error)
