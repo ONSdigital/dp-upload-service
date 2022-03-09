@@ -96,7 +96,7 @@ func TestPathValid(t *testing.T) {
 	formWriter := multipart.NewWriter(b)
 	formWriter.WriteField("resumableFilename", "file.csv")
 	formWriter.WriteField("path", "\\x")
-	formWriter.WriteField("isPublishable", "true")
+	formWriter.WriteField("isPublishable", "false")
 	formWriter.WriteField("collectionId", "1234567890")
 	formWriter.WriteField("title", "A New File")
 	formWriter.WriteField("resumableTotalSize", "1478")
@@ -116,6 +116,33 @@ func TestPathValid(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	response, _ := ioutil.ReadAll(rec.Body)
 	assert.Contains(t, string(response), "Path aws-upload-key")
+}
+
+func TestIsPublishableSetToFalseInNotARequireFailure(t *testing.T) {
+	b := &bytes.Buffer{}
+	formWriter := multipart.NewWriter(b)
+	formWriter.WriteField("resumableFilename", "path.csv")
+	formWriter.WriteField("path", "valid")
+	formWriter.WriteField("isPublishable", "false")
+	formWriter.WriteField("collectionId", "1234567890")
+	formWriter.WriteField("title", "A New File")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
+	formWriter.WriteField("licence", "OGL v3")
+	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
+	formWriter.Close()
+
+	rec := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
+	req.Header.Set("Content-Type", formWriter.FormDataContentType())
+
+	h := api.CreateV1UploadHandler(stubStoreFunction)
+
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	assert.NotContains(t, string(response), "IsPublishable required")
 }
 
 func TestTypeValid(t *testing.T) {

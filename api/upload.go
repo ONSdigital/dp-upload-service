@@ -3,10 +3,11 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/ONSdigital/dp-upload-service/files"
 	"io/ioutil"
 	"net/http"
 	"regexp"
+
+	"github.com/ONSdigital/dp-upload-service/files"
 
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gabriel-vasile/mimetype"
@@ -16,7 +17,7 @@ import (
 
 type Metadata struct {
 	Path          string `schema:"path" validate:"required,aws-upload-key"`
-	IsPublishable bool   `schema:"isPublishable" validate:"required"`
+	IsPublishable *bool  `schema:"isPublishable,omitempty" validate:"required"`
 	CollectionId  string `schema:"collectionId" validate:"required"`
 	Title         string `schema:"title"`
 	SizeInBytes   int    `schema:"resumableTotalSize" validate:"required"`
@@ -128,7 +129,7 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 func getStoreMetadata(metadata Metadata, resumable files.Resumable) files.StoreMetadata {
 	return files.StoreMetadata{
 		Path:          fmt.Sprintf("%s/%s", metadata.Path, resumable.FileName),
-		IsPublishable: metadata.IsPublishable,
+		IsPublishable: *metadata.IsPublishable,
 		CollectionId:  metadata.CollectionId,
 		Title:         metadata.Title,
 		SizeInBytes:   metadata.SizeInBytes,
