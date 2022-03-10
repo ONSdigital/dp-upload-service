@@ -84,7 +84,6 @@ func TestRequiredFields(t *testing.T) {
 
 	assert.Contains(t, string(response), "Path required")
 	assert.Contains(t, string(response), "IsPublishable required")
-	assert.Contains(t, string(response), "CollectionId required")
 	assert.Contains(t, string(response), "SizeInBytes required")
 	assert.Contains(t, string(response), "SizeInBytes required")
 	assert.Contains(t, string(response), "Type required")
