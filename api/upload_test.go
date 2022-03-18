@@ -44,7 +44,7 @@ func (s UploadTestSuite) TestJsonProvidedRatherThanMultiPartFrom() {
 	h.ServeHTTP(rec, req)
 	s.Equal(http.StatusBadRequest, rec.Code)
 	response, _ := ioutil.ReadAll(rec.Body)
-	s.Contains(string(response), "error parsing form")
+	s.Contains(string(response), "ParsingForm")
 }
 
 func (s UploadTestSuite) TestFailureToWriteErrorToResponse() {
@@ -113,7 +113,7 @@ func (s UploadTestSuite) TestFileWasSupplied() {
 
 	s.Equal(http.StatusBadRequest, rec.Code)
 	response, _ := ioutil.ReadAll(rec.Body)
-	s.Contains(string(response), "error getting file from form")
+	s.Contains(string(response), "FileForm")
 }
 
 func (s UploadTestSuite) TestSuccessfulStorageOfCompleteFileReturns201() {

@@ -14,8 +14,10 @@ import (
 	"github.com/gorilla/schema"
 )
 
-const maxChunkSize = 5
-const maxMultipartMemory = (maxChunkSize + 1) * 1024 * 1024
+const (
+	maxChunkSize       = 5 * 1024 * 1024
+	maxMultipartMemory = maxChunkSize + 1024
+)
 
 type Metadata struct {
 	Path          string  `schema:"path" validate:"required,aws-upload-key"`
@@ -30,35 +32,28 @@ type Metadata struct {
 
 type StoreFile func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, content []byte) (bool, error)
 
-func awsUploadKeyValidator(fl validator.FieldLevel) bool {
-	path := fl.Field().String()
-	matched, _ := regexp.MatchString("^[a-z0-9A-Z\\/\\!\\*\\_\\'\\(\\)\\.\\-]*$", path)
-
-	return matched
-}
-
 func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if err := req.ParseMultipartForm(maxMultipartMemory); err != nil {
 			log.Error(req.Context(), "error parsing form", err)
-			writeError(w, buildErrors(err, "error parsing form"), http.StatusBadRequest)
+			writeError(w, buildErrors(err, "ParsingForm"), http.StatusBadRequest)
 			return
 		}
 
-		metadata := Metadata{}
-
 		d := schema.NewDecoder()
 		d.IgnoreUnknownKeys(true)
+
+		metadata := Metadata{}
 		if err := d.Decode(&metadata, req.Form); err != nil {
 			log.Error(req.Context(), "error decoding metadata form", err)
-			writeError(w, buildErrors(err, "error decoding metadata form"), http.StatusBadRequest)
+			writeError(w, buildErrors(err, "DecodingMetadata"), http.StatusBadRequest)
 			return
 		}
 
 		resumable := files.Resumable{}
 		if err := d.Decode(&resumable, req.Form); err != nil {
 			log.Error(req.Context(), "error decoding resumable form", err)
-			writeError(w, buildErrors(err, "error decoding resumable form"), http.StatusBadRequest)
+			writeError(w, buildErrors(err, "DecodingResumable"), http.StatusBadRequest)
 			return
 		}
 
@@ -74,7 +69,7 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 		content, _, err := req.FormFile("file")
 		if err != nil {
 			log.Error(req.Context(), "error getting file from form", err)
-			writeError(w, buildErrors(err, "error getting file from form"), http.StatusBadRequest)
+			writeError(w, buildErrors(err, "FileForm"), http.StatusBadRequest)
 			return
 		}
 		defer content.Close()
@@ -86,9 +81,7 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			return
 		}
 
-		storeMetadata := getStoreMetadata(metadata, resumable)
-
-		allPartsUploaded, err := storeFile(req.Context(), storeMetadata, resumable, payload)
+		allPartsUploaded, err := storeFile(req.Context(), getStoreMetadata(metadata, resumable), resumable, payload)
 		if err != nil {
 			switch err {
 			case files.ErrFilesAPIDuplicateFile:
@@ -100,20 +93,26 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			default:
 				writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 			}
-
 			return
 		}
 
-		var header int
-
-		if allPartsUploaded {
-			header = http.StatusCreated
-		} else {
-			header = http.StatusOK
-		}
-
-		w.WriteHeader(header)
+		w.WriteHeader(getResponseStatus(allPartsUploaded))
 	}
+}
+
+func awsUploadKeyValidator(fl validator.FieldLevel) bool {
+	path := fl.Field().String()
+	matched, _ := regexp.MatchString("^[a-z0-9A-Z\\/\\!\\*\\_\\'\\(\\)\\.\\-]*$", path)
+
+	return matched
+}
+
+func getResponseStatus(allPartsUploaded bool) int {
+	if allPartsUploaded {
+		return http.StatusCreated
+	}
+
+	return http.StatusOK
 }
 
 func getStoreMetadata(metadata Metadata, resumable files.Resumable) files.StoreMetadata {
@@ -127,14 +126,4 @@ func getStoreMetadata(metadata Metadata, resumable files.Resumable) files.StoreM
 		Licence:       metadata.Licence,
 		LicenceUrl:    metadata.LicenceUrl,
 	}
-}
-
-func buildValidationErrors(validationErrs validator.ValidationErrors) jsonErrors {
-	jsonErrs := jsonErrors{Error: []jsonError{}}
-
-	for _, validationErr := range validationErrs {
-		desc := fmt.Sprintf("%s %s", validationErr.Field(), validationErr.Tag())
-		jsonErrs.Error = append(jsonErrs.Error, jsonError{Code: "ValidationError", Description: desc})
-	}
-	return jsonErrs
 }
