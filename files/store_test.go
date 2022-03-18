@@ -40,7 +40,7 @@ func (s *StoreSuite) SetupTest() {
 	}
 	s.mockVault = &mock.VaultClienterMock{
 		ReadKeyFunc: func(path string, key string) (string, error) {
-			return "testing", nil
+			return "123456789123456789", nil
 		},
 		WriteKeyFunc: func(path string, key string, value string) error {
 			return nil
@@ -149,6 +149,18 @@ func (s *StoreSuite) TestErrorReadingEncryptionKeyFromValue() {
 	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
 
 	s.Equal(files.ErrVaultRead, err)
+}
+
+func (s *StoreSuite) TestEncryptionKeyContainsNonHexCharacters() {
+	s.mockVault.ReadKeyFunc = func(path string, key string) (string, error) {
+		return "NON HEX CHARACTERS", nil
+	}
+
+	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
+
+	s.Equal(files.ErrInvalidEncryptionKey, err)
 }
 
 func (s StoreSuite) TestUploadPartReturnsAnError() {

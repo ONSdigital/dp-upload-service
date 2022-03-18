@@ -35,6 +35,7 @@ var (
 	ErrChunkTooSmall            = errors.New("chunk size below minimum 5MB")
 	ErrVaultWrite               = errors.New("failed to write to vault")
 	ErrVaultRead                = errors.New("failed to read from vault")
+	ErrInvalidEncryptionKey     = errors.New("encryption key invalid")
 )
 
 type Store struct {
@@ -104,7 +105,11 @@ func (s Store) getEncryptionKey(ctx context.Context, filepath string) ([]byte, e
 		return nil, ErrVaultRead
 	}
 
-	encryptionKey, _ := hex.DecodeString(strKey)
+	encryptionKey, err := hex.DecodeString(strKey)
+	if err != nil {
+		log.Error(ctx, "encryption key contains non-hexadecimal characters", err, log.Data{"key": strKey})
+		return nil, ErrInvalidEncryptionKey
+	}
 	return encryptionKey, nil
 }
 
