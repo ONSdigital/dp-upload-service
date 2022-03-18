@@ -14,6 +14,9 @@ import (
 	"github.com/gorilla/schema"
 )
 
+const maxChunkSize = 5
+const maxMultipartMemory = (maxChunkSize + 1) * 1024 * 1024
+
 type Metadata struct {
 	Path          string  `schema:"path" validate:"required,aws-upload-key"`
 	IsPublishable *bool   `schema:"isPublishable,omitempty" validate:"required"`
@@ -36,7 +39,7 @@ func awsUploadKeyValidator(fl validator.FieldLevel) bool {
 
 func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		if err := req.ParseMultipartForm(4); err != nil {
+		if err := req.ParseMultipartForm(maxMultipartMemory); err != nil {
 			log.Error(req.Context(), "error parsing form", err)
 			writeError(w, buildErrors(err, "error parsing form"), http.StatusBadRequest)
 			return
