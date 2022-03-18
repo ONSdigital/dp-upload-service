@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/stretchr/testify/suite"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"github.com/ONSdigital/dp-upload-service/files"
 
 	"github.com/ONSdigital/dp-upload-service/api"
-	"github.com/stretchr/testify/assert"
 )
 
 var stubStoreFunction = func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, c []byte) (bool, error) {
@@ -22,18 +22,216 @@ var stubStoreFunction = func(ctx context.Context, uf files.StoreMetadata, r file
 
 const UploadURI = "/upload-new"
 
-func TestJsonProvidedRatherThanMultiPartFrom(t *testing.T) {
-	buf := bytes.NewBufferString(`{"key": "value"}`)
+var rec *httptest.ResponseRecorder
 
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, buf)
+type UploadTestSuite struct {
+	suite.Suite
+}
+
+func TestUploadTestSuite(t *testing.T) {
+	suite.Run(t, new(UploadTestSuite))
+}
+
+func (suite *UploadTestSuite) SetupTest() {
+	rec = httptest.NewRecorder()
+}
+
+func (s UploadTestSuite) TestJsonProvidedRatherThanMultiPartFrom() {
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, bytes.NewBufferString(`{"key": "value"}`))
 
 	h := api.CreateV1UploadHandler(stubStoreFunction)
 
 	h.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	s.Equal(http.StatusBadRequest, rec.Code)
 	response, _ := ioutil.ReadAll(rec.Body)
-	assert.Contains(t, string(response), "error parsing form")
+	s.Contains(string(response), "error parsing form")
+}
+
+func (s UploadTestSuite) TestFailureToWriteErrorToResponse() {
+	rec := &ErrorWriter{}
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, bytes.NewBufferString(`{"key": "value"}`))
+
+	h := api.CreateV1UploadHandler(stubStoreFunction)
+
+	h.ServeHTTP(rec, req)
+
+	s.Equal(http.StatusInternalServerError, rec.status)
+}
+
+func (s UploadTestSuite) TestRequiredFields() {
+	b := &bytes.Buffer{}
+	formWriter := multipart.NewWriter(b)
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(stubStoreFunction)
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusBadRequest, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+
+	s.Contains(string(response), "Path required")
+	s.Contains(string(response), "IsPublishable required")
+	s.Contains(string(response), "SizeInBytes required")
+	s.Contains(string(response), "SizeInBytes required")
+	s.Contains(string(response), "Type required")
+	s.Contains(string(response), "Licence required")
+	s.Contains(string(response), "LicenceUrl required")
+}
+
+func (s UploadTestSuite) TestPathValid() {
+	b, formWriter := generateFormWriter("\\x")
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(stubStoreFunction)
+
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusBadRequest, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	s.Contains(string(response), "Path aws-upload-key")
+}
+
+func (s UploadTestSuite) TestIsPublishableSetToFalseInNotARequireFailure() {
+	b, formWriter := generateFormWriter("valid")
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(stubStoreFunction)
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusBadRequest, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	s.NotContains(string(response), "IsPublishable required")
+}
+
+func (s UploadTestSuite) TestFileWasSupplied() {
+	b, formWriter := generateFormWriter("valid")
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(stubStoreFunction)
+
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusBadRequest, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	s.Contains(string(response), "error getting file from form")
+}
+
+func (s UploadTestSuite) TestSuccessfulStorageOfCompleteFileReturns201() {
+	payload := "TEST DATA"
+	funcCalled := false
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+		funcCalled = true
+		s.Equal(payload, string(fileContent))
+		return true, nil
+	}
+
+	b, formWriter := generateFormWriter("valid")
+	part, _ := formWriter.CreateFormFile("file", "testing.csv")
+	part.Write([]byte(payload))
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(st)
+
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusCreated, rec.Code)
+	s.True(funcCalled)
+}
+
+func (s UploadTestSuite) TestChunkTooSmallReturns400() {
+	payload := "TEST DATA"
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+		return true, files.ErrChunkTooSmall
+	}
+
+	b, formWriter := generateFormWriter("valid")
+	part, _ := formWriter.CreateFormFile("file", "testing.csv")
+	part.Write([]byte(payload))
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(st)
+
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
+	req.Header.Set("Content-Type", formWriter.FormDataContentType())
+
+	h.ServeHTTP(rec, req)
+
+	s.Equal(http.StatusBadRequest, rec.Code)
+}
+
+func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+		return false, files.ErrFilesAPIDuplicateFile
+	}
+
+	b, formWriter := generateFormWriter("valid")
+	part, _ := formWriter.CreateFormFile("file", "testing.csv")
+	part.Write([]byte("TEST DATA"))
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(st)
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusBadRequest, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	s.Contains(string(response), "DuplicateFile")
+}
+
+func (s UploadTestSuite) TestInvalidContentReturns500() {
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+		return false, files.ErrFileAPICreateInvalidData
+	}
+
+	b, formWriter := generateFormWriter("valid")
+	part, _ := formWriter.CreateFormFile("file", "testing.csv")
+	part.Write([]byte("TEST DATA"))
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(st)
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusInternalServerError, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	s.Contains(string(response), "RemoteValidationError")
+}
+
+func (s UploadTestSuite) TestUnexpectedErrorReturns500() {
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+		return false, errors.New("its broken")
+	}
+
+	b, formWriter := generateFormWriter("valid")
+	part, _ := formWriter.CreateFormFile("file", "testing.csv")
+	part.Write([]byte("TEST DATA"))
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(st)
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusInternalServerError, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	s.Contains(string(response), "InternalError")
+}
+
+func generateFormWriter(path string) (*bytes.Buffer, *multipart.Writer) {
+	b := &bytes.Buffer{}
+	formWriter := multipart.NewWriter(b)
+	formWriter.WriteField("resumableFilename", "file.csv")
+	formWriter.WriteField("path", path)
+	formWriter.WriteField("isPublishable", "false")
+	formWriter.WriteField("collectionId", "1234567890")
+	formWriter.WriteField("title", "A New File")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
+	formWriter.WriteField("licence", "OGL v3")
+	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
+	return b, formWriter
+}
+
+func generateRequest(b *bytes.Buffer, formWriter *multipart.Writer) *http.Request {
+	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
+	req.Header.Set("Content-Type", formWriter.FormDataContentType())
+	return req
 }
 
 type ErrorWriter struct {
@@ -50,292 +248,4 @@ func (e *ErrorWriter) Write(i []byte) (int, error) {
 
 func (e *ErrorWriter) WriteHeader(statusCode int) {
 	e.status = statusCode
-}
-
-func TestFailureToWriteErrorToResponse(t *testing.T) {
-	buf := bytes.NewBufferString(`{"key": "value"}`)
-
-	rec := &ErrorWriter{}
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, buf)
-
-	h := api.CreateV1UploadHandler(stubStoreFunction)
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusInternalServerError, rec.status)
-}
-
-func TestRequiredFields(t *testing.T) {
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-
-	formWriter.Close()
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-
-	h := api.CreateV1UploadHandler(stubStoreFunction)
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
-
-	assert.Contains(t, string(response), "Path required")
-	assert.Contains(t, string(response), "IsPublishable required")
-	assert.Contains(t, string(response), "SizeInBytes required")
-	assert.Contains(t, string(response), "SizeInBytes required")
-	assert.Contains(t, string(response), "Type required")
-	assert.Contains(t, string(response), "Licence required")
-	assert.Contains(t, string(response), "LicenceUrl required")
-}
-
-func TestPathValid(t *testing.T) {
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "file.csv")
-	formWriter.WriteField("path", "\\x")
-	formWriter.WriteField("isPublishable", "false")
-	formWriter.WriteField("collectionId", "1234567890")
-	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("resumableTotalSize", "1478")
-	formWriter.WriteField("resumableType", "text/csv")
-	formWriter.WriteField("licence", "OGL v3")
-	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
-	formWriter.Close()
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-
-	h := api.CreateV1UploadHandler(stubStoreFunction)
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
-	assert.Contains(t, string(response), "Path aws-upload-key")
-}
-
-func TestIsPublishableSetToFalseInNotARequireFailure(t *testing.T) {
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "path.csv")
-	formWriter.WriteField("path", "valid")
-	formWriter.WriteField("isPublishable", "false")
-	formWriter.WriteField("collectionId", "1234567890")
-	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("resumableTotalSize", "1478")
-	formWriter.WriteField("resumableType", "text/csv")
-	formWriter.WriteField("licence", "OGL v3")
-	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
-	formWriter.Close()
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-
-	h := api.CreateV1UploadHandler(stubStoreFunction)
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
-	assert.NotContains(t, string(response), "IsPublishable required")
-}
-
-func TestFileWasSupplied(t *testing.T) {
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "path.csv")
-	formWriter.WriteField("path", "valid")
-	formWriter.WriteField("isPublishable", "true")
-	formWriter.WriteField("collectionId", "1234567890")
-	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("resumableTotalSize", "1478")
-	formWriter.WriteField("resumableType", "text/csv")
-	formWriter.WriteField("licence", "OGL v3")
-	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
-	formWriter.Close()
-
-	h := api.CreateV1UploadHandler(stubStoreFunction)
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
-	assert.Contains(t, string(response), "error getting file from form")
-}
-
-func TestSuccessfulStorageOfCompleteFileReturns201(t *testing.T) {
-	payload := "TEST DATA"
-	funcCalled := false
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
-		funcCalled = true
-		assert.Equal(t, payload, string(fileContent))
-		return true, nil
-	}
-
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "path.csv")
-	formWriter.WriteField("path", "valid")
-	formWriter.WriteField("isPublishable", "true")
-	formWriter.WriteField("collectionId", "1234567890")
-	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("resumableTotalSize", "1478")
-	formWriter.WriteField("resumableType", "text/csv")
-	formWriter.WriteField("licence", "OGL v3")
-	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
-	part, _ := formWriter.CreateFormFile("file", "testing.csv")
-	part.Write([]byte(payload))
-	formWriter.Close()
-
-	h := api.CreateV1UploadHandler(st)
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusCreated, rec.Code)
-	assert.True(t, funcCalled)
-}
-
-func TestChunkTooSmallReturns400(t *testing.T) {
-	payload := "TEST DATA"
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
-		return true, files.ErrChunkTooSmall
-	}
-
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "path.csv")
-	formWriter.WriteField("path", "valid")
-	formWriter.WriteField("isPublishable", "true")
-	formWriter.WriteField("collectionId", "1234567890")
-	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("resumableTotalSize", "1478")
-	formWriter.WriteField("resumableType", "text/csv")
-	formWriter.WriteField("licence", "OGL v3")
-	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
-	part, _ := formWriter.CreateFormFile("file", "testing.csv")
-	part.Write([]byte(payload))
-	formWriter.Close()
-
-	h := api.CreateV1UploadHandler(st)
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-}
-
-func TestFilePathExistsInFilesAPIReturns409(t *testing.T) {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
-		return false, files.ErrFilesAPIDuplicateFile
-	}
-
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "path.csv")
-	formWriter.WriteField("path", "valid")
-	formWriter.WriteField("isPublishable", "true")
-	formWriter.WriteField("collectionId", "1234567890")
-	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("resumableTotalSize", "1478")
-	formWriter.WriteField("resumableType", "text/csv")
-	formWriter.WriteField("licence", "OGL v3")
-	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
-	part, _ := formWriter.CreateFormFile("file", "testing.csv")
-	part.Write([]byte("TEST DATA"))
-	formWriter.Close()
-
-	h := api.CreateV1UploadHandler(st)
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
-	assert.Contains(t, string(response), "DuplicateFile")
-}
-
-func TestInvalidContentReturns500(t *testing.T) {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
-		return false, files.ErrFileAPICreateInvalidData
-	}
-
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "path.csv")
-	formWriter.WriteField("path", "valid")
-	formWriter.WriteField("isPublishable", "true")
-	formWriter.WriteField("collectionId", "1234567890")
-	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("resumableTotalSize", "1478")
-	formWriter.WriteField("resumableType", "text/csv")
-	formWriter.WriteField("licence", "OGL v3")
-	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
-	part, _ := formWriter.CreateFormFile("file", "testing.csv")
-	part.Write([]byte("TEST DATA"))
-	formWriter.Close()
-
-	h := api.CreateV1UploadHandler(st)
-
-	rec := httptest.NewRecorder()
-
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
-	assert.Contains(t, string(response), "RemoteValidationError")
-}
-
-func TestUnexpectedErrorReturns500(t *testing.T) {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
-		return false, errors.New("its broken")
-	}
-
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "path.csv")
-	formWriter.WriteField("path", "valid")
-	formWriter.WriteField("isPublishable", "true")
-	formWriter.WriteField("collectionId", "1234567890")
-	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("resumableTotalSize", "1478")
-	formWriter.WriteField("resumableType", "text/csv")
-	formWriter.WriteField("licence", "OGL v3")
-	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
-	part, _ := formWriter.CreateFormFile("file", "testing.csv")
-	part.Write([]byte("TEST DATA"))
-	formWriter.Close()
-
-	h := api.CreateV1UploadHandler(st)
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
-	assert.Contains(t, string(response), "InternalError")
 }
