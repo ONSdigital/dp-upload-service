@@ -339,36 +339,3 @@ func TestUnexpectedErrorReturns500(t *testing.T) {
 	response, _ := ioutil.ReadAll(rec.Body)
 	assert.Contains(t, string(response), "InternalError")
 }
-
-func TestSetsStatusCodeContinueWhenIncludedInRequestHeader(t *testing.T) {
-	payload := "TEST DATA"
-	storeFile := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
-		return false, nil
-	}
-
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-	formWriter.WriteField("resumableFilename", "path.csv")
-	formWriter.WriteField("path", "valid")
-	formWriter.WriteField("isPublishable", "true")
-	formWriter.WriteField("collectionId", "1234567890")
-	formWriter.WriteField("title", "A New File")
-	formWriter.WriteField("resumableTotalSize", "1478")
-	formWriter.WriteField("resumableType", "text/csv")
-	formWriter.WriteField("licence", "OGL v3")
-	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
-	part, _ := formWriter.CreateFormFile("file", "testing.csv")
-	part.Write([]byte(payload))
-	formWriter.Close()
-
-	h := api.CreateV1UploadHandler(storeFile)
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, UploadURI, b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-	req.Header.Set("Expect", "100-continue")
-
-	h.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusContinue, rec.Code)
-}
