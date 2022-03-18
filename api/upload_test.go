@@ -36,7 +36,7 @@ func (suite *UploadTestSuite) SetupTest() {
 	rec = httptest.NewRecorder()
 }
 
-func (s UploadTestSuite) TestJsonProvidedRatherThanMultiPartFrom() {
+func (s UploadTestSuite) TestJsonProvidedRatherThanMultiPartForm() {
 	req, _ := http.NewRequest(http.MethodPost, UploadURI, bytes.NewBufferString(`{"key": "value"}`))
 
 	h := api.CreateV1UploadHandler(stubStoreFunction)

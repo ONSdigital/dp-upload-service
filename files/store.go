@@ -107,7 +107,7 @@ func (s Store) getEncryptionKey(ctx context.Context, filepath string) ([]byte, e
 
 	encryptionKey, err := hex.DecodeString(strKey)
 	if err != nil {
-		log.Error(ctx, "encryption key contains non-hexadecimal characters", err, log.Data{"key": strKey})
+		log.Error(ctx, "encryption key contains non-hexadecimal characters", err, log.Data{"vault-path": s.getVaultPath(filepath), "vault-encryptionkey": vaultKey})
 		return nil, ErrInvalidEncryptionKey
 	}
 	return encryptionKey, nil
