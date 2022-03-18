@@ -5,13 +5,11 @@ Digital Publishing resumable file upload service that handles on-the-fly encrypt
 
 ### Getting started
 
-* Run `make debug`
+* Run `make docker-local`
+* Run (inside container) `make debug`
 
-Please note that encryption is enabled by default. To disable it set `ENCRYPTION_DISABLED=true`. If you wish to run with encryption
-enabled, you will need vault running locally:
-
-- Run `brew install vault`
-- Run `vault server -dev`
+Please note that encryption is enabled by default. To disable it set `ENCRYPTION_DISABLED=true`. If you wish to run with encryption enabled, 
+encryption is always enabled for the `/upload-new` endpoint
 
 ### Dependencies
 
