@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 
+	dphttp "github.com/ONSdigital/dp-net/http"
+
 	"github.com/ONSdigital/log.go/v2/log"
 
 	"github.com/ONSdigital/dp-upload-service/encryption"
@@ -57,7 +59,7 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 	var err error
 
 	if firstChunk(resumable.CurrentChunk) {
-		if err = s.registerFileUpload(metadata); err != nil {
+		if err = s.registerFileUpload(ctx, metadata); err != nil {
 			log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
 			return false, err
 		}
@@ -134,11 +136,10 @@ func (s Store) generateUploadPart(metadata StoreMetadata, resumable Resumable) *
 func (s Store) markUploadComplete(ctx context.Context, path, etag string) error {
 	uc := uploadComplete{StateUploaded, strings.Trim(etag, "\"")}
 
-	client := &http.Client{}
 	req, _ := http.NewRequest(http.MethodPatch, fmt.Sprintf("%s/files/%s", s.hostname, path), jsonEncode(uc))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := client.Do(req)
+	resp, err := dphttp.DefaultClient.Do(ctx, req)
 
 	logData := log.Data{"upload-complete": uc, "request": req, "response": resp}
 	if err != nil {
@@ -170,11 +171,15 @@ func (s Store) markUploadComplete(ctx context.Context, path, etag string) error 
 	}
 }
 
-func (s Store) registerFileUpload(metadata StoreMetadata) error {
-	log.Info(context.Background(), "Register files API Call", log.Data{"hostname": s.hostname})
-	resp, err := http.Post(fmt.Sprintf("%s/files", s.hostname), "application/json", jsonEncode(metadata))
+func (s Store) registerFileUpload(ctx context.Context, metadata StoreMetadata) error {
+	log.Info(ctx, "Register files API Call", log.Data{"hostname": s.hostname})
+
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/files", s.hostname), jsonEncode(metadata))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := dphttp.DefaultClient.Do(ctx, req)
 	if err != nil {
-		log.Error(context.Background(), "failed to connect to files API", err, log.Data{"hostname": s.hostname})
+		log.Error(ctx, "failed to connect to files API", err, log.Data{"hostname": s.hostname})
 		return ErrConnectingToFilesApi
 	}
 
