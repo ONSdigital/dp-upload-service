@@ -156,6 +156,14 @@ func (s Store) markUploadComplete(ctx context.Context, path, etag string) error 
 		err := ErrFileStateConflict
 		log.Error(ctx, "file in wrong state to be marked uploaded", err, logData)
 		return err
+	} else if resp.StatusCode == http.StatusInternalServerError {
+		err := ErrFilesServer
+		log.Error(ctx, "file api returning internal server errors", err, logData)
+		return err
+	} else if resp.StatusCode == http.StatusForbidden {
+		err := ErrFilesUnauthorised
+		log.Error(ctx, "unauthorised access", err, logData)
+		return err
 	} else if resp.StatusCode != http.StatusOK {
 		err := ErrUnknownError
 		log.Error(ctx, "unexpected error morning file uploaded", err, logData)

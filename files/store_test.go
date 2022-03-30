@@ -239,6 +239,24 @@ func (s StoreSuite) TestReturnsConflictWhenFileInUnexpectedState() {
 	s.Equal(files.ErrFileStateConflict, err)
 }
 
+func (s StoreSuite) TestReturnsFileServerErrorWhenFileInteralServerError() {
+	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusInternalServerError)
+
+	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
+	s.Equal(files.ErrFilesServer, err)
+}
+
+func (s StoreSuite) TestReturnsAuthenticationErrorWhenFileForbidden() {
+	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusForbidden)
+
+	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
+	s.Equal(files.ErrFilesUnauthorised, err)
+}
+
 func (s StoreSuite) TestUploadCompleteUnknownError() {
 	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusTeapot)
 
