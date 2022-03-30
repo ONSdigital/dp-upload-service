@@ -76,30 +76,6 @@ Feature: Uploading a file
         """
     But the file should not be marked as uploaded
 
-  Scenario: File upload is marked as started when first chunk is uploaded
-    When I upload the file "features/countries.csv" with the following form resumable parameters:
-      | resumableFilename    | countries.csv      |
-      | resumableType        | text/csv           |
-      | resumableTotalChunks | 2                  |
-      | resumableChunkNumber | 1                  |
-      | path                 | data               |
-    Then the HTTP status code should be "200"
-    And the file upload should be marked as started using payload:
-        """
-        {
-        "path": "data/countries.csv",
-        "is_publishable": true,
-        "collection_id": "1234-asdfg-54321-qwerty",
-        "title": "The number of people",
-        "size_in_bytes": 14794,
-        "type": "text/csv",
-        "licence": "OGL v3",
-        "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
-        }
-        """
-    But the file should not be marked as uploaded
-
-
   Scenario: File ends up in bucket as result of uploading second chunk
     Given the 1st part of the file "features/countries.csv" has been uploaded with resumable parameters:
       | resumableFilename    | countries.csv      |

@@ -195,9 +195,9 @@ func (s UploadTestSuite) TestInvalidContentReturns500() {
 	s.Contains(string(response), "RemoteValidationError")
 }
 
-func (s UploadTestSuite) TestUnexpectedErrorReturns500() {
+func (s UploadTestSuite) TestServerErrorReturns500() {
 	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
-		return false, errors.New("its broken")
+		return false, files.ErrFilesServer
 	}
 
 	b, formWriter := generateFormWriter("valid")
@@ -210,7 +210,25 @@ func (s UploadTestSuite) TestUnexpectedErrorReturns500() {
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 	response, _ := ioutil.ReadAll(rec.Body)
-	s.Contains(string(response), "InternalError")
+	s.Contains(string(response), "RemoteServerError")
+}
+
+func (s UploadTestSuite) TestFileUnathorisedErrorReturnsForbidden() {
+	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+		return false, files.ErrFilesUnauthorised
+	}
+
+	b, formWriter := generateFormWriter("valid")
+	part, _ := formWriter.CreateFormFile("file", "testing.csv")
+	part.Write([]byte("TEST DATA"))
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(st)
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusForbidden, rec.Code)
+	response, _ := ioutil.ReadAll(rec.Body)
+	s.Contains(string(response), "Unauthorised")
 }
 
 func generateFormWriter(path string) (*bytes.Buffer, *multipart.Writer) {

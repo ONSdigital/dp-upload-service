@@ -36,6 +36,8 @@ var (
 	ErrVaultWrite               = errors.New("failed to write to vault")
 	ErrVaultRead                = errors.New("failed to read from vault")
 	ErrInvalidEncryptionKey     = errors.New("encryption key invalid")
+	ErrFilesServer              = errors.New("file api returning internal server errors")
+	ErrFilesUnauthorised        = errors.New("access unauthorised")
 )
 
 type Store struct {
@@ -190,7 +192,18 @@ func (s Store) registerFileUpload(metadata StoreMetadata) error {
 		}
 
 		return err
+	} else if resp.StatusCode == http.StatusInternalServerError {
+		err := ErrFilesServer
+		return err
+	} else if resp.StatusCode == http.StatusForbidden {
+		err := ErrFilesUnauthorised
+		return err
+	} else if resp.StatusCode != http.StatusCreated {
+		//any other unexpected response code
+		err := ErrUnknownError
+		return err
 	}
+
 	return nil
 }
 

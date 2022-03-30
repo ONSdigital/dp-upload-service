@@ -106,6 +106,42 @@ func (s *StoreSuite) TestFileRegisterReturnsUnknownError() {
 	s.Equal(files.ErrUnknownError, err)
 }
 
+func (s *StoreSuite) TestFileRegisterReturnsInternalServerError() {
+	s.fakeFilesApi.NewHandler().
+		Post("/files").
+		Reply(http.StatusInternalServerError).
+		Body([]byte(`{"errors": [{"code": "BROKEN", "description": "nothing is working"}]}`))
+
+	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
+	s.Equal(files.ErrFilesServer, err)
+}
+
+func (s *StoreSuite) TestFileRegisterReturnsUnexpectedError() {
+	s.fakeFilesApi.NewHandler().
+		Post("/files").
+		Reply(http.StatusTeapot).
+		Body([]byte("we're all mad down here"))
+
+	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
+	s.Equal(files.ErrUnknownError, err)
+}
+
+func (s *StoreSuite) TestFileRegisterReturnsForbiddenError() {
+	s.fakeFilesApi.NewHandler().
+		Post("/files").
+		Reply(http.StatusForbidden).
+		Body([]byte(`{"errors": [{"code": "Forbidden", "description": "unauthorised"}]}`))
+
+	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+
+	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
+	s.Equal(files.ErrFilesUnauthorised, err)
+}
+
 func (s *StoreSuite) TestFileRegisterReturnsMalformedJSON() {
 	s.fakeFilesApi.NewHandler().
 		Post("/files").

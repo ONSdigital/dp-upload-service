@@ -87,8 +87,13 @@ func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) 
 	requests = make(map[string]string)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
-		requests[fmt.Sprintf("%s|%s",r.URL.Path, r.Method)] = string(body)
-		w.WriteHeader(http.StatusOK)
+		requests[fmt.Sprintf("%s|%s", r.URL.Path, r.Method)] = string(body)
+
+		if r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusCreated)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
 	}))
 
 	os.Setenv("FILES_API_URL", s.URL)
@@ -263,7 +268,7 @@ func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(fi
 }
 
 func (c *UploadComponent) theFileUploadOfShouldBeMarkedAsStartedUsingPayload(expectedFilesPayload *godog.DocString) error {
-	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests[fmt.Sprintf("%s|%s",filesURI, http.MethodPost)])
+	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests[fmt.Sprintf("%s|%s", filesURI, http.MethodPost)])
 
 	return c.ApiFeature.StepError()
 }

@@ -90,6 +90,10 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 				writeError(w, buildErrors(err, "RemoteValidationError"), http.StatusInternalServerError)
 			case files.ErrChunkTooSmall:
 				writeError(w, buildErrors(err, "ChunkTooSmall"), http.StatusBadRequest)
+			case files.ErrFilesServer:
+				writeError(w, buildErrors(err, "RemoteServerError"), http.StatusInternalServerError)
+			case files.ErrFilesUnauthorised:
+				writeError(w, buildErrors(err, "Unauthorised"), http.StatusForbidden)
 			default:
 				writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 			}
