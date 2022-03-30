@@ -146,73 +146,73 @@ func (s Store) markUploadComplete(ctx context.Context, path, etag string) error 
 		return ErrConnectingToFilesApi
 	}
 
-	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		err := ErrFileNotFound
-		log.Error(ctx, "could not file file to mark uploaded", err, logData)
-		return err
-	} else if resp.StatusCode == http.StatusConflict {
-		err := ErrFileStateConflict
-		log.Error(ctx, "file in wrong state to be marked uploaded", err, logData)
-		return err
-	} else if resp.StatusCode == http.StatusInternalServerError {
+	switch resp.StatusCode {
+	case http.StatusNotFound:
+		log.Error(ctx, "could not file file to mark uploaded", ErrFileNotFound, logData)
+		return ErrFileNotFound
+	case http.StatusConflict:
+		log.Error(ctx, "file in wrong state to be marked uploaded", ErrFileStateConflict, logData)
+		return ErrFileStateConflict
+	case http.StatusInternalServerError:
 		err := ErrFilesServer
 		log.Error(ctx, "file api returning internal server errors", err, logData)
 		return err
-	} else if resp.StatusCode == http.StatusForbidden {
-		err := ErrFilesUnauthorised
-		log.Error(ctx, "unauthorised access", err, logData)
-		return err
-	} else if resp.StatusCode != http.StatusOK {
-		err := ErrUnknownError
-		log.Error(ctx, "unexpected error morning file uploaded", err, logData)
-		return err
+	case http.StatusForbidden:
+		log.Error(ctx, "unauthorised access", ErrFilesUnauthorised, logData)
+		return ErrFilesUnauthorised
+	default:
+		log.Error(ctx, "unexpected error morning file uploaded", ErrUnknownError, logData)
+		return ErrUnknownError
 	}
-
-	return nil
 }
 
 func (s Store) registerFileUpload(metadata StoreMetadata) error {
 	log.Info(context.Background(), "Register files API Call", log.Data{"hostname": s.hostname})
 	resp, err := http.Post(fmt.Sprintf("%s/files", s.hostname), "application/json", jsonEncode(metadata))
 	if err != nil {
-		log.Error(context.Background(), "failed to connect to file API", err, log.Data{"hostname": s.hostname})
+		log.Error(context.Background(), "failed to connect to files API", err, log.Data{"hostname": s.hostname})
 		return ErrConnectingToFilesApi
 	}
 
-	if resp.StatusCode == http.StatusBadRequest {
-		var err error
+	if resp.StatusCode == http.StatusCreated {
+		return nil
+	}
 
-		jsonErrors := jsonErrors{}
-		err = json.NewDecoder(resp.Body).Decode(&jsonErrors)
-		if err != nil {
-			return err
-		}
+	switch resp.StatusCode {
+	case http.StatusInternalServerError:
+		return ErrFilesServer
+	case http.StatusForbidden:
+		return ErrFilesUnauthorised
+	case http.StatusBadRequest:
+		return s.handleBadRequestResponse(resp)
+	default:
+		return ErrUnknownError
+	}
+}
 
-		switch jsonErrors.Error[0].Code {
-		case "DuplicateFileError":
-			err = ErrFilesAPIDuplicateFile
-		case "ValidationError":
-			err = ErrFileAPICreateInvalidData
-		default:
-			err = ErrUnknownError
-		}
+func (s Store) handleBadRequestResponse(resp *http.Response) error {
+	var err error
 
-		return err
-	} else if resp.StatusCode == http.StatusInternalServerError {
-		err := ErrFilesServer
-		return err
-	} else if resp.StatusCode == http.StatusForbidden {
-		err := ErrFilesUnauthorised
-		return err
-	} else if resp.StatusCode != http.StatusCreated {
-		//any other unexpected response code
-		err := ErrUnknownError
+	jsonErrors := jsonErrors{}
+	err = json.NewDecoder(resp.Body).Decode(&jsonErrors)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	switch jsonErrors.Error[0].Code {
+	case "DuplicateFileError":
+		err = ErrFilesAPIDuplicateFile
+	case "ValidationError":
+		err = ErrFileAPICreateInvalidData
+	default:
+		err = ErrUnknownError
+	}
+
+	return err
 }
 
 func jsonEncode(data interface{}) *bytes.Buffer {
