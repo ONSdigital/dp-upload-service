@@ -41,7 +41,9 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			return
 		}
 		authHeaderValue := req.Header.Get(request.AuthHeaderKey)
-		augmentedContext := context.WithValue(req.Context(), request.AuthHeaderKey, authHeaderValue)
+
+		const authContextKey files.ContextKey = request.AuthHeaderKey
+		augmentedContext := context.WithValue(req.Context(), authContextKey, authHeaderValue)
 
 		d := schema.NewDecoder()
 		d.IgnoreUnknownKeys(true)

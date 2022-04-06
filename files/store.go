@@ -42,6 +42,8 @@ var (
 	ErrFilesUnauthorised        = errors.New("access unauthorised")
 )
 
+type ContextKey string
+
 type Store struct {
 	hostname     string
 	s3           upload.S3Clienter
@@ -179,7 +181,9 @@ func (s Store) registerFileUpload(ctx context.Context, metadata StoreMetadata) e
 	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/files", s.hostname), jsonEncode(metadata))
 	req.Header.Set("Content-Type", "application/json")
 
-	authHeaderValue := ctx.Value(request.AuthHeaderKey)
+	const authContextKey ContextKey = request.AuthHeaderKey
+
+	authHeaderValue := ctx.Value(authContextKey)
 	if authHeaderValue != nil {
 		req.Header.Set(request.AuthHeaderKey, authHeaderValue.(string))
 	}
