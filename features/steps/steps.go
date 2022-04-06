@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/ONSdigital/dp-net/v2/request"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -90,7 +91,7 @@ func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) 
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
 		requests[fmt.Sprintf("%s|%s", r.URL.Path, r.Method)] = string(body)
-		requests[fmt.Sprintf("%s|%s|auth", r.URL.Path, r.Method)] = r.Header.Get("Authorization")
+		requests[fmt.Sprintf("%s|%s|auth", r.URL.Path, r.Method)] = r.Header.Get(request.AuthHeaderKey)
 
 		if r.Method == http.MethodPost {
 			w.WriteHeader(http.StatusCreated)

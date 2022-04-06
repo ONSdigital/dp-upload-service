@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/ONSdigital/dp-net/v2/request"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -39,8 +40,8 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			writeError(w, buildErrors(err, "ParsingForm"), http.StatusBadRequest)
 			return
 		}
-		authHeaderValue := req.Header.Get("Authorization")
-		augmentedContext := context.WithValue(req.Context(), "Authorization", authHeaderValue)
+		authHeaderValue := req.Header.Get(request.AuthHeaderKey)
+		augmentedContext := context.WithValue(req.Context(), request.AuthHeaderKey, authHeaderValue)
 
 		d := schema.NewDecoder()
 		d.IgnoreUnknownKeys(true)

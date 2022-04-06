@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	"github.com/ONSdigital/dp-net/v2/request"
 	"net/http"
 	"strings"
 
@@ -178,9 +179,9 @@ func (s Store) registerFileUpload(ctx context.Context, metadata StoreMetadata) e
 	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/files", s.hostname), jsonEncode(metadata))
 	req.Header.Set("Content-Type", "application/json")
 
-	authHeaderValue := ctx.Value("Authorization")
+	authHeaderValue := ctx.Value(request.AuthHeaderKey)
 	if authHeaderValue != nil {
-		req.Header.Set("Authorization", authHeaderValue.(string))
+		req.Header.Set(request.AuthHeaderKey, authHeaderValue.(string))
 	}
 
 	client := dphttp.NewClient()
