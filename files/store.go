@@ -7,10 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	dphttp "github.com/ONSdigital/dp-net/v2/http"
 	"net/http"
 	"strings"
-
-	dphttp "github.com/ONSdigital/dp-net/http"
 
 	"github.com/ONSdigital/log.go/v2/log"
 
@@ -139,7 +138,9 @@ func (s Store) markUploadComplete(ctx context.Context, path, etag string) error 
 	req, _ := http.NewRequest(http.MethodPatch, fmt.Sprintf("%s/files/%s", s.hostname, path), jsonEncode(uc))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := dphttp.DefaultClient.Do(ctx, req)
+	client := dphttp.NewClient()
+
+	resp, err := client.Do(ctx, req)
 
 	logData := log.Data{"upload-complete": uc, "request": req, "response": resp}
 	if err != nil {
@@ -177,7 +178,15 @@ func (s Store) registerFileUpload(ctx context.Context, metadata StoreMetadata) e
 	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/files", s.hostname), jsonEncode(metadata))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := dphttp.DefaultClient.Do(ctx, req)
+	authHeaderValue := ctx.Value("Authorization")
+	if authHeaderValue != nil {
+		req.Header.Set("Authorization", authHeaderValue.(string))
+	}
+
+	client := dphttp.NewClient()
+
+	resp, err := client.Do(ctx, req)
+
 	if err != nil {
 		log.Error(ctx, "failed to connect to files API", err, log.Data{"hostname": s.hostname})
 		return ErrConnectingToFilesApi

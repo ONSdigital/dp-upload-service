@@ -14,7 +14,7 @@ import (
 	"github.com/ONSdigital/dp-upload-service/upload"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	dphttp "github.com/ONSdigital/dp-net/http"
+	dphttp "github.com/ONSdigital/dp-net/v2/http"
 	dps3 "github.com/ONSdigital/dp-s3/v2"
 	dpvault "github.com/ONSdigital/dp-vault"
 )

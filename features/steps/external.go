@@ -9,7 +9,7 @@ import (
 	"github.com/ONSdigital/dp-upload-service/encryption"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	dphttp "github.com/ONSdigital/dp-net/http"
+	dphttp "github.com/ONSdigital/dp-net/v2/http"
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/service"

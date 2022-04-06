@@ -9,13 +9,12 @@ replace github.com/dgrijalva/jwt-go => github.com/dgrijalva/jwt-go v3.2.1-0.2021
 require (
 	github.com/ONSdigital/dp-component-test v0.6.3
 	github.com/ONSdigital/dp-healthcheck v1.2.3
-	github.com/ONSdigital/dp-net v1.2.0
+	github.com/ONSdigital/dp-net/v2 v2.1.0
 	github.com/ONSdigital/dp-s3/v2 v2.0.0-beta.2
 	github.com/ONSdigital/dp-vault v1.1.2
-	github.com/ONSdigital/log.go/v2 v2.0.9
-	github.com/aws/aws-sdk-go v1.42.29
+	github.com/ONSdigital/log.go/v2 v2.1.0
+	github.com/aws/aws-sdk-go v1.42.47
 	github.com/cucumber/godog v0.12.2
-	github.com/gabriel-vasile/mimetype v1.4.0
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/gorilla/mux v1.8.0

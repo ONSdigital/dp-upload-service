@@ -39,20 +39,22 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			writeError(w, buildErrors(err, "ParsingForm"), http.StatusBadRequest)
 			return
 		}
+		authHeaderValue := req.Header.Get("Authorization")
+		augmentedContext := context.WithValue(req.Context(), "Authorization", authHeaderValue)
 
 		d := schema.NewDecoder()
 		d.IgnoreUnknownKeys(true)
 
 		metadata := Metadata{}
 		if err := d.Decode(&metadata, req.Form); err != nil {
-			log.Error(req.Context(), "error decoding metadata form", err)
+			log.Error(augmentedContext, "error decoding metadata form", err)
 			writeError(w, buildErrors(err, "DecodingMetadata"), http.StatusBadRequest)
 			return
 		}
 
 		resumable := files.Resumable{}
 		if err := d.Decode(&resumable, req.Form); err != nil {
-			log.Error(req.Context(), "error decoding resumable form", err)
+			log.Error(augmentedContext, "error decoding resumable form", err)
 			writeError(w, buildErrors(err, "DecodingResumable"), http.StatusBadRequest)
 			return
 		}
@@ -68,7 +70,7 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 
 		content, _, err := req.FormFile("file")
 		if err != nil {
-			log.Error(req.Context(), "error getting file from form", err)
+			log.Error(augmentedContext, "error getting file from form", err)
 			writeError(w, buildErrors(err, "FileForm"), http.StatusBadRequest)
 			return
 		}
@@ -76,12 +78,12 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 
 		payload, err := ioutil.ReadAll(content)
 		if err != nil {
-			log.Error(req.Context(), "error getting file from form", err)
+			log.Error(augmentedContext, "error getting file from form", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		allPartsUploaded, err := storeFile(req.Context(), getStoreMetadata(metadata, resumable), resumable, payload)
+		allPartsUploaded, err := storeFile(augmentedContext, getStoreMetadata(metadata, resumable), resumable, payload)
 		if err != nil {
 			switch err {
 			case files.ErrFilesAPIDuplicateFile:

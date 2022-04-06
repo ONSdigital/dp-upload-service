@@ -39,6 +39,7 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 
 	// Whens
 	ctx.Step(`^I upload the file "([^"]*)" with the following form resumable parameters:$`, c.iUploadTheFileWithTheFollowingFormResumableParameters)
+	ctx.Step(`^I upload the file "([^"]*)" with the following form resumable parameters and auth header "([^"]*)"$`, c.iUploadTheFileWithTheFollowingFormResumableParametersAndAuthHeader)
 
 	// Thens
 	ctx.Step(`^the path "([^"]*)" should be available in the S3 bucket matching content using encryption key "([^"]*)":`, c.theFileShouldBeAvailableInTheSBucketMatchingContent)
@@ -46,6 +47,7 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file "([^"]*)" should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
 	ctx.Step(`^the stored file "([^"]*)" should match the sent file "([^"]*)" using encryption key "([^"]*)"$`, c.theStoredFileShouldMatchTheSentFile)
 	ctx.Step(`^the encryption key "([^"]*)" should be stored against file "([^"]*)"$`, c.theEncryptionKeyShouldBeStored)
+	ctx.Step(`^the request should contain an authorization header containing "([^"]*)"$`, c.theRequestShouldContainAnAuthorizationHeaderContaining)
 
 	// Buts
 	ctx.Step(`^the file should not be marked as uploaded$`, c.theFileShouldNotBeMarkedAsUploaded)
@@ -88,6 +90,7 @@ func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) 
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
 		requests[fmt.Sprintf("%s|%s", r.URL.Path, r.Method)] = string(body)
+		requests[fmt.Sprintf("%s|%s|auth", r.URL.Path, r.Method)] = r.Header.Get("Authorization")
 
 		if r.Method == http.MethodPost {
 			w.WriteHeader(http.StatusCreated)
@@ -152,6 +155,63 @@ func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParameters(
 	}
 	req := httptest.NewRequest(http.MethodPost, "http://foo/upload-new", b)
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
+
+	q := req.URL.Query()
+	for key, value := range queryParams {
+		q.Add(key, value)
+	}
+	req.URL.RawQuery = q.Encode()
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	c.ApiFeature.HttpResponse = w.Result()
+
+	return nil
+}
+
+func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParametersAndAuthHeader(filename, authHeader string, table *godog.Table) error {
+	b := &bytes.Buffer{}
+	formWriter := multipart.NewWriter(b)
+
+	for key, value := range c.fileMetadata {
+		formWriter.WriteField(key, value)
+	}
+
+	part, _ := formWriter.CreateFormFile("file", filename)
+
+	testPayload, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	assist := assistdog.NewDefault()
+	queryParams, _ := assist.ParseMap(table)
+
+	total, _ := strconv.ParseInt(queryParams["resumableTotalChunks"], 10, 32)
+	current, _ := strconv.ParseInt(queryParams["resumableChunkNumber"], 10, 32)
+
+	if total > 1 {
+		if current == 1 {
+			b := testPayload[:(5 * 1024 * 1024)]
+			part.Write(b)
+		} else if total > 1 {
+			b := testPayload[(5 * 1024 * 1024):]
+			part.Write(b)
+		}
+	} else {
+		part.Write(testPayload)
+	}
+
+	formWriter.Close()
+
+	handler, err := c.ApiFeature.Initialiser()
+	if err != nil {
+		return err
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://foo/upload-new", b)
+	req.Header.Set("Content-Type", formWriter.FormDataContentType())
+	req.Header.Set("Authorization", authHeader)
 
 	q := req.URL.Query()
 	for key, value := range queryParams {
@@ -304,5 +364,10 @@ func (c *UploadComponent) theEncryptionKeyShouldBeStored(expectedEncryptionKey, 
 	assert.NoError(c.ApiFeature, err)
 	assert.Equal(c.ApiFeature, expectedEncryptionKey, actualEncryptionKey)
 
+	return c.ApiFeature.StepError()
+}
+
+func (c *UploadComponent) theRequestShouldContainAnAuthorizationHeaderContaining(expectedAuthHeader string) error {
+	assert.Equal(c.ApiFeature, expectedAuthHeader, requests[fmt.Sprintf("%s|%s|auth", filesURI, http.MethodPost)])
 	return c.ApiFeature.StepError()
 }

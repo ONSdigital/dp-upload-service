@@ -100,3 +100,18 @@ Feature: Uploading a file
     And the stored file "data/countries.csv" should match the sent file "features/countries.csv" using encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf"
     But the file upload should not have been registered again
 
+    Scenario: The one where a single chunk file is uploaded using an authorisation header
+      Given the data file "authorized.csv" with content:
+        """
+        brian,1
+        russ,2
+        """
+      When I upload the file "test-data/authorized.csv" with the following form resumable parameters and auth header "auth-header-total-secure"
+        | resumableFilename    | authorized.csv       |
+        | resumableType        | text/csv             |
+        | resumableTotalChunks | 1                    |
+        | resumableChunkNumber | 1                    |
+        | path                 | data                 |
+      Then the request should contain an authorization header containing "auth-header-total-secure"
+      And the HTTP status code should be "201"
+

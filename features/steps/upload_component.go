@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
 	componenttest "github.com/ONSdigital/dp-component-test"
-	dphttp "github.com/ONSdigital/dp-net/http"
+	dphttp "github.com/ONSdigital/dp-net/v2/http"
 	"github.com/ONSdigital/dp-upload-service/service"
 )
 
