@@ -112,6 +112,8 @@ Feature: Uploading a file
         | resumableTotalChunks | 1                    |
         | resumableChunkNumber | 1                    |
         | path                 | data                 |
-      Then the request should contain an authorization header containing "auth-header-total-secure"
+      Then the files api POST request should contain an authorization header containing "auth-header-total-secure"
+      And the files api PATCH request with path ("data/authorized.csv") should contain an authorization header containing "auth-header-total-secure"
       And the HTTP status code should be "201"
+
 

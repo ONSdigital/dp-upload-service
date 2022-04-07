@@ -140,6 +140,7 @@ func (s Store) markUploadComplete(ctx context.Context, path, etag string) error 
 
 	req, _ := http.NewRequest(http.MethodPatch, fmt.Sprintf("%s/files/%s", s.hostname, path), jsonEncode(uc))
 	req.Header.Set("Content-Type", "application/json")
+	s.setAuthHeader(ctx, req)
 
 	client := dphttp.NewClient()
 
@@ -180,13 +181,7 @@ func (s Store) registerFileUpload(ctx context.Context, metadata StoreMetadata) e
 
 	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/files", s.hostname), jsonEncode(metadata))
 	req.Header.Set("Content-Type", "application/json")
-
-	const authContextKey ContextKey = request.AuthHeaderKey
-
-	authHeaderValue := ctx.Value(authContextKey)
-	if authHeaderValue != nil {
-		req.Header.Set(request.AuthHeaderKey, authHeaderValue.(string))
-	}
+	s.setAuthHeader(ctx, req)
 
 	client := dphttp.NewClient()
 
@@ -210,6 +205,17 @@ func (s Store) registerFileUpload(ctx context.Context, metadata StoreMetadata) e
 		return s.handleBadRequestResponse(resp)
 	default:
 		return ErrUnknownError
+	}
+}
+
+func (s Store) setAuthHeader(ctx context.Context, req *http.Request) {
+	const authContextKey ContextKey = request.AuthHeaderKey
+
+	authHeaderValue := ctx.Value(authContextKey)
+	if authHeaderValue != nil {
+		req.Header.Set(request.AuthHeaderKey, authHeaderValue.(string))
+	} else {
+		log.Info(ctx, fmt.Sprintf("no %s set in context, this may cause auth issues", request.AuthHeaderKey), log.Data{"Request:": req})
 	}
 }
 
