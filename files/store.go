@@ -7,10 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	dphttp "github.com/ONSdigital/dp-net/v2/http"
-	"github.com/ONSdigital/dp-net/v2/request"
 	"net/http"
 	"strings"
+
+	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	"github.com/ONSdigital/dp-net/v2/request"
 
 	"github.com/ONSdigital/log.go/v2/log"
 
@@ -142,9 +143,7 @@ func (s Store) markUploadComplete(ctx context.Context, path, etag string) error 
 	req.Header.Set("Content-Type", "application/json")
 	s.setAuthHeader(ctx, req)
 
-	client := dphttp.NewClient()
-
-	resp, err := client.Do(ctx, req)
+	resp, err := dphttp.NewClient().Do(ctx, req)
 
 	logData := log.Data{"upload-complete": uc, "request": req, "response": resp}
 	if err != nil {
@@ -183,9 +182,7 @@ func (s Store) registerFileUpload(ctx context.Context, metadata StoreMetadata) e
 	req.Header.Set("Content-Type", "application/json")
 	s.setAuthHeader(ctx, req)
 
-	client := dphttp.NewClient()
-
-	resp, err := client.Do(ctx, req)
+	resp, err := dphttp.NewClient().Do(ctx, req)
 
 	if err != nil {
 		log.Error(ctx, "failed to connect to files API", err, log.Data{"hostname": s.hostname})
@@ -220,24 +217,19 @@ func (s Store) setAuthHeader(ctx context.Context, req *http.Request) {
 }
 
 func (s Store) handleBadRequestResponse(resp *http.Response) error {
-	var err error
-
 	jsonErrors := jsonErrors{}
-	err = json.NewDecoder(resp.Body).Decode(&jsonErrors)
-	if err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&jsonErrors); err != nil {
 		return err
 	}
 
 	switch jsonErrors.Error[0].Code {
 	case "DuplicateFileError":
-		err = ErrFilesAPIDuplicateFile
+		return ErrFilesAPIDuplicateFile
 	case "ValidationError":
-		err = ErrFileAPICreateInvalidData
+		return ErrFileAPICreateInvalidData
 	default:
-		err = ErrUnknownError
+		return ErrUnknownError
 	}
-
-	return err
 }
 
 func jsonEncode(data interface{}) *bytes.Buffer {

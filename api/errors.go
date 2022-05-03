@@ -3,8 +3,9 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-playground/validator"
 	"net/http"
+
+	"github.com/go-playground/validator"
 )
 
 type jsonError struct {
@@ -17,10 +18,8 @@ type jsonErrors struct {
 }
 
 func writeError(w http.ResponseWriter, errs jsonErrors, httpCode int) {
-	encoder := json.NewEncoder(w)
 	w.WriteHeader(httpCode)
-	err := encoder.Encode(&errs)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(&errs); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
