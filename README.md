@@ -64,6 +64,11 @@ Please refer [Resumable struct](upload/upload.go).
 
 * `curl -i -X POST -H 'content-type: multipart/form-data' -F file=@README.md 'http://localhost:25100/upload\?resumableFilename=README.md&resumableChunkNumber=1&resumableType=text/plain&resumableTotalChunks=1&resumableIdentifier=<KEY_MATCHING_VAULT_SECRET_KEY>&resumableChunkSize=1000000&aliasName=somealias'`
 
+## API Client
+
+There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/upload) for the Upload API this is part
+of [dp-api-clients-go](https://github.com/ONSdigital/dp-api-clients-go) package.
+
 ## Contributing
 
 See [CONTRIBUTING](CONTRIBUTING.md) for details.
