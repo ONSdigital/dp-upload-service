@@ -48,6 +48,14 @@ func (e external) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, ver
 }
 
 func (e external) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+	return generateS3Client(cfg, cfg.UploadBucketName)
+}
+
+func (e external) DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+	return generateS3Client(cfg, cfg.StaticFilesEncryptedBucketName)
+}
+
+func generateS3Client(cfg *config.Config, bucketName string) (upload.S3Clienter, error) {
 	s, err := session.NewSession(&aws.Config{
 		Endpoint:         aws.String(localStackHost),
 		Region:           aws.String(cfg.AwsRegion),
@@ -59,7 +67,7 @@ func (e external) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (uplo
 		fmt.Println("S3 ERROR: " + err.Error())
 	}
 
-	return s3client.NewClientWithSession(cfg.UploadBucketName, s), nil
+	return s3client.NewClientWithSession(bucketName, s), nil
 }
 
 func (e external) DoGetEncryptionKeyGenerator() encryption.GenerateKey {

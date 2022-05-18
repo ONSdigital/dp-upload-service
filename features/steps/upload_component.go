@@ -68,7 +68,7 @@ func (c *UploadComponent) Reset() {
 
 	err := s3manager.NewBatchDeleteWithClient(s3client).Delete(
 		aws.BackgroundContext(), s3manager.NewDeleteListIterator(s3client, &s3.ListObjectsInput{
-			Bucket: aws.String(cfg.UploadBucketName),
+			Bucket: aws.String(cfg.StaticFilesEncryptedBucketName),
 		}))
 
 	if err != nil {

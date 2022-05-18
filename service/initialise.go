@@ -66,6 +66,10 @@ func (e *ExternalServiceList) GetS3Uploaded(ctx context.Context, cfg *config.Con
 	return s3, nil
 }
 
+func (e *ExternalServiceList) GetS3StaticFileUploader(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+	return e.Init.DoGetStaticFileS3Uploader(ctx, cfg)
+}
+
 // GetHealthCheck creates a healthcheck with versionInfo and sets teh HealthCheck flag to true
 func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error) {
 	hc, err := e.Init.DoGetHealthCheck(cfg, buildTime, gitCommit, version)
@@ -89,6 +93,15 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 
 // DoGetS3Uploaded returns a S3Client
 func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+	return generateS3Client(cfg, cfg.UploadBucketName)
+}
+
+// DoGetStaticFileS3Uploader returns a S3Client
+func (e *Init) DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+	return generateS3Client(cfg, cfg.StaticFilesEncryptedBucketName)
+}
+
+func generateS3Client(cfg *config.Config, bucketName string) (upload.S3Clienter, error) {
 	if cfg.LocalstackHost != "" {
 		s, err := session.NewSession(&aws.Config{
 			Endpoint:         aws.String(cfg.LocalstackHost),
@@ -101,15 +114,14 @@ func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.
 			return nil, err
 		}
 
-		return dps3.NewClientWithSession(cfg.UploadBucketName, s), nil
+		return dps3.NewClientWithSession(bucketName, s), nil
 	}
 
-	s3Client, err := dps3.NewClient(cfg.AwsRegion, cfg.UploadBucketName)
+	s3Client, err := dps3.NewClient(cfg.AwsRegion, bucketName)
 	if err != nil {
 		return nil, err
 	}
 	return s3Client, nil
-
 }
 
 // DoGetVault returns a VaultClient unless encryption is disabled

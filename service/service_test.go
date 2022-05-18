@@ -105,6 +105,7 @@ func TestRun(t *testing.T) {
 			initMock := &InitialiserMock{
 				DoGetHTTPServerFunc:             funcDoGetHTTPServerNil,
 				DoGetS3UploadedFunc:             funcDoS3UploadedErr,
+				DoGetStaticFileS3UploaderFunc:   funcDoGetS3UploadedOk,
 				DoGetHealthCheckFunc:            funcDoGetHealthcheckOk,
 				DoGetVaultFunc:                  funcDoGetVaultOk,
 				DoGetEncryptionKeyGeneratorFunc: funcDoGetEncryptionKeyGenerator,
@@ -126,6 +127,7 @@ func TestRun(t *testing.T) {
 				DoGetHTTPServerFunc:             funcDoGetHTTPServerNil,
 				DoGetVaultFunc:                  funcDoGetVaultErr,
 				DoGetS3UploadedFunc:             funcDoGetS3UploadedOk,
+				DoGetStaticFileS3UploaderFunc:   funcDoGetS3UploadedOk,
 				DoGetHealthCheckFunc:            funcDoGetHealthcheckOk,
 				DoGetEncryptionKeyGeneratorFunc: funcDoGetEncryptionKeyGenerator,
 			}
@@ -146,6 +148,7 @@ func TestRun(t *testing.T) {
 				DoGetHTTPServerFunc:             funcDoGetHTTPServerNil,
 				DoGetHealthCheckFunc:            funcDoGetHealthcheckErr,
 				DoGetS3UploadedFunc:             funcDoGetS3UploadedOk,
+				DoGetStaticFileS3UploaderFunc:   funcDoGetS3UploadedOk,
 				DoGetVaultFunc:                  funcDoGetVaultOk,
 				DoGetEncryptionKeyGeneratorFunc: funcDoGetEncryptionKeyGenerator,
 			}
@@ -167,6 +170,7 @@ func TestRun(t *testing.T) {
 				DoGetHTTPServerFunc:             funcDoGetHTTPServer,
 				DoGetHealthCheckFunc:            funcDoGetHealthcheckOk,
 				DoGetS3UploadedFunc:             funcDoGetS3UploadedOk,
+				DoGetStaticFileS3UploaderFunc:   funcDoGetS3UploadedOk,
 				DoGetVaultFunc:                  funcDoGetVaultOk,
 				DoGetEncryptionKeyGeneratorFunc: funcDoGetEncryptionKeyGenerator,
 			}
@@ -220,6 +224,7 @@ func TestRun(t *testing.T) {
 					return hcMockAddFail, nil
 				},
 				DoGetS3UploadedFunc:             funcDoGetS3UploadedOk,
+				DoGetStaticFileS3UploaderFunc:   funcDoGetS3UploadedOk,
 				DoGetEncryptionKeyGeneratorFunc: funcDoGetEncryptionKeyGenerator,
 			}
 			svcErrors := make(chan error, 1)
@@ -275,9 +280,10 @@ func TestClose(t *testing.T) {
 		Convey("When closing the service", func() {
 
 			initMock := &InitialiserMock{
-				DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) HTTPServer { return serverMock },
-				DoGetVaultFunc:      func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) { return vaultMock, nil },
-				DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) { return s3UploadedMock, nil },
+				DoGetHTTPServerFunc:           func(bindAddr string, router http.Handler) HTTPServer { return serverMock },
+				DoGetVaultFunc:                func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) { return vaultMock, nil },
+				DoGetS3UploadedFunc:           func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) { return s3UploadedMock, nil },
+				DoGetStaticFileS3UploaderFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) { return s3UploadedMock, nil },
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (HealthChecker, error) {
 					return hcMock, nil
 				},
@@ -306,9 +312,10 @@ func TestClose(t *testing.T) {
 			}
 
 			initMock := &InitialiserMock{
-				DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) HTTPServer { return failingserverMock },
-				DoGetVaultFunc:      func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) { return vaultMock, nil },
-				DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) { return s3UploadedMock, nil },
+				DoGetHTTPServerFunc:           func(bindAddr string, router http.Handler) HTTPServer { return failingserverMock },
+				DoGetVaultFunc:                func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) { return vaultMock, nil },
+				DoGetS3UploadedFunc:           func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) { return s3UploadedMock, nil },
+				DoGetStaticFileS3UploaderFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) { return s3UploadedMock, nil },
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (HealthChecker, error) {
 					return hcMock, nil
 				},

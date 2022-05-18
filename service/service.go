@@ -48,6 +48,12 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
+	s3StaticFileUploader, err := serviceList.GetS3StaticFileUploader(ctx, cfg)
+	if err != nil {
+		log.Fatal(ctx, "failed to initialise Static File S3 client for uploaded bucket", err)
+		return nil, err
+	}
+
 	var vault upload.VaultClienter
 
 	// Get Vault client
@@ -84,7 +90,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	// v1 DO NOT USE IN PRODUCTION YET!
 	r.Path("/upload-new").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(files.NewStore(
 		cfg.FilesAPIURL,
-		s3Uploaded,
+		s3StaticFileUploader,
 		serviceList.GetEncryptionKeyGenerator(),
 		vaultClient,
 		cfg.VaultPath,

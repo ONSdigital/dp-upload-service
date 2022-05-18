@@ -5,12 +5,11 @@ package service
 
 import (
 	"context"
-	"net/http"
-	"sync"
-
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/encryption"
 	"github.com/ONSdigital/dp-upload-service/upload"
+	"net/http"
+	"sync"
 )
 
 // Ensure, that InitialiserMock does implement Initialiser.
@@ -24,7 +23,7 @@ var _ Initialiser = &InitialiserMock{}
 // 		// make and configure a mocked Initialiser
 // 		mockedInitialiser := &InitialiserMock{
 // 			DoGetEncryptionKeyGeneratorFunc: func() encryption.GenerateKey {
-// 				panic("mock out the GetEncryptionKeyGenerator method")
+// 				panic("mock out the DoGetEncryptionKeyGenerator method")
 // 			},
 // 			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) HTTPServer {
 // 				panic("mock out the DoGetHTTPServer method")
@@ -34,6 +33,9 @@ var _ Initialiser = &InitialiserMock{}
 // 			},
 // 			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
 // 				panic("mock out the DoGetS3Uploaded method")
+// 			},
+// 			DoGetStaticFileS3UploaderFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+// 				panic("mock out the DoGetStaticFileS3Uploader method")
 // 			},
 // 			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
 // 				panic("mock out the DoGetVault method")
@@ -45,7 +47,7 @@ var _ Initialiser = &InitialiserMock{}
 //
 // 	}
 type InitialiserMock struct {
-	// DoGetEncryptionKeyGeneratorFunc mocks the GetEncryptionKeyGenerator method.
+	// DoGetEncryptionKeyGeneratorFunc mocks the DoGetEncryptionKeyGenerator method.
 	DoGetEncryptionKeyGeneratorFunc func() encryption.GenerateKey
 
 	// DoGetHTTPServerFunc mocks the DoGetHTTPServer method.
@@ -57,12 +59,15 @@ type InitialiserMock struct {
 	// DoGetS3UploadedFunc mocks the DoGetS3Uploaded method.
 	DoGetS3UploadedFunc func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error)
 
+	// DoGetStaticFileS3UploaderFunc mocks the DoGetStaticFileS3Uploader method.
+	DoGetStaticFileS3UploaderFunc func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error)
+
 	// DoGetVaultFunc mocks the DoGetVault method.
 	DoGetVaultFunc func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// GetEncryptionKeyGenerator holds details about calls to the GetEncryptionKeyGenerator method.
+		// DoGetEncryptionKeyGenerator holds details about calls to the DoGetEncryptionKeyGenerator method.
 		DoGetEncryptionKeyGenerator []struct {
 		}
 		// DoGetHTTPServer holds details about calls to the DoGetHTTPServer method.
@@ -90,6 +95,13 @@ type InitialiserMock struct {
 			// Cfg is the cfg argument value.
 			Cfg *config.Config
 		}
+		// DoGetStaticFileS3Uploader holds details about calls to the DoGetStaticFileS3Uploader method.
+		DoGetStaticFileS3Uploader []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Cfg is the cfg argument value.
+			Cfg *config.Config
+		}
 		// DoGetVault holds details about calls to the DoGetVault method.
 		DoGetVault []struct {
 			// Ctx is the ctx argument value.
@@ -102,13 +114,14 @@ type InitialiserMock struct {
 	lockDoGetHTTPServer             sync.RWMutex
 	lockDoGetHealthCheck            sync.RWMutex
 	lockDoGetS3Uploaded             sync.RWMutex
+	lockDoGetStaticFileS3Uploader   sync.RWMutex
 	lockDoGetVault                  sync.RWMutex
 }
 
-// GetEncryptionKeyGenerator calls DoGetEncryptionKeyGeneratorFunc.
+// DoGetEncryptionKeyGenerator calls DoGetEncryptionKeyGeneratorFunc.
 func (mock *InitialiserMock) DoGetEncryptionKeyGenerator() encryption.GenerateKey {
 	if mock.DoGetEncryptionKeyGeneratorFunc == nil {
-		panic("InitialiserMock.DoGetEncryptionKeyGeneratorFunc: method is nil but Initialiser.GetEncryptionKeyGenerator was just called")
+		panic("InitialiserMock.DoGetEncryptionKeyGeneratorFunc: method is nil but Initialiser.DoGetEncryptionKeyGenerator was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -118,7 +131,7 @@ func (mock *InitialiserMock) DoGetEncryptionKeyGenerator() encryption.GenerateKe
 	return mock.DoGetEncryptionKeyGeneratorFunc()
 }
 
-// DoGetEncryptionKeyGeneratorCalls gets all the calls that were made to GetEncryptionKeyGenerator.
+// DoGetEncryptionKeyGeneratorCalls gets all the calls that were made to DoGetEncryptionKeyGenerator.
 // Check the length with:
 //     len(mockedInitialiser.DoGetEncryptionKeyGeneratorCalls())
 func (mock *InitialiserMock) DoGetEncryptionKeyGeneratorCalls() []struct {
@@ -241,6 +254,41 @@ func (mock *InitialiserMock) DoGetS3UploadedCalls() []struct {
 	mock.lockDoGetS3Uploaded.RLock()
 	calls = mock.calls.DoGetS3Uploaded
 	mock.lockDoGetS3Uploaded.RUnlock()
+	return calls
+}
+
+// DoGetStaticFileS3Uploader calls DoGetStaticFileS3UploaderFunc.
+func (mock *InitialiserMock) DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+	if mock.DoGetStaticFileS3UploaderFunc == nil {
+		panic("InitialiserMock.DoGetStaticFileS3UploaderFunc: method is nil but Initialiser.DoGetStaticFileS3Uploader was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Cfg *config.Config
+	}{
+		Ctx: ctx,
+		Cfg: cfg,
+	}
+	mock.lockDoGetStaticFileS3Uploader.Lock()
+	mock.calls.DoGetStaticFileS3Uploader = append(mock.calls.DoGetStaticFileS3Uploader, callInfo)
+	mock.lockDoGetStaticFileS3Uploader.Unlock()
+	return mock.DoGetStaticFileS3UploaderFunc(ctx, cfg)
+}
+
+// DoGetStaticFileS3UploaderCalls gets all the calls that were made to DoGetStaticFileS3Uploader.
+// Check the length with:
+//     len(mockedInitialiser.DoGetStaticFileS3UploaderCalls())
+func (mock *InitialiserMock) DoGetStaticFileS3UploaderCalls() []struct {
+	Ctx context.Context
+	Cfg *config.Config
+} {
+	var calls []struct {
+		Ctx context.Context
+		Cfg *config.Config
+	}
+	mock.lockDoGetStaticFileS3Uploader.RLock()
+	calls = mock.calls.DoGetStaticFileS3Uploader
+	mock.lockDoGetStaticFileS3Uploader.RUnlock()
 	return calls
 }
 

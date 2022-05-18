@@ -21,6 +21,7 @@ type Initialiser interface {
 	DoGetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error)
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
 	DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error)
+	DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error)
 	DoGetEncryptionKeyGenerator() encryption.GenerateKey
 }
 

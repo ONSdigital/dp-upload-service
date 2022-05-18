@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/ONSdigital/dp-net/v2/request"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -13,6 +12,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"strconv"
+
+	"github.com/ONSdigital/dp-net/v2/request"
 
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/aws/aws-sdk-go/aws"
@@ -300,14 +301,14 @@ func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(fi
 	dl := s3manager.NewDownloaderWithClient(s3client)
 
 	_, err := s3client.HeadObject(&s3.HeadObjectInput{
-		Bucket: aws.String(cfg.UploadBucketName),
+		Bucket: aws.String(cfg.StaticFilesEncryptedBucketName),
 		Key:    aws.String(filename),
 	})
 
 	assert.NoError(c.ApiFeature, err)
 
 	_, err = dl.Download(&buf, &s3.GetObjectInput{
-		Bucket: aws.String(cfg.UploadBucketName),
+		Bucket: aws.String(cfg.StaticFilesEncryptedBucketName),
 		Key:    aws.String(filename),
 	})
 
