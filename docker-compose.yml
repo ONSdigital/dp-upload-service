@@ -8,7 +8,8 @@ services:
     environment:
       BIND_ADDR: ':25100'
       AWS_REGION: 'eu-west1' # http://localstack:4572
-      UPLOAD_BUCKET_NAME: 'testing'
+      UPLOAD_BUCKET_NAME: 'deprecated'
+      STATIC_FILES_ENCRYPTED_BUCKET_NAME: 'testing'
       ENCRYPTION_DISABLED: 'false'
       GRACEFUL_SHUTDOWN_TIMEOUT: '5s'
       HEALTHCHECK_INTERVAL: '5s'
