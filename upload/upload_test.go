@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"github.com/ONSdigital/dp-upload-service/upload"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/ONSdigital/dp-upload-service/upload"
 
 	s3client "github.com/ONSdigital/dp-s3"
 	"github.com/ONSdigital/dp-upload-service/upload/mock"
