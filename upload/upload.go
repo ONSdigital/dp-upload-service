@@ -10,6 +10,7 @@ import (
 
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/log.go/v2/log"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 )
 
@@ -184,7 +185,14 @@ func statusCodeFromS3Error(err error) int {
 // GetS3URL returns an S3 URL for a requested path, and the client's region and bucket name.
 // Path corresponds to the S3 object key
 func (u *Uploader) GetS3URL(w http.ResponseWriter, req *http.Request) {
-	path := req.URL.Query().Get(":id")
+	param := req.URL.Query().Get(":id")
+	path := mux.Vars(req)["id"]
+
+	// Florence historically sent the query param, but this is being removed. Where
+	// it is provided, it should be used by preference for now.
+	if len(param) > 0 {
+		path = param
+	}
 
 	// Generate URL from region, bucket and S3 key defined by query
 	s3Url, err := s3client.NewURL(u.s3Region, u.s3Bucket, path)
