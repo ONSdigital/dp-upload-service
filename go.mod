@@ -2,9 +2,14 @@ module github.com/ONSdigital/dp-upload-service
 
 go 1.16
 
-replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
-
-replace github.com/dgrijalva/jwt-go => github.com/dgrijalva/jwt-go v3.2.1-0.20210802184156-9742bd7fca1c+incompatible
+replace (
+	github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
+	github.com/dgrijalva/jwt-go => github.com/dgrijalva/jwt-go v3.2.1-0.20210802184156-9742bd7fca1c+incompatible
+	github.com/go-ldap/ldap/v3 => github.com/go-ldap/ldap/v3 v3.4.3
+	github.com/pkg/sftp => github.com/pkg/sftp v1.13.4
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.12.2
+	github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
+)
 
 require (
 	github.com/ONSdigital/dp-component-test v0.6.3
@@ -26,7 +31,6 @@ require (
 	github.com/rdumont/assistdog v0.0.0-20201106100018-168b06230d14
 	github.com/smartystreets/goconvey v1.7.2
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.4.1 // indirect
