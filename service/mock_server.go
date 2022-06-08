@@ -14,22 +14,22 @@ var _ HTTPServer = &HTTPServerMock{}
 
 // HTTPServerMock is a mock implementation of HTTPServer.
 //
-//     func TestSomethingThatUsesHTTPServer(t *testing.T) {
+// 	func TestSomethingThatUsesHTTPServer(t *testing.T) {
 //
-//         // make and configure a mocked HTTPServer
-//         mockedHTTPServer := &HTTPServerMock{
-//             ListenAndServeFunc: func() error {
-// 	               panic("mock out the ListenAndServe method")
-//             },
-//             ShutdownFunc: func(ctx context.Context) error {
-// 	               panic("mock out the Shutdown method")
-//             },
-//         }
+// 		// make and configure a mocked HTTPServer
+// 		mockedHTTPServer := &HTTPServerMock{
+// 			ListenAndServeFunc: func() error {
+// 				panic("mock out the ListenAndServe method")
+// 			},
+// 			ShutdownFunc: func(ctx context.Context) error {
+// 				panic("mock out the Shutdown method")
+// 			},
+// 		}
 //
-//         // use mockedHTTPServer in code that requires HTTPServer
-//         // and then make assertions.
+// 		// use mockedHTTPServer in code that requires HTTPServer
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type HTTPServerMock struct {
 	// ListenAndServeFunc mocks the ListenAndServe method.
 	ListenAndServeFunc func() error

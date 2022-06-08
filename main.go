@@ -6,7 +6,7 @@ import (
 	"os/signal"
 
 	"github.com/ONSdigital/dp-upload-service/service"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/pkg/errors"
 )
 
@@ -26,14 +26,14 @@ func main() {
 	ctx := context.Background()
 
 	if err := run(ctx); err != nil {
-		log.Event(ctx, "fatal runtime error", log.Error(err), log.FATAL)
+		log.Fatal(ctx, "fatal runtime error", err)
 		os.Exit(1)
 	}
 }
 
 func run(ctx context.Context) error {
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, os.Kill)
+	signal.Notify(signals, os.Interrupt, os.Kill) //nolint
 
 	// Run the service, providing an error channel for fatal errors
 	svcErrors := make(chan error, 1)
@@ -41,7 +41,7 @@ func run(ctx context.Context) error {
 
 	svc, err := service.Run(ctx, svcList, BuildTime, GitCommit, Version, svcErrors)
 	if err != nil {
-		log.Event(ctx, "failed to run service", log.Error(err), log.FATAL)
+		log.Fatal(ctx, "failed to run service", err)
 		return errors.Wrap(err, "running service failed")
 	}
 
@@ -50,7 +50,7 @@ func run(ctx context.Context) error {
 	case err := <-svcErrors:
 		return errors.Wrap(err, "service error received")
 	case sig := <-signals:
-		log.Event(ctx, "os signal received", log.Data{"signal": sig}, log.INFO)
+		log.Info(ctx, "os signal received", log.Data{"signal": sig})
 
 	}
 	return svc.Close(ctx)
