@@ -3,7 +3,6 @@ package files_test
 import (
 	"context"
 	"errors"
-	"net/http"
 	"testing"
 
 	"github.com/ONSdigital/dp-upload-service/encryption"
@@ -13,16 +12,17 @@ import (
 	"github.com/ONSdigital/dp-upload-service/files"
 	"github.com/ONSdigital/dp-upload-service/upload/mock"
 
-	"github.com/maxcnunes/httpfake"
+	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
+
 	"github.com/stretchr/testify/suite"
 )
 
 type StoreSuite struct {
 	suite.Suite
 
-	fakeFilesApi     *httpfake.HTTPFake
 	mockS3           *mock.S3ClienterMock
 	mockVault        *mock.VaultClienterMock
+	mockFiles        *mock.FilesClienterMock
 	fakeKeyGenerator encryption.GenerateKey
 }
 
@@ -32,7 +32,14 @@ func TestStore(t *testing.T) {
 
 // beforeEach
 func (s *StoreSuite) SetupTest() {
-	s.fakeFilesApi = httpfake.New(httpfake.WithTesting(s.T()))
+	s.mockFiles = &mock.FilesClienterMock{
+		RegisterFileFunc: func(ctx context.Context, metadata filesAPI.FileMetaData) error {
+			return nil
+		},
+		MarkFileUploadedFunc: func(ctx context.Context, path string, etag string) error {
+			return nil
+		},
+	}
 	s.mockS3 = &mock.S3ClienterMock{
 		UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
 			return s3client.MultipartUploadResponse{Etag: "123456789", AllPartsUploaded: true}, nil
@@ -55,122 +62,35 @@ var (
 	vaultPath      = "secret/path/psk"
 )
 
-// afterEach
-func (s *StoreSuite) TearDownTest() {
-	s.fakeFilesApi.Close()
-}
-
 func (s *StoreSuite) TestFileUploadIsRegisteredWithFilesApi() {
-	s.fakeFilesApi.NewHandler().Post("/files").Reply(http.StatusCreated)
-	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusOK)
+	store := files.NewStore(s.mockFiles, s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, []byte("CONTENT"))
 	s.NoError(err)
+	s.Len(s.mockFiles.RegisterFileCalls(), 1)
 }
 
-func (s *StoreSuite) TestFileAlreadyRegisteredWithFilesApi() {
-	s.fakeFilesApi.NewHandler().
-		Post("/files").
-		Reply(http.StatusBadRequest).
-		Body([]byte(`{"errors": [{"code": "DuplicateFileError", "description": "file already exists"}]}`))
+func (s *StoreSuite) TestFileRegistrationFailsWithFilesApi() {
 
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+	expectedError := errors.New("registration error")
+	s.mockFiles.RegisterFileFunc = func(ctx context.Context, metadata filesAPI.FileMetaData) error {
+		return expectedError
+	}
 
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
-	s.Equal(files.ErrFilesAPIDuplicateFile, err)
-}
+	store := files.NewStore(s.mockFiles, s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-func (s *StoreSuite) TestFileRegisteredWithInvalidContent() {
-	s.fakeFilesApi.NewHandler().
-		Post("/files").
-		Reply(http.StatusBadRequest).
-		Body([]byte(`{"errors": [{"code": "ValidationError", "description": "fields were invalid"}]}`))
-
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
-	s.Equal(files.ErrFileAPICreateInvalidData, err)
-}
-
-func (s *StoreSuite) TestFileRegisterReturnsUnknownError() {
-	s.fakeFilesApi.NewHandler().
-		Post("/files").
-		Reply(http.StatusBadRequest).
-		Body([]byte(`{"errors": [{"code": "SpecialError", "description": "fields were invalid"}]}`))
-
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
-	s.Equal(files.ErrUnknownError, err)
-}
-
-func (s *StoreSuite) TestFileRegisterReturnsInternalServerError() {
-	s.fakeFilesApi.NewHandler().
-		Post("/files").
-		Reply(http.StatusInternalServerError).
-		Body([]byte(`{"errors": [{"code": "BROKEN", "description": "nothing is working"}]}`))
-
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
-	s.Equal(files.ErrFilesServer, err)
-}
-
-func (s *StoreSuite) TestFileRegisterReturnsUnexpectedError() {
-	s.fakeFilesApi.NewHandler().
-		Post("/files").
-		Reply(http.StatusTeapot).
-		Body([]byte("we're all mad down here"))
-
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
-	s.Equal(files.ErrUnknownError, err)
-}
-
-func (s *StoreSuite) TestFileRegisterReturnsForbiddenError() {
-	s.fakeFilesApi.NewHandler().
-		Post("/files").
-		Reply(http.StatusForbidden).
-		Body([]byte(`{"errors": [{"code": "Forbidden", "description": "unauthorised"}]}`))
-
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
-	s.Equal(files.ErrFilesUnauthorised, err)
-}
-
-func (s *StoreSuite) TestFileRegisterReturnsMalformedJSON() {
-	s.fakeFilesApi.NewHandler().
-		Post("/files").
-		Reply(http.StatusBadRequest).
-		Body([]byte(`<json>Error occurred</json>`))
-
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
-
-	s.Error(err)
-}
-
-func (s *StoreSuite) TestErrorConnectingToRegisterFiles() {
-	store := files.NewStore("does.not.work", s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
-	s.Equal(files.ErrConnectingToFilesApi, err)
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, []byte("CONTENT"))
+	s.Equal(expectedError, err)
 }
 
 func (s *StoreSuite) TestErrorStoringEncryptionKeyInVault() {
-	s.fakeFilesApi.NewHandler().Post("/files").Reply(http.StatusCreated)
 	s.mockVault.WriteKeyFunc = func(path string, key string, value string) error {
 		return errors.New("failed writing to vault")
 	}
 
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+	store := files.NewStore(s.mockFiles, s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, firstResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, []byte("CONTENT"))
 
 	s.Equal(files.ErrVaultWrite, err)
 }
@@ -180,9 +100,9 @@ func (s *StoreSuite) TestErrorReadingEncryptionKeyFromValue() {
 		return "", errors.New("failed writing to vault")
 	}
 
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+	store := files.NewStore(s.mockFiles, s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, []byte("CONTENT"))
 
 	s.Equal(files.ErrVaultRead, err)
 }
@@ -192,9 +112,9 @@ func (s *StoreSuite) TestEncryptionKeyContainsNonHexCharacters() {
 		return "NON HEX CHARACTERS", nil
 	}
 
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+	store := files.NewStore(s.mockFiles, s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, []byte("CONTENT"))
 
 	s.Equal(files.ErrInvalidEncryptionKey, err)
 }
@@ -204,9 +124,9 @@ func (s StoreSuite) TestUploadPartReturnsAnError() {
 		return s3client.MultipartUploadResponse{}, s3client.NewError(errors.New("broken"), nil)
 	}
 
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+	store := files.NewStore(s.mockFiles, s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, []byte("CONTENT"))
 	s.Equal(files.ErrS3Upload, err)
 }
 
@@ -215,60 +135,19 @@ func (s StoreSuite) TestUploadChunkTooSmallReturnsErrChuckTooSmall() {
 		return s3client.MultipartUploadResponse{}, s3client.NewChunkTooSmallError(errors.New("chunk size below minimum 5MB"), nil)
 	}
 
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
+	store := files.NewStore(s.mockFiles, s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, []byte("CONTENT"))
 	s.Equal(files.ErrChunkTooSmall, err)
 }
 
-func (s StoreSuite) TestFileNotFoundWhenMarkedAsUploaded() {
-	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusNotFound)
+func (s StoreSuite) TestErrorMarkingAsUploaded() {
+	expectedError := errors.New("marking error")
+	s.mockFiles.MarkFileUploadedFunc = func(ctx context.Context, path string, etag string) error {
+		return expectedError
+	}
+	store := files.NewStore(s.mockFiles, s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
 
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
-	s.Equal(files.ErrFileNotFound, err)
-}
-
-func (s StoreSuite) TestReturnsConflictWhenFileInUnexpectedState() {
-	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusConflict)
-
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
-	s.Equal(files.ErrFileStateConflict, err)
-}
-
-func (s StoreSuite) TestReturnsFileServerErrorWhenFileInteralServerError() {
-	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusInternalServerError)
-
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
-	s.Equal(files.ErrFilesServer, err)
-}
-
-func (s StoreSuite) TestReturnsAuthenticationErrorWhenFileForbidden() {
-	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusForbidden)
-
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
-	s.Equal(files.ErrFilesUnauthorised, err)
-}
-
-func (s StoreSuite) TestUploadCompleteUnknownError() {
-	s.fakeFilesApi.NewHandler().Patch("/files/").Reply(http.StatusTeapot)
-
-	store := files.NewStore(s.fakeFilesApi.ResolveURL(""), s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
-	s.Equal(files.ErrUnknownError, err)
-}
-
-func (s *StoreSuite) TestErrorConnectingToUploadComplete() {
-	store := files.NewStore("does.not.work", s.mockS3, s.fakeKeyGenerator, s.mockVault, vaultPath)
-
-	_, err := store.UploadFile(context.Background(), files.StoreMetadata{}, lastResumable, []byte("CONTENT"))
-	s.Equal(files.ErrConnectingToFilesApi, err)
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, []byte("CONTENT"))
+	s.Equal(expectedError, err)
 }

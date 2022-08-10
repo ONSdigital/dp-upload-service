@@ -4,19 +4,21 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/stretchr/testify/suite"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
+	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
 	"github.com/ONSdigital/dp-upload-service/files"
 
 	"github.com/ONSdigital/dp-upload-service/api"
 )
 
-var stubStoreFunction = func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, c []byte) (bool, error) {
+var stubStoreFunction = func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, c []byte) (bool, error) {
 	return false, nil
 }
 
@@ -119,7 +121,7 @@ func (s UploadTestSuite) TestFileWasSupplied() {
 func (s UploadTestSuite) TestSuccessfulStorageOfCompleteFileReturns201() {
 	payload := "TEST DATA"
 	funcCalled := false
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		funcCalled = true
 		s.Equal(payload, string(fileContent))
 		return true, nil
@@ -140,7 +142,7 @@ func (s UploadTestSuite) TestSuccessfulStorageOfCompleteFileReturns201() {
 
 func (s UploadTestSuite) TestChunkTooSmallReturns400() {
 	payload := "TEST DATA"
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		return true, files.ErrChunkTooSmall
 	}
 
@@ -160,7 +162,7 @@ func (s UploadTestSuite) TestChunkTooSmallReturns400() {
 }
 
 func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFilesAPIDuplicateFile
 	}
 
@@ -178,7 +180,7 @@ func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
 }
 
 func (s UploadTestSuite) TestInvalidContentReturns500() {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFileAPICreateInvalidData
 	}
 
@@ -196,7 +198,7 @@ func (s UploadTestSuite) TestInvalidContentReturns500() {
 }
 
 func (s UploadTestSuite) TestServerErrorReturns500() {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFilesServer
 	}
 
@@ -214,7 +216,7 @@ func (s UploadTestSuite) TestServerErrorReturns500() {
 }
 
 func (s UploadTestSuite) TestFileUnathorisedErrorReturnsForbidden() {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFilesUnauthorised
 	}
 

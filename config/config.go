@@ -21,6 +21,7 @@ type Config struct {
 	VaultAddress                   string        `envconfig:"VAULT_ADDR"`
 	VaultPath                      string        `envconfig:"VAULT_PATH"`
 	FilesAPIURL                    string        `envconfig:"FILES_API_URL"`
+	ServiceAuthToken               string        `envconfig:"SERVICE_AUTH_TOKEN"         json:"-"`
 }
 
 // Get returns the default config with any modifications through environment
@@ -37,6 +38,7 @@ func Get() (*Config, error) {
 		VaultToken:                 "",
 		VaultAddress:               "http://localhost:8200",
 		VaultPath:                  "secret/shared/psk",
+		ServiceAuthToken:           "c60198e9-1864-4b68-ad0b-1e858e5b46a4",
 	}
 
 	return cfg, envconfig.Process("", cfg)

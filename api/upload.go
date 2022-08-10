@@ -3,13 +3,15 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/ONSdigital/dp-net/v2/request"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 
+	"github.com/ONSdigital/dp-net/v2/request"
+
 	"github.com/ONSdigital/dp-upload-service/files"
 
+	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/go-playground/validator"
 	"github.com/gorilla/schema"
@@ -31,7 +33,7 @@ type Metadata struct {
 	LicenceUrl    string  `schema:"licenceUrl" validate:"required"`
 }
 
-type StoreFile func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, content []byte) (bool, error)
+type StoreFile func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, content []byte) (bool, error)
 
 func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -124,13 +126,13 @@ func getResponseStatus(allPartsUploaded bool) int {
 	return http.StatusOK
 }
 
-func getStoreMetadata(metadata Metadata, resumable files.Resumable) files.StoreMetadata {
-	return files.StoreMetadata{
+func getStoreMetadata(metadata Metadata, resumable files.Resumable) filesAPI.FileMetaData {
+	return filesAPI.FileMetaData{
 		Path:          fmt.Sprintf("%s/%s", metadata.Path, resumable.FileName),
 		IsPublishable: *metadata.IsPublishable,
-		CollectionId:  metadata.CollectionId,
+		CollectionID:  metadata.CollectionId,
 		Title:         metadata.Title,
-		SizeInBytes:   metadata.SizeInBytes,
+		SizeInBytes:   uint64(metadata.SizeInBytes),
 		Type:          metadata.Type,
 		Licence:       metadata.Licence,
 		LicenceUrl:    metadata.LicenceUrl,

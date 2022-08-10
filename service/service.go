@@ -10,6 +10,8 @@ import (
 	"github.com/ONSdigital/dp-upload-service/upload"
 	"github.com/ONSdigital/log.go/v2/log"
 
+	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
+
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 )
@@ -89,7 +91,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 
 	// v1 DO NOT USE IN PRODUCTION YET!
 	r.Path("/upload-new").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(files.NewStore(
-		cfg.FilesAPIURL,
+		filesAPI.NewAPIClient(cfg.FilesAPIURL, cfg.ServiceAuthToken),
 		s3StaticFileUploader,
 		serviceList.GetEncryptionKeyGenerator(),
 		vaultClient,

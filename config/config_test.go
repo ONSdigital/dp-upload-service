@@ -32,6 +32,7 @@ func TestConfig(t *testing.T) {
 				So(testCfg.VaultAddress, ShouldEqual, "http://localhost:8200")
 				So(testCfg.VaultPath, ShouldEqual, "secret/shared/psk")
 				So(testCfg.VaultToken, ShouldEqual, "")
+				So(testCfg.ServiceAuthToken, ShouldEqual, "c60198e9-1864-4b68-ad0b-1e858e5b46a4")
 			})
 
 			Convey("Then a second call to config should return the same config", func() {
