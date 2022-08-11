@@ -49,8 +49,8 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file "([^"]*)" should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
 	ctx.Step(`^the stored file "([^"]*)" should match the sent file "([^"]*)" using encryption key "([^"]*)"$`, c.theStoredFileShouldMatchTheSentFile)
 	ctx.Step(`^the encryption key "([^"]*)" should be stored against file "([^"]*)"$`, c.theEncryptionKeyShouldBeStored)
-	ctx.Step(`^the files api POST request should contain an authorization header containing "([^"]*)"$`, c.theFilesapiPOSTRequestShouldContainAnAuthorizationHeaderContaining)
-	ctx.Step(`^the files api PATCH request with path \("([^"]*)"\) should contain an authorization header containing "([^"]*)"$`, c.theFilesApiPATCHRequestWithPathShouldContainAnAuthorizationHeaderContaining)
+	ctx.Step(`^the files api POST request should contain a default authorization header$`, c.theFilesApiPOSTRequestShouldContainADefaultAuthorizationHeader)
+	ctx.Step(`^the files api PATCH request with path \("([^"]*)"\) should contain a default authorization header$`, c.theFilesApiPATCHRequestWithPathShouldContainADefaultAuthorizationHeader)
 	// Buts
 	ctx.Step(`^the file should not be marked as uploaded$`, c.theFileShouldNotBeMarkedAsUploaded)
 	ctx.Step(`^the file upload should not have been registered again$`, c.theFileUploadShouldNotHaveBeenRegisteredAgain)
@@ -369,12 +369,14 @@ func (c *UploadComponent) theEncryptionKeyShouldBeStored(expectedEncryptionKey, 
 	return c.ApiFeature.StepError()
 }
 
-func (c *UploadComponent) theFilesapiPOSTRequestShouldContainAnAuthorizationHeaderContaining(expectedAuthHeader string) error {
-	assert.Equal(c.ApiFeature, expectedAuthHeader, requests[fmt.Sprintf("%s|%s|auth", filesURI, http.MethodPost)])
+func (c *UploadComponent) theFilesApiPOSTRequestShouldContainADefaultAuthorizationHeader() error {
+	cfg, _ := config.Get()
+	assert.Equal(c.ApiFeature, "Bearer "+cfg.ServiceAuthToken, requests[fmt.Sprintf("%s|%s|auth", filesURI, http.MethodPost)])
 	return c.ApiFeature.StepError()
 }
 
-func (c *UploadComponent) theFilesApiPATCHRequestWithPathShouldContainAnAuthorizationHeaderContaining(filepath, expectedAuthHeader string) error {
-	assert.Equal(c.ApiFeature, expectedAuthHeader, requests[fmt.Sprintf("%s/%s|%s|auth", filesURI, filepath, http.MethodPatch)])
+func (c *UploadComponent) theFilesApiPATCHRequestWithPathShouldContainADefaultAuthorizationHeader(filepath string) error {
+	cfg, _ := config.Get()
+	assert.Equal(c.ApiFeature, "Bearer "+cfg.ServiceAuthToken, requests[fmt.Sprintf("%s/%s|%s|auth", filesURI, filepath, http.MethodPatch)])
 	return c.ApiFeature.StepError()
 }

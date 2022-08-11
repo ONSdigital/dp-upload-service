@@ -106,14 +106,14 @@ Feature: Uploading a file
         brian,1
         russ,2
         """
-      When I upload the file "test-data/authorized.csv" with the following form resumable parameters and auth header "auth-header-total-secure"
+      When I upload the file "test-data/authorized.csv" with the following form resumable parameters:
         | resumableFilename    | authorized.csv       |
         | resumableType        | text/csv             |
         | resumableTotalChunks | 1                    |
         | resumableChunkNumber | 1                    |
         | path                 | data                 |
-      Then the files api POST request should contain an authorization header containing "auth-header-total-secure"
-      And the files api PATCH request with path ("data/authorized.csv") should contain an authorization header containing "auth-header-total-secure"
+      Then the files api POST request should contain a default authorization header
+      And the files api PATCH request with path ("data/authorized.csv") should contain a default authorization header
       And the HTTP status code should be "201"
 
 

@@ -30,7 +30,7 @@ require (
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0 // indirect
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.159.2-0.20220810154629-c8bc0fce3585 // indirect
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.159.2-0.20220811214156-352503b95e6f
 	github.com/ONSdigital/dp-mongodb-in-memory v1.2.0 // indirect
 	github.com/ONSdigital/dp-net v1.4.1 // indirect
 	github.com/chromedp/cdproto v0.0.0-20211126220118-81fa0469ad77 // indirect
