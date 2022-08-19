@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/encryption"
 	"net/http"
 	"strings"
@@ -169,11 +170,8 @@ func (s Store) registerFileUpload(ctx context.Context, metadata StoreMetadata) e
 }
 
 func (s Store) setAuthHeader(ctx context.Context, req *http.Request) {
-	const authContextKey ContextKey = request.AuthHeaderKey
-
-	authHeaderValue := ctx.Value(authContextKey)
-	if authHeaderValue != nil {
-		req.Header.Set(request.AuthHeaderKey, authHeaderValue.(string))
+	if authHeaderValue, ok := ctx.Value(api.AuthContextKey).(string); ok {
+		req.Header.Set(request.AuthHeaderKey, authHeaderValue)
 	} else {
 		log.Info(ctx, fmt.Sprintf("no %s set in context, this may cause auth issues", request.AuthHeaderKey), log.Data{"Request:": req})
 	}
