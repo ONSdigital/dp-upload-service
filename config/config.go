@@ -1,10 +1,17 @@
 package config
 
 import (
+	"github.com/ONSdigital/dp-net/v2/request"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
+
+const (
+	AuthContextKey ContextKey = request.AuthHeaderKey
+)
+
+type ContextKey string
 
 // Config represents service configuration for dp-upload-service
 type Config struct {

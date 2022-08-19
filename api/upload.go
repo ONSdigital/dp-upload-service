@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/ONSdigital/dp-net/v2/request"
+	"github.com/ONSdigital/dp-upload-service/config"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -16,9 +17,8 @@ import (
 )
 
 const (
-	maxChunkSize                        = 5 * 1024 * 1024
-	maxMultipartMemory                  = maxChunkSize + 1024
-	AuthContextKey     files.ContextKey = request.AuthHeaderKey
+	maxChunkSize       = 5 * 1024 * 1024
+	maxMultipartMemory = maxChunkSize + 1024
 )
 
 type Metadata struct {
@@ -42,7 +42,7 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			return
 		}
 		authHeaderValue := req.Header.Get(request.AuthHeaderKey)
-		augmentedContext := context.WithValue(req.Context(), AuthContextKey, authHeaderValue)
+		augmentedContext := context.WithValue(req.Context(), config.AuthContextKey, authHeaderValue)
 
 		d := schema.NewDecoder()
 		d.IgnoreUnknownKeys(true)
