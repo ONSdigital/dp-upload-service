@@ -37,7 +37,7 @@ var _ Initialiser = &InitialiserMock{}
 // 			DoGetStaticFileS3UploaderFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
 // 				panic("mock out the DoGetStaticFileS3Uploader method")
 // 			},
-// 			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+// 			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 // 				panic("mock out the DoGetVault method")
 // 			},
 // 		}
@@ -63,7 +63,7 @@ type InitialiserMock struct {
 	DoGetStaticFileS3UploaderFunc func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error)
 
 	// DoGetVaultFunc mocks the DoGetVault method.
-	DoGetVaultFunc func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error)
+	DoGetVaultFunc func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -293,7 +293,7 @@ func (mock *InitialiserMock) DoGetStaticFileS3UploaderCalls() []struct {
 }
 
 // DoGetVault calls DoGetVaultFunc.
-func (mock *InitialiserMock) DoGetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+func (mock *InitialiserMock) DoGetVault(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 	if mock.DoGetVaultFunc == nil {
 		panic("InitialiserMock.DoGetVaultFunc: method is nil but Initialiser.DoGetVault was just called")
 	}

@@ -3,10 +3,10 @@ package files
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ONSdigital/dp-upload-service/encryption"
 	"net/http"
 	"strings"
 
@@ -15,8 +15,6 @@ import (
 
 	"github.com/ONSdigital/log.go/v2/log"
 
-	"github.com/ONSdigital/dp-upload-service/encryption"
-
 	s3client "github.com/ONSdigital/dp-s3/v2"
 
 	"github.com/ONSdigital/dp-upload-service/upload"
@@ -24,7 +22,6 @@ import (
 
 const (
 	StateUploaded = "UPLOADED"
-	vaultKey      = "key"
 )
 
 var (
@@ -36,9 +33,6 @@ var (
 	ErrFileNotFound             = errors.New("file not found")
 	ErrFileStateConflict        = errors.New("file was not in the expected state")
 	ErrChunkTooSmall            = errors.New("chunk size below minimum 5MB")
-	ErrVaultWrite               = errors.New("failed to write to vault")
-	ErrVaultRead                = errors.New("failed to read from vault")
-	ErrInvalidEncryptionKey     = errors.New("encryption key invalid")
 	ErrFilesServer              = errors.New("file api returning internal server errors")
 	ErrFilesUnauthorised        = errors.New("access unauthorised")
 )
@@ -46,15 +40,13 @@ var (
 type ContextKey string
 
 type Store struct {
-	hostname     string
-	s3           upload.S3Clienter
-	keyGenerator encryption.GenerateKey
-	vault        upload.VaultClienter
-	vaultPath    string
+	hostname string
+	s3       upload.S3Clienter
+	vault    *encryption.Vault
 }
 
-func NewStore(hostname string, s3 upload.S3Clienter, keyGenerator encryption.GenerateKey, vault upload.VaultClienter, vaultPath string) Store {
-	return Store{hostname, s3, keyGenerator, vault, vaultPath}
+func NewStore(hostname string, s3 upload.S3Clienter, vault *encryption.Vault) Store {
+	return Store{hostname, s3, vault}
 }
 
 func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable Resumable, content []byte) (bool, error) {
@@ -67,12 +59,12 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 			return false, err
 		}
 
-		encryptionKey, err = s.generateEncryptionKey(ctx, metadata.Path)
+		encryptionKey, err = s.vault.GenerateEncryptionKey(ctx, metadata.Path)
 		if err != nil {
 			return false, err
 		}
 	} else {
-		encryptionKey, err = s.getEncryptionKey(ctx, metadata.Path)
+		encryptionKey, err = s.vault.EncryptionKey(ctx, metadata.Path)
 		if err != nil {
 			return false, err
 		}
@@ -93,35 +85,6 @@ func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable
 	}
 
 	return false, nil
-}
-
-func (s Store) generateEncryptionKey(ctx context.Context, filepath string) ([]byte, error) {
-	encryptionKey := s.keyGenerator()
-	if err := s.vault.WriteKey(s.getVaultPath(filepath), vaultKey, hex.EncodeToString(encryptionKey)); err != nil {
-		log.Error(ctx, "failed to write encryption encryptionKey to vault", err, log.Data{"vault-path": s.getVaultPath(filepath), "vault-encryptionKey": vaultKey})
-		return nil, ErrVaultWrite
-	}
-
-	return encryptionKey, nil
-}
-
-func (s Store) getEncryptionKey(ctx context.Context, filepath string) ([]byte, error) {
-	strKey, err := s.vault.ReadKey(s.getVaultPath(filepath), vaultKey)
-	if err != nil {
-		log.Error(ctx, "failed to read encryption encryptionkey from vault", err, log.Data{"vault-path": s.getVaultPath(filepath), "vault-encryptionkey": vaultKey})
-		return nil, ErrVaultRead
-	}
-
-	encryptionKey, err := hex.DecodeString(strKey)
-	if err != nil {
-		log.Error(ctx, "encryption key contains non-hexadecimal characters", err, log.Data{"vault-path": s.getVaultPath(filepath), "vault-encryptionkey": vaultKey})
-		return nil, ErrInvalidEncryptionKey
-	}
-	return encryptionKey, nil
-}
-
-func (s Store) getVaultPath(filepath string) string {
-	return fmt.Sprintf("%s/%s", s.vaultPath, filepath)
 }
 
 func firstChunk(currentChunk int64) bool { return currentChunk == 1 }

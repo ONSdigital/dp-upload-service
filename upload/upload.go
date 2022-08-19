@@ -2,16 +2,14 @@ package upload
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
-	"net/http"
-
 	s3client "github.com/ONSdigital/dp-s3/v2"
+	"github.com/ONSdigital/dp-upload-service/encryption"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
+	"io/ioutil"
+	"net/http"
 )
 
 var decoder = schema.NewDecoder()
@@ -44,21 +42,19 @@ func (resum *Resumable) createS3Request() *s3client.UploadPartRequest {
 
 // Uploader represents the necessary configuration for uploading a file
 type Uploader struct {
-	s3Client    S3Clienter
-	vaultClient VaultClienter
-	vaultPath   string
-	s3Region    string
-	s3Bucket    string
+	s3Client S3Clienter
+	vault    *encryption.Vault
+	s3Region string
+	s3Bucket string
 }
 
 // New returns a new Uploader from the provided clients and vault path
-func New(s3 S3Clienter, vc VaultClienter, vaultPath, s3Region, s3Bucket string) *Uploader {
+func New(s3 S3Clienter, vault *encryption.Vault, s3Region, s3Bucket string) *Uploader {
 	return &Uploader{
-		s3Client:    s3,
-		vaultClient: vc,
-		vaultPath:   vaultPath,
-		s3Region:    s3Region,
-		s3Bucket:    s3Bucket,
+		s3Client: s3,
+		vault:    vault,
+		s3Region: s3Region,
+		s3Bucket: s3Bucket,
 	}
 }
 
@@ -123,7 +119,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if u.vaultClient == nil {
+	if u.vault == nil {
 		// Perform upload without PSK
 		if _, err := u.s3Client.UploadPart(req.Context(), resum.createS3Request(), payload); err != nil {
 			log.Error(req.Context(), "error returned from upload without PSK", err)
@@ -134,25 +130,13 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	vaultKey := "key"
-	vaultKeyPath := u.vaultPath + "/" + resum.Identifier
-
 	// Get PSK from Vault. If the vault PSK is not found for this file, then create one and use it
-	var psk []byte
-	pskStr, err := u.vaultClient.ReadKey(vaultKeyPath, vaultKey)
+	psk, err := u.vault.EncryptionKey(req.Context(), resum.Identifier)
 	if err != nil {
 		// Create PSK and write it to Vault
-		psk = createPSK()
-		if err := u.vaultClient.WriteKey(vaultKeyPath, vaultKey, hex.EncodeToString(psk)); err != nil {
-			log.Error(req.Context(), "error writing key to vault", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	} else {
-		// Use existing PSK found in Vault
-		psk, err = hex.DecodeString(pskStr)
+		psk, err = u.vault.GenerateEncryptionKey(req.Context(), resum.Identifier)
 		if err != nil {
-			log.Error(req.Context(), "error decoding key", err)
+			log.Error(req.Context(), "error writing key to vault", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -225,11 +209,4 @@ func (u *Uploader) GetS3URL(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(b) //nolint
-}
-
-func createPSK() []byte {
-	key := make([]byte, 16)
-	rand.Read(key) //nolint
-
-	return key
 }

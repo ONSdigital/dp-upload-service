@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	maxChunkSize       = 5 * 1024 * 1024
-	maxMultipartMemory = maxChunkSize + 1024
+	maxChunkSize                        = 5 * 1024 * 1024
+	maxMultipartMemory                  = maxChunkSize + 1024
+	authContextKey     files.ContextKey = request.AuthHeaderKey
 )
 
 type Metadata struct {
@@ -41,8 +42,6 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			return
 		}
 		authHeaderValue := req.Header.Get(request.AuthHeaderKey)
-
-		const authContextKey files.ContextKey = request.AuthHeaderKey
 		augmentedContext := context.WithValue(req.Context(), authContextKey, authHeaderValue)
 
 		d := schema.NewDecoder()

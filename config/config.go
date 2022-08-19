@@ -29,7 +29,7 @@ func Get() (*Config, error) {
 	cfg := &Config{
 		BindAddr:                   "localhost:25100",
 		AwsRegion:                  "eu-west-1",
-		UploadBucketName:           "dp-frontend-florence-file-uploads",
+		UploadBucketName:           "testing",
 		EncryptionDisabled:         false,
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,

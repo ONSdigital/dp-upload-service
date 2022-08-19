@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-upload-service/encryption"
+	encryption_mock "github.com/ONSdigital/dp-upload-service/encryption/mock"
 	"net/http"
 	"testing"
 	"time"
@@ -120,9 +122,9 @@ func TestGetHTTPServer(t *testing.T) {
 
 func TestGetVault(t *testing.T) {
 	Convey("Given a service list that includes a mocked vault", t, func() {
-		vaultMock := &mock.VaultClienterMock{}
+		vaultMock := &encryption_mock.VaultClienterMock{}
 		newServiceMock := &InitialiserMock{
-			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 				return vaultMock, nil
 			},
 		}
@@ -139,7 +141,7 @@ func TestGetVault(t *testing.T) {
 
 	Convey("Given a service list that returns nil for vault client", t, func() {
 		newServiceMock := &InitialiserMock{
-			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 				return nil, errVault
 			},
 		}
@@ -159,7 +161,7 @@ func TestGetS3Uploaded(t *testing.T) {
 
 	Convey("Given a service list that includes a mocked s3Client", t, func() {
 
-		s3UploadedMock := &mock.S3ClienterMock{}
+		s3UploadedMock := &upload_mock.S3ClienterMock{}
 		newServiceMock := &InitialiserMock{
 			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
 				return s3UploadedMock, nil

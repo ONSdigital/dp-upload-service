@@ -7,15 +7,7 @@ import (
 	s3client "github.com/ONSdigital/dp-s3/v2"
 )
 
-//go:generate moq -out mock/s3.go -pkg mock . S3Clienter
-//go:generate moq -out mock/vault.go -pkg mock . VaultClienter
-
-// VaultClienter defines the required method
-type VaultClienter interface {
-	ReadKey(path, key string) (string, error)
-	WriteKey(path, key, value string) error
-	Checker(ctx context.Context, state *healthcheck.CheckState) error
-}
+//go:generate moq -out mock/s3.go -pkg upload_mock . S3Clienter
 
 // S3Clienter defines the required method
 type S3Clienter interface {

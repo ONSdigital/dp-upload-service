@@ -24,7 +24,7 @@ func TestConfig(t *testing.T) {
 			Convey("Then the values should be set to the expected defaults", func() {
 				So(testCfg.BindAddr, ShouldEqual, "localhost:25100")
 				So(testCfg.AwsRegion, ShouldEqual, "eu-west-1")
-				So(testCfg.UploadBucketName, ShouldEqual, "dp-frontend-florence-file-uploads")
+				So(testCfg.UploadBucketName, ShouldEqual, "testing")
 				So(testCfg.EncryptionDisabled, ShouldBeFalse)
 				So(testCfg.GracefulShutdownTimeout, ShouldEqual, 5*time.Second)
 				So(testCfg.HealthCheckInterval, ShouldEqual, 30*time.Second)

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	encryption_mock "github.com/ONSdigital/dp-upload-service/encryption/mock"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -32,7 +33,7 @@ var (
 	errHealthcheck = errors.New("healthCheck error")
 )
 
-var funcDoGetVaultErr = func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+var funcDoGetVaultErr = func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 	return nil, errVault
 }
 
@@ -64,11 +65,11 @@ func TestRun(t *testing.T) {
 			return r.Match(req, match)
 		}
 
-		vaultMock := &mock.VaultClienterMock{
+		vaultMock := &encryption_mock.VaultClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
-		s3UploadedMock := &mock.S3ClienterMock{
+		s3UploadedMock := &upload_mock.S3ClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
@@ -85,7 +86,7 @@ func TestRun(t *testing.T) {
 			},
 		}
 
-		funcDoGetVaultOk := func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+		funcDoGetVaultOk := func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 			return vaultMock, nil
 		}
 
@@ -251,11 +252,11 @@ func TestClose(t *testing.T) {
 
 		hcStopped := false
 
-		vaultMock := &mock.VaultClienterMock{
+		vaultMock := &encryption_mock.VaultClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
-		s3UploadedMock := &mock.S3ClienterMock{
+		s3UploadedMock := &upload_mock.S3ClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
@@ -281,7 +282,7 @@ func TestClose(t *testing.T) {
 
 			initMock := &InitialiserMock{
 				DoGetHTTPServerFunc:           func(bindAddr string, router http.Handler) HTTPServer { return serverMock },
-				DoGetVaultFunc:                func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) { return vaultMock, nil },
+				DoGetVaultFunc:                func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) { return vaultMock, nil },
 				DoGetS3UploadedFunc:           func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) { return s3UploadedMock, nil },
 				DoGetStaticFileS3UploaderFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) { return s3UploadedMock, nil },
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (HealthChecker, error) {
@@ -313,7 +314,7 @@ func TestClose(t *testing.T) {
 
 			initMock := &InitialiserMock{
 				DoGetHTTPServerFunc:           func(bindAddr string, router http.Handler) HTTPServer { return failingserverMock },
-				DoGetVaultFunc:                func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) { return vaultMock, nil },
+				DoGetVaultFunc:                func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) { return vaultMock, nil },
 				DoGetS3UploadedFunc:           func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) { return s3UploadedMock, nil },
 				DoGetStaticFileS3UploaderFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) { return s3UploadedMock, nil },
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (HealthChecker, error) {
