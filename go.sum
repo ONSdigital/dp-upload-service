@@ -54,6 +54,7 @@ github.com/ONSdigital/dp-healthcheck v1.1.0/go.mod h1:vZwyjMJiCHjp/sJ2R1ZEqzZT0r
 github.com/ONSdigital/dp-healthcheck v1.3.0 h1:WQLajH8Ne47fHcz3of9dZKCvqeBmjw+Kyx4bHzpzZLk=
 github.com/ONSdigital/dp-healthcheck v1.3.0/go.mod h1:XUhXoDIWPCdletDtpDOoXhmDFcc9b/kbedx96jN75aI=
 github.com/ONSdigital/dp-mocking v0.0.0-20190905163309-fee2702ad1b9/go.mod h1:BcIRgitUju//qgNePRBmNjATarTtynAgc0yV29VpLEk=
+github.com/ONSdigital/dp-mocking v0.9.1 h1:lfpk7D8xB+6OvCN/PXMoTp+zCYr0tDdfMCl/lJTml2g=
 github.com/ONSdigital/dp-mongodb-in-memory v1.2.0 h1:rv4fMJXul4KLU2INlzGF73/EWz4Zezndn53ZAKY4gAo=
 github.com/ONSdigital/dp-mongodb-in-memory v1.2.0/go.mod h1:AQaNcbSS18WtldA4iWUlHQDn9FCLB2K6ff68QnvZBqM=
 github.com/ONSdigital/dp-net v1.0.5-0.20200805082802-e518bc287596/go.mod h1:wDVhk2pYosQ1q6PXxuFIRYhYk2XX5+1CeRRnXpSczPY=
