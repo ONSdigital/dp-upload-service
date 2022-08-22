@@ -7,11 +7,10 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/ONSdigital/dp-net/v2/request"
-
-	"github.com/ONSdigital/dp-upload-service/files"
-
 	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
+	"github.com/ONSdigital/dp-net/v2/request"
+	"github.com/ONSdigital/dp-upload-service/config"
+	"github.com/ONSdigital/dp-upload-service/files"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/go-playground/validator"
 	"github.com/gorilla/schema"
@@ -43,9 +42,7 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			return
 		}
 		authHeaderValue := req.Header.Get(request.AuthHeaderKey)
-
-		const authContextKey files.ContextKey = request.AuthHeaderKey
-		augmentedContext := context.WithValue(req.Context(), authContextKey, authHeaderValue)
+		augmentedContext := context.WithValue(req.Context(), config.AuthContextKey, authHeaderValue)
 
 		d := schema.NewDecoder()
 		d.IgnoreUnknownKeys(true)

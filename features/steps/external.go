@@ -32,7 +32,7 @@ func (e external) DoGetHTTPServer(bindAddr string, router http.Handler) service.
 	return e.Server
 }
 
-func (e external) DoGetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+func (e external) DoGetVault(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 	v, err := vault.CreateClient(cfg.VaultToken, cfg.VaultAddress, 5)
 	if err != nil {
 		fmt.Println(err.Error())

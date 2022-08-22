@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-upload-service/encryption"
 	"net/http"
 
 	"github.com/ONSdigital/dp-upload-service/api"
@@ -23,7 +24,7 @@ type Service struct {
 	router      *mux.Router
 	serviceList *ExternalServiceList
 	healthCheck HealthChecker
-	vault       upload.VaultClienter
+	vault       encryption.VaultClienter
 	uploader    *upload.Uploader
 }
 
@@ -56,17 +57,15 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	var vault upload.VaultClienter
-
-	// Get Vault client
-	vault, err = serviceList.GetVault(ctx, cfg)
+	vaultClient, err := serviceList.GetVault(ctx, cfg)
 	if err != nil {
-		log.Fatal(ctx, "failed to initialise Vault client", err)
+		log.Fatal(ctx, "could not connect to Vault", err)
 		return nil, err
 	}
+	vault := encryption.NewVault(serviceList.GetEncryptionKeyGenerator(), vaultClient, cfg.VaultPath)
 
 	// Create Uploader with S3 client and Vault
-	uploader := upload.New(s3Uploaded, vault, cfg.VaultPath, cfg.AwsRegion, cfg.UploadBucketName)
+	uploader := upload.New(s3Uploaded, vault, cfg.AwsRegion, cfg.UploadBucketName)
 
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
 	if err != nil {
@@ -74,30 +73,19 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	vaultClient, err := serviceList.GetVault(ctx, cfg)
-	if err != nil {
-		log.Fatal(ctx, "could not connect to Vault", err)
-		return nil, err
-	}
-
-	if err := registerCheckers(ctx, hc, vault, s3Uploaded); err != nil {
+	if err := registerCheckers(ctx, hc, vaultClient, s3Uploaded); err != nil {
 		log.Fatal(ctx, "unable to register checkers", err)
 		return nil, err
 	}
+
 	r.StrictSlash(true).Path("/health").Methods(http.MethodGet).HandlerFunc(hc.Handler)
 	r.Path("/upload").Methods(http.MethodGet).HandlerFunc(uploader.CheckUploaded)
 	r.Path("/upload").Methods(http.MethodPost).HandlerFunc(uploader.Upload)
 	r.Path("/upload/{id}").Methods(http.MethodGet).HandlerFunc(uploader.GetS3URL)
 
 	// v1 DO NOT USE IN PRODUCTION YET!
-	r.Path("/upload-new").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(files.NewStore(
-		filesAPI.NewAPIClient(cfg.FilesAPIURL, cfg.ServiceAuthToken),
-		s3StaticFileUploader,
-		serviceList.GetEncryptionKeyGenerator(),
-		vaultClient,
-		cfg.VaultPath,
-	).UploadFile),
-	)
+	store := files.NewStore(filesAPI.NewAPIClient(cfg.FilesAPIURL, cfg.ServiceAuthToken), s3StaticFileUploader, vault)
+	r.Path("/upload-new").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(store.UploadFile))
 
 	hc.Start(ctx)
 
@@ -114,7 +102,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		healthCheck: hc,
 		serviceList: serviceList,
 		server:      s,
-		vault:       vault,
+		vault:       vaultClient,
 		uploader:    uploader,
 	}, nil
 }
@@ -164,7 +152,7 @@ func (svc *Service) Close(ctx context.Context) error {
 
 func registerCheckers(ctx context.Context,
 	hc HealthChecker,
-	vault upload.VaultClienter,
+	vault encryption.VaultClienter,
 	s3Uploaded upload.S3Clienter) (err error) {
 
 	hasErrors := false

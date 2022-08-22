@@ -47,7 +47,7 @@ func (e *ExternalServiceList) GetHTTPServer(bindAddr string, router http.Handler
 }
 
 // GetVault creates a Vault client and sets the Vault flag to true
-func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 	vault, err := e.Init.DoGetVault(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func generateS3Client(cfg *config.Config, bucketName string) (upload.S3Clienter,
 // DoGetVault returns a VaultClient unless encryption is disabled
 //
 // If cfg.EncryptionDisabled is true then the function returns nil
-func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 	if cfg.EncryptionDisabled {
 		return nil, nil
 	}
