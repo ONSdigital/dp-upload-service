@@ -50,4 +50,4 @@ docker-local:
 
 .PHONY: lint
 lint:
-	golangci-lint run ./... --timeout 2m --tests=false --skip-dirs=features
+	golangci-lint run ./... --timeout 3m --tests=false --skip-dirs=features
