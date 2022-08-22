@@ -153,6 +153,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 
 // handleError decides the HTTP status according to the provided error
 func statusCodeFromS3Error(err error) int {
+	//nolint
 	switch err.(type) {
 	case *s3client.ErrNotUploaded:
 		return http.StatusNotFound
