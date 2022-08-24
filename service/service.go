@@ -89,7 +89,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	filesAPIClient := filesAPI.NewAPIClient(cfg.FilesAPIURL, cfg.ServiceAuthToken)
 	store := files.NewStore(filesAPIClient, staticBucket, vault)
 	r.Path("/upload-new").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(store.UploadFile))
-	r.Path("/upload-new/status/files/{path:.*}").Methods(http.MethodGet).HandlerFunc(api.StatusHandler(store))
+	r.Path("/upload-new/files/{path:.*?}/status").Methods(http.MethodGet).HandlerFunc(api.StatusHandler(store))
 
 	hc.Start(ctx)
 

@@ -18,7 +18,7 @@ Feature: Status for a single file
     And encryption key will be "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf"
 
   Scenario: Status returns with valid metadata and status messages for vault and bucket
-    Given I GET "/upload-new/status/files/testing/valid"
+    Given I GET "/upload-new/files/testing/valid/status"
     Then I should receive the following JSON response with status "200":
             """
                 {
@@ -43,5 +43,5 @@ Feature: Status for a single file
             """
 
   Scenario: Status returns with 404 if path doesnt exist
-    Given I GET "/upload-new/status/files/testing/invalid"
+    Given I GET "/upload-new/files/testing/invalid/status"
     Then the HTTP status code should be "404"
