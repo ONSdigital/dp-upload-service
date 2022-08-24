@@ -35,17 +35,19 @@ type Config struct {
 // variables
 func Get() (*Config, error) {
 	cfg := &Config{
-		BindAddr:                   "localhost:25100",
-		AwsRegion:                  "eu-west-1",
-		UploadBucketName:           "testing",
-		EncryptionDisabled:         false,
-		GracefulShutdownTimeout:    5 * time.Second,
-		HealthCheckInterval:        30 * time.Second,
-		HealthCheckCriticalTimeout: 90 * time.Second,
-		VaultToken:                 "",
-		VaultAddress:               "http://localhost:8200",
-		VaultPath:                  "secret/shared/psk",
-		ServiceAuthToken:           "c60198e9-1864-4b68-ad0b-1e858e5b46a4",
+		BindAddr:                       ":25100",
+		AwsRegion:                      "eu-west-1",
+		UploadBucketName:               "deprecated",
+		StaticFilesEncryptedBucketName: "testing",
+		EncryptionDisabled:             false,
+		GracefulShutdownTimeout:        5 * time.Second,
+		HealthCheckInterval:            30 * time.Second,
+		HealthCheckCriticalTimeout:     90 * time.Second,
+		VaultToken:                     "0000-0000-0000-0000",
+		VaultAddress:                   "http://localhost:8200",
+		VaultPath:                      "secret/shared/psk",
+		FilesAPIURL:                    "http://localhost:26900", //401 via api-router [http://localhost:23200/v1]
+		ServiceAuthToken:               "c60198e9-1864-4b68-ad0b-1e858e5b46a4",
 	}
 
 	return cfg, envconfig.Process("", cfg)

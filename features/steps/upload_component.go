@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	localStackHost = "http://localstack:4566"
+	localStackHost = "http://localhost:4566"
 	testFilePath   = "test-data"
 )
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	s3client "github.com/ONSdigital/dp-s3/v2"
+	"github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/encryption"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
@@ -42,19 +43,17 @@ func (resum *Resumable) createS3Request() *s3client.UploadPartRequest {
 
 // Uploader represents the necessary configuration for uploading a file
 type Uploader struct {
-	s3Client S3Clienter
+	bucket   *aws.Bucket
 	vault    *encryption.Vault
 	s3Region string
 	s3Bucket string
 }
 
 // New returns a new Uploader from the provided clients and vault path
-func New(s3 S3Clienter, vault *encryption.Vault, s3Region, s3Bucket string) *Uploader {
+func New(bucket *aws.Bucket, vault *encryption.Vault) *Uploader {
 	return &Uploader{
-		s3Client: s3,
-		vault:    vault,
-		s3Region: s3Region,
-		s3Bucket: s3Bucket,
+		bucket: bucket,
+		vault:  vault,
 	}
 }
 
@@ -75,7 +74,7 @@ func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, err := u.s3Client.CheckPartUploaded(req.Context(), resum.createS3Request())
+	_, err := u.bucket.CheckPartUploaded(req.Context(), resum.createS3Request())
 	if err != nil {
 		log.Error(req.Context(), "error returned from check part uploaded", err)
 		w.WriteHeader(statusCodeFromS3Error(err))
@@ -121,7 +120,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 
 	if u.vault == nil {
 		// Perform upload without PSK
-		if _, err := u.s3Client.UploadPart(req.Context(), resum.createS3Request(), payload); err != nil {
+		if _, err := u.bucket.UploadPart(req.Context(), resum.createS3Request(), payload); err != nil {
 			log.Error(req.Context(), "error returned from upload without PSK", err)
 			w.WriteHeader(statusCodeFromS3Error(err))
 			return
@@ -143,28 +142,12 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Perform upload using vault PSK
-	if _, err = u.s3Client.UploadPartWithPsk(req.Context(), resum.createS3Request(), payload, psk); err != nil {
+	if _, err = u.bucket.UploadPartWithPsk(req.Context(), resum.createS3Request(), payload, psk); err != nil {
 		log.Error(req.Context(), "error returned from upload using vault PSK", err)
 		w.WriteHeader(statusCodeFromS3Error(err))
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-}
-
-// handleError decides the HTTP status according to the provided error
-func statusCodeFromS3Error(err error) int {
-	//nolint
-	switch err.(type) {
-	case *s3client.ErrNotUploaded:
-		return http.StatusNotFound
-	case *s3client.ErrListParts:
-		return http.StatusNotFound
-	case *s3client.ErrChunkNumberNotFound:
-		return http.StatusNotFound
-	default:
-		return http.StatusInternalServerError
-	}
-	// TODO I would suggest considering S3 client errors to be '502 BAD gateway'
 }
 
 // GetS3URL returns an S3 URL for a requested path, and the client's region and bucket name.
@@ -179,17 +162,9 @@ func (u *Uploader) GetS3URL(w http.ResponseWriter, req *http.Request) {
 		path = param
 	}
 
-	// Generate URL from region, bucket and S3 key defined by query
-	s3Url, err := s3client.NewURL(u.s3Region, u.s3Bucket, path)
+	url, err := u.bucket.GetS3URL(path)
 	if err != nil {
-		log.Error(req.Context(), "error generating S3 URL from bucket and path", err,
-			log.Data{"bucket": u.s3Bucket, "region": u.s3Region, "path": path})
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	url, err := s3Url.String(s3client.PathStyle)
-	if err != nil {
-		log.Error(req.Context(), "error getting path-style S3 URL", err)
+		log.Error(req.Context(), "error getting S3 URL", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -210,4 +185,20 @@ func (u *Uploader) GetS3URL(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(b) //nolint
+}
+
+// handleError decides the HTTP status according to the provided error
+func statusCodeFromS3Error(err error) int {
+	//nolint
+	switch err.(type) {
+	case *s3client.ErrNotUploaded:
+		return http.StatusNotFound
+	case *s3client.ErrListParts:
+		return http.StatusNotFound
+	case *s3client.ErrChunkNumberNotFound:
+		return http.StatusNotFound
+	default:
+		return http.StatusInternalServerError
+	}
+	// TODO I would suggest considering S3 client errors to be '502 BAD gateway'
 }

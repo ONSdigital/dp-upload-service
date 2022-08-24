@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate moq -out mock/vault.go -pkg encryption_mock . VaultClienter
+//go:generate moq -out mock/vault.go -pkg mock_encryption . VaultClienter
 
 const (
 	vaultKey = "key"
