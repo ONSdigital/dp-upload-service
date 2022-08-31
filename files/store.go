@@ -72,14 +72,8 @@ func (s Store) Status(ctx context.Context, path string) (*Status, error) {
 	encryptionKey := newStatusMessage(len(k) > 0, err)
 
 	//file content
-	url, err := s.bucket.GetS3URL(path)
-	if err != nil {
-		log.Error(ctx, "failed to get file content", err, log.Data{"path": path})
-		return nil, ErrS3Download
-	}
-	//todo encryption off??? handle this with other Get call
-	_, size, err := s.bucket.GetFromS3URLWithPSK(url, aws.PathStyle, k)
-	fileContent := newStatusMessage(size != nil && *size > 0, err)
+	head, err := s.bucket.Head(path)
+	fileContent := newStatusMessage(head.ContentLength != nil && *head.ContentLength > 0, err)
 
 	return &Status{
 		Metadata:      metadata,

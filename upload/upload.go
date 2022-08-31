@@ -45,8 +45,6 @@ func (resum *Resumable) createS3Request() *s3client.UploadPartRequest {
 type Uploader struct {
 	bucket   *aws.Bucket
 	vault    *encryption.Vault
-	s3Region string
-	s3Bucket string
 }
 
 // New returns a new Uploader from the provided clients and vault path
