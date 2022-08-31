@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/aws"
-	"io"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"sync"
 )
 
@@ -28,11 +28,8 @@ var _ aws.S3Clienter = &S3ClienterMock{}
 // 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 // 				panic("mock out the Checker method")
 // 			},
-// 			GetFromS3URLFunc: func(rawURL string, style s3client.URLStyle) (io.ReadCloser, *int64, error) {
-// 				panic("mock out the GetFromS3URL method")
-// 			},
-// 			GetFromS3URLWithPSKFunc: func(rawURL string, style s3client.URLStyle, psk []byte) (io.ReadCloser, *int64, error) {
-// 				panic("mock out the GetFromS3URLWithPSK method")
+// 			HeadFunc: func(key string) (*s3.HeadObjectOutput, error) {
+// 				panic("mock out the Head method")
 // 			},
 // 			UploadPartFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
 // 				panic("mock out the UploadPart method")
@@ -53,11 +50,8 @@ type S3ClienterMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
 
-	// GetFromS3URLFunc mocks the GetFromS3URL method.
-	GetFromS3URLFunc func(rawURL string, style s3client.URLStyle) (io.ReadCloser, *int64, error)
-
-	// GetFromS3URLWithPSKFunc mocks the GetFromS3URLWithPSK method.
-	GetFromS3URLWithPSKFunc func(rawURL string, style s3client.URLStyle, psk []byte) (io.ReadCloser, *int64, error)
+	// HeadFunc mocks the Head method.
+	HeadFunc func(key string) (*s3.HeadObjectOutput, error)
 
 	// UploadPartFunc mocks the UploadPart method.
 	UploadPartFunc func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error)
@@ -81,21 +75,10 @@ type S3ClienterMock struct {
 			// State is the state argument value.
 			State *healthcheck.CheckState
 		}
-		// GetFromS3URL holds details about calls to the GetFromS3URL method.
-		GetFromS3URL []struct {
-			// RawURL is the rawURL argument value.
-			RawURL string
-			// Style is the style argument value.
-			Style s3client.URLStyle
-		}
-		// GetFromS3URLWithPSK holds details about calls to the GetFromS3URLWithPSK method.
-		GetFromS3URLWithPSK []struct {
-			// RawURL is the rawURL argument value.
-			RawURL string
-			// Style is the style argument value.
-			Style s3client.URLStyle
-			// Psk is the psk argument value.
-			Psk []byte
+		// Head holds details about calls to the Head method.
+		Head []struct {
+			// Key is the key argument value.
+			Key string
 		}
 		// UploadPart holds details about calls to the UploadPart method.
 		UploadPart []struct {
@@ -118,12 +101,11 @@ type S3ClienterMock struct {
 			Psk []byte
 		}
 	}
-	lockCheckPartUploaded   sync.RWMutex
-	lockChecker             sync.RWMutex
-	lockGetFromS3URL        sync.RWMutex
-	lockGetFromS3URLWithPSK sync.RWMutex
-	lockUploadPart          sync.RWMutex
-	lockUploadPartWithPsk   sync.RWMutex
+	lockCheckPartUploaded sync.RWMutex
+	lockChecker           sync.RWMutex
+	lockHead              sync.RWMutex
+	lockUploadPart        sync.RWMutex
+	lockUploadPartWithPsk sync.RWMutex
 }
 
 // CheckPartUploaded calls CheckPartUploadedFunc.
@@ -196,77 +178,34 @@ func (mock *S3ClienterMock) CheckerCalls() []struct {
 	return calls
 }
 
-// GetFromS3URL calls GetFromS3URLFunc.
-func (mock *S3ClienterMock) GetFromS3URL(rawURL string, style s3client.URLStyle) (io.ReadCloser, *int64, error) {
-	if mock.GetFromS3URLFunc == nil {
-		panic("S3ClienterMock.GetFromS3URLFunc: method is nil but S3Clienter.GetFromS3URL was just called")
+// Head calls HeadFunc.
+func (mock *S3ClienterMock) Head(key string) (*s3.HeadObjectOutput, error) {
+	if mock.HeadFunc == nil {
+		panic("S3ClienterMock.HeadFunc: method is nil but S3Clienter.Head was just called")
 	}
 	callInfo := struct {
-		RawURL string
-		Style  s3client.URLStyle
+		Key string
 	}{
-		RawURL: rawURL,
-		Style:  style,
+		Key: key,
 	}
-	mock.lockGetFromS3URL.Lock()
-	mock.calls.GetFromS3URL = append(mock.calls.GetFromS3URL, callInfo)
-	mock.lockGetFromS3URL.Unlock()
-	return mock.GetFromS3URLFunc(rawURL, style)
+	mock.lockHead.Lock()
+	mock.calls.Head = append(mock.calls.Head, callInfo)
+	mock.lockHead.Unlock()
+	return mock.HeadFunc(key)
 }
 
-// GetFromS3URLCalls gets all the calls that were made to GetFromS3URL.
+// HeadCalls gets all the calls that were made to Head.
 // Check the length with:
-//     len(mockedS3Clienter.GetFromS3URLCalls())
-func (mock *S3ClienterMock) GetFromS3URLCalls() []struct {
-	RawURL string
-	Style  s3client.URLStyle
+//     len(mockedS3Clienter.HeadCalls())
+func (mock *S3ClienterMock) HeadCalls() []struct {
+	Key string
 } {
 	var calls []struct {
-		RawURL string
-		Style  s3client.URLStyle
+		Key string
 	}
-	mock.lockGetFromS3URL.RLock()
-	calls = mock.calls.GetFromS3URL
-	mock.lockGetFromS3URL.RUnlock()
-	return calls
-}
-
-// GetFromS3URLWithPSK calls GetFromS3URLWithPSKFunc.
-func (mock *S3ClienterMock) GetFromS3URLWithPSK(rawURL string, style s3client.URLStyle, psk []byte) (io.ReadCloser, *int64, error) {
-	if mock.GetFromS3URLWithPSKFunc == nil {
-		panic("S3ClienterMock.GetFromS3URLWithPSKFunc: method is nil but S3Clienter.GetFromS3URLWithPSK was just called")
-	}
-	callInfo := struct {
-		RawURL string
-		Style  s3client.URLStyle
-		Psk    []byte
-	}{
-		RawURL: rawURL,
-		Style:  style,
-		Psk:    psk,
-	}
-	mock.lockGetFromS3URLWithPSK.Lock()
-	mock.calls.GetFromS3URLWithPSK = append(mock.calls.GetFromS3URLWithPSK, callInfo)
-	mock.lockGetFromS3URLWithPSK.Unlock()
-	return mock.GetFromS3URLWithPSKFunc(rawURL, style, psk)
-}
-
-// GetFromS3URLWithPSKCalls gets all the calls that were made to GetFromS3URLWithPSK.
-// Check the length with:
-//     len(mockedS3Clienter.GetFromS3URLWithPSKCalls())
-func (mock *S3ClienterMock) GetFromS3URLWithPSKCalls() []struct {
-	RawURL string
-	Style  s3client.URLStyle
-	Psk    []byte
-} {
-	var calls []struct {
-		RawURL string
-		Style  s3client.URLStyle
-		Psk    []byte
-	}
-	mock.lockGetFromS3URLWithPSK.RLock()
-	calls = mock.calls.GetFromS3URLWithPSK
-	mock.lockGetFromS3URLWithPSK.RUnlock()
+	mock.lockHead.RLock()
+	calls = mock.calls.Head
+	mock.lockHead.RUnlock()
 	return calls
 }
 

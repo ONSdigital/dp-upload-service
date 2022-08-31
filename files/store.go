@@ -73,7 +73,7 @@ func (s Store) Status(ctx context.Context, path string) (*Status, error) {
 
 	//file content
 	head, err := s.bucket.Head(path)
-	fileContent := newStatusMessage(head.ContentLength != nil && *head.ContentLength > 0, err)
+	fileContent := newStatusMessage(head != nil && head.ContentLength != nil && *head.ContentLength > 0, err)
 
 	return &Status{
 		Metadata:      metadata,

@@ -1,11 +1,10 @@
 package files_test
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"github.com/ONSdigital/dp-upload-service/aws"
-	"io"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -55,9 +54,9 @@ func (s *StoreSuite) SetupTest() {
 	}
 
 	s.mockS3 = &mock_aws.S3ClienterMock{
-		GetFromS3URLWithPSKFunc: func(rawURL string, style s3client.URLStyle, psk []byte) (io.ReadCloser, *int64, error) {
+		HeadFunc: func(key string) (*s3.HeadObjectOutput, error) {
 			size := int64(100)
-			return io.NopCloser(bytes.NewReader(content)), &size, nil
+			return &s3.HeadObjectOutput{ContentLength: &size}, nil
 		},
 		UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
 			return s3client.MultipartUploadResponse{Etag: "123456789", AllPartsUploaded: true}, nil
@@ -176,7 +175,7 @@ func (s *StoreSuite) TestStatusHappyPath() {
 	s.True(response.FileContent.Value)
 	s.Len(s.mockFiles.GetFileCalls(), 1)
 	s.Len(s.mockVaultClient.ReadKeyCalls(), 1)
-	s.Len(s.mockS3.GetFromS3URLWithPSKCalls(), 1)
+	s.Len(s.mockS3.HeadCalls(), 1)
 }
 
 func (s *StoreSuite) TestStatusWhenErrorOnFilesAPIGetCall() {
@@ -188,22 +187,12 @@ func (s *StoreSuite) TestStatusWhenErrorOnFilesAPIGetCall() {
 	s.Equal(files.ErrFilesAPINotFound, err)
 	s.Len(s.mockFiles.GetFileCalls(), 1)
 	s.Len(s.mockVaultClient.ReadKeyCalls(), 0)
-	s.Len(s.mockS3.GetFromS3URLWithPSKCalls(), 0)
-}
-
-func (s *StoreSuite) TestStatusWhenInvalidAWSS3Details() {
-	badBucket := aws.NewBucket("", "", s.mockS3)
-	store := files.NewStore(s.mockFiles, badBucket, s.vault)
-	_, err := store.Status(context.Background(), "valid")
-	s.Equal(files.ErrS3Download, err)
-	s.Len(s.mockFiles.GetFileCalls(), 1)
-	s.Len(s.mockVaultClient.ReadKeyCalls(), 1)
-	s.Len(s.mockS3.GetFromS3URLWithPSKCalls(), 0)
+	s.Len(s.mockS3.HeadCalls(), 0)
 }
 
 func (s *StoreSuite) TestStatusStillReturnedIfVaultAndBucketReadFails() {
-	s.mockS3.GetFromS3URLWithPSKFunc = func(rawURL string, style s3client.URLStyle, psk []byte) (io.ReadCloser, *int64, error) {
-		return nil, nil, errors.New("downstream error")
+	s.mockS3.HeadFunc = func(key string) (*s3.HeadObjectOutput, error) {
+		return nil, errors.New("downstream error")
 	}
 	s.mockVaultClient.ReadKeyFunc = func(path string, key string) (string, error) {
 		return "", errors.New("downstream error")
@@ -217,5 +206,5 @@ func (s *StoreSuite) TestStatusStillReturnedIfVaultAndBucketReadFails() {
 	s.NotEmpty(response.FileContent.Err)
 	s.Len(s.mockFiles.GetFileCalls(), 1)
 	s.Len(s.mockVaultClient.ReadKeyCalls(), 1)
-	s.Len(s.mockS3.GetFromS3URLWithPSKCalls(), 1)
+	s.Len(s.mockS3.HeadCalls(), 1)
 }
