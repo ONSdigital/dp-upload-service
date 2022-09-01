@@ -82,6 +82,17 @@ func (s *StoreSuite) TestFileRegistrationFailsWithFilesApi() {
 	s.Equal(expectedError, err)
 }
 
+func (s *StoreSuite) TestErrorGeneratingEncryptionKey() {
+	badKeyGenerator := func() ([]byte, error) { return nil, errors.New("no key available") }
+	s.mockVault = encryption.NewVault(badKeyGenerator, s.mockVaultClient, vaultPath)
+
+	store := files.NewStore(s.mockFiles, s.mockS3, s.mockVault)
+
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, []byte("CONTENT"))
+
+	s.Equal(encryption.ErrKeyGeneration, err)
+}
+
 func (s *StoreSuite) TestErrorStoringEncryptionKeyInVault() {
 	s.mockVaultClient.WriteKeyFunc = func(path string, key string, value string) error {
 		return errors.New("failed writing to vault")

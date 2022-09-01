@@ -19,6 +19,7 @@ const (
 var (
 	ErrVaultWrite           = errors.New("failed to write to vault")
 	ErrVaultRead            = errors.New("failed to read from vault")
+	ErrKeyGeneration        = errors.New("failed to generate encryption key")
 	ErrInvalidEncryptionKey = errors.New("encryption key invalid")
 )
 
@@ -41,7 +42,8 @@ func NewVault(keyGenerator GenerateKey, client VaultClienter, path string) *Vaul
 func (v *Vault) GenerateEncryptionKey(ctx context.Context, filepath string) ([]byte, error) {
 	encryptionKey, err := v.keyGenerator()
 	if err != nil {
-		return nil, err
+		log.Error(ctx, "failed to generate encryption key", err)
+		return nil, ErrKeyGeneration
 	}
 	if err := v.client.WriteKey(v.vaultPath(filepath), vaultKey, hex.EncodeToString(encryptionKey)); err != nil {
 		log.Error(ctx, "failed to write encryption encryptionKey to vault", err, log.Data{"vault-path": v.vaultPath(filepath), "vault-encryptionKey": vaultKey})
