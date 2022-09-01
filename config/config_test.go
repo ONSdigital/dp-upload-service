@@ -22,16 +22,17 @@ func TestConfig(t *testing.T) {
 			})
 
 			Convey("Then the values should be set to the expected defaults", func() {
-				So(testCfg.BindAddr, ShouldEqual, "localhost:25100")
+				So(testCfg.BindAddr, ShouldEqual, ":25100")
 				So(testCfg.AwsRegion, ShouldEqual, "eu-west-1")
-				So(testCfg.UploadBucketName, ShouldEqual, "testing")
+				So(testCfg.UploadBucketName, ShouldEqual, "deprecated")
+				So(testCfg.StaticFilesEncryptedBucketName, ShouldEqual, "testing")
 				So(testCfg.EncryptionDisabled, ShouldBeFalse)
 				So(testCfg.GracefulShutdownTimeout, ShouldEqual, 5*time.Second)
 				So(testCfg.HealthCheckInterval, ShouldEqual, 30*time.Second)
 				So(testCfg.HealthCheckCriticalTimeout, ShouldEqual, 90*time.Second)
 				So(testCfg.VaultAddress, ShouldEqual, "http://localhost:8200")
 				So(testCfg.VaultPath, ShouldEqual, "secret/shared/psk")
-				So(testCfg.VaultToken, ShouldEqual, "")
+				So(testCfg.VaultToken, ShouldEqual, "0000-0000-0000-0000")
 				So(testCfg.ServiceAuthToken, ShouldEqual, "c60198e9-1864-4b68-ad0b-1e858e5b46a4")
 			})
 

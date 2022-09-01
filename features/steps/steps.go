@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	s3client "github.com/ONSdigital/dp-s3/v2"
+	"github.com/ONSdigital/dp-upload-service/encryption"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -12,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/ONSdigital/dp-net/v2/request"
 
@@ -34,6 +37,7 @@ const filesURI = "/files"
 func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	// Givens
 	ctx.Step(`^dp-files-api does not have a file "([^"]*)" registered$`, c.dpfilesapiDoesNotHaveAFileRegistered)
+	ctx.Step(`^dp-files-api has a file with path "([^"]*)" and filename "([^"]*)" registered with meta-data:$`, c.dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMetadata)
 	ctx.Step(`^the data file "([^"]*)" with content:$`, c.theDataFile)
 	ctx.Step(`^the file meta-data is:$`, c.theFileMetadataIs)
 	ctx.Step(`^the 1st part of the file "([^"]*)" has been uploaded with resumable parameters:$`, c.the1StPartOfTheFileHasBeenUploaded)
@@ -104,6 +108,40 @@ func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) 
 	os.Setenv("FILES_API_URL", s.URL)
 
 	return nil
+}
+
+func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMetadata(path, filename string, jsonResponse *godog.DocString) error {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/valid") {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(jsonResponse.Content))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	pathAndFilename := path + "/" + filename
+	encryptedKey := encryption.CreateKey()
+
+	//setup vault
+	cfg, _ := config.Get()
+	vault, _ := c.svcList.GetVault(context.Background(), cfg)
+	_ = vault.WriteKey(fmt.Sprintf("%s/%s", cfg.VaultPath, pathAndFilename), "key", hex.EncodeToString(encryptedKey))
+
+	//setup s3
+	s3Client, _ := c.svcList.GetS3StaticFileUploader(context.Background(), cfg)
+	_, err := s3Client.UploadPartWithPsk(context.Background(), &s3client.UploadPartRequest{
+		UploadKey:   pathAndFilename,
+		Type:        "type",
+		ChunkNumber: 1,
+		TotalChunks: 1,
+		FileName:    filename,
+	}, []byte("content"), encryptedKey)
+
+	os.Setenv("FILES_API_URL", s.URL)
+
+	return err
 }
 
 func (c *UploadComponent) theFileMetadataIs(table *godog.Table) error {

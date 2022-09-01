@@ -4,19 +4,16 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-
-	"github.com/ONSdigital/dp-upload-service/encryption"
-
-	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/ONSdigital/dp-upload-service/upload"
-
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
 	dps3 "github.com/ONSdigital/dp-s3/v2"
+	dpaws "github.com/ONSdigital/dp-upload-service/aws"
+	"github.com/ONSdigital/dp-upload-service/config"
+	"github.com/ONSdigital/dp-upload-service/encryption"
 	dpvault "github.com/ONSdigital/dp-vault"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
@@ -57,7 +54,7 @@ func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) 
 }
 
 // GetS3Uploaded creates a S3 client and sets the S3Uploaded flag to true
-func (e *ExternalServiceList) GetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+func (e *ExternalServiceList) GetS3Uploaded(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
 	s3, err := e.Init.DoGetS3Uploaded(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -66,7 +63,7 @@ func (e *ExternalServiceList) GetS3Uploaded(ctx context.Context, cfg *config.Con
 	return s3, nil
 }
 
-func (e *ExternalServiceList) GetS3StaticFileUploader(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+func (e *ExternalServiceList) GetS3StaticFileUploader(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
 	return e.Init.DoGetStaticFileS3Uploader(ctx, cfg)
 }
 
@@ -92,16 +89,16 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 }
 
 // DoGetS3Uploaded returns a S3Client
-func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
 	return generateS3Client(cfg, cfg.UploadBucketName)
 }
 
 // DoGetStaticFileS3Uploader returns a S3Client
-func (e *Init) DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+func (e *Init) DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
 	return generateS3Client(cfg, cfg.StaticFilesEncryptedBucketName)
 }
 
-func generateS3Client(cfg *config.Config, bucketName string) (upload.S3Clienter, error) {
+func generateS3Client(cfg *config.Config, bucketName string) (dpaws.S3Clienter, error) {
 	if cfg.LocalstackHost != "" {
 		s, err := session.NewSession(&aws.Config{
 			Endpoint:         aws.String(cfg.LocalstackHost),
