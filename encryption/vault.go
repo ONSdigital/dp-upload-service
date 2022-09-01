@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/pkg/errors"
@@ -38,7 +39,10 @@ func NewVault(keyGenerator GenerateKey, client VaultClienter, path string) *Vaul
 }
 
 func (v *Vault) GenerateEncryptionKey(ctx context.Context, filepath string) ([]byte, error) {
-	encryptionKey := v.keyGenerator()
+	encryptionKey, err := v.keyGenerator()
+	if err != nil {
+		return nil, err
+	}
 	if err := v.client.WriteKey(v.vaultPath(filepath), vaultKey, hex.EncodeToString(encryptionKey)); err != nil {
 		log.Error(ctx, "failed to write encryption encryptionKey to vault", err, log.Data{"vault-path": v.vaultPath(filepath), "vault-encryptionKey": vaultKey})
 		return nil, ErrVaultWrite

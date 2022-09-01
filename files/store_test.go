@@ -8,9 +8,9 @@ import (
 	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/encryption"
-	"github.com/ONSdigital/dp-upload-service/encryption/mock"
+	encryption_mock "github.com/ONSdigital/dp-upload-service/encryption/mock"
 	"github.com/ONSdigital/dp-upload-service/files"
-	"github.com/ONSdigital/dp-upload-service/upload/mock"
+	upload_mock "github.com/ONSdigital/dp-upload-service/upload/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -57,7 +57,7 @@ func (s *StoreSuite) SetupTest() {
 			return nil
 		},
 	}
-	fakeKeyGenerator := func() []byte { return []byte("testing") }
+	fakeKeyGenerator := func() ([]byte, error) { return []byte("testing"), nil }
 	s.mockVault = encryption.NewVault(fakeKeyGenerator, s.mockVaultClient, vaultPath)
 }
 

@@ -71,5 +71,5 @@ func generateS3Client(cfg *config.Config, bucketName string) (upload.S3Clienter,
 }
 
 func (e external) DoGetEncryptionKeyGenerator() encryption.GenerateKey {
-	return func() []byte { return e.EncryptionKey }
+	return func() ([]byte, error) { return e.EncryptionKey, nil }
 }

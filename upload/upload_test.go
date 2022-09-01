@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"github.com/ONSdigital/dp-upload-service/encryption"
-	encryption_mock "github.com/ONSdigital/dp-upload-service/encryption/mock"
-	upload_mock "github.com/ONSdigital/dp-upload-service/upload/mock"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/ONSdigital/dp-upload-service/encryption"
+	encryption_mock "github.com/ONSdigital/dp-upload-service/encryption/mock"
+	upload_mock "github.com/ONSdigital/dp-upload-service/upload/mock"
 
 	"github.com/ONSdigital/dp-upload-service/upload"
 
@@ -26,7 +27,7 @@ var (
 	s3Bucket = "test-bucket"
 
 	expectedPayload  = []byte(`some test file bytes to be uploaded`)
-	fakeKeyGenerator = func() []byte { return []byte("testing") }
+	fakeKeyGenerator = func() ([]byte, error) { return []byte("testing"), nil }
 )
 
 func TestGetUpload(t *testing.T) {

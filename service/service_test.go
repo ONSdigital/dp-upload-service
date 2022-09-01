@@ -2,18 +2,19 @@ package service
 
 import (
 	"context"
-	encryption_mock "github.com/ONSdigital/dp-upload-service/encryption/mock"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
+
+	encryption_mock "github.com/ONSdigital/dp-upload-service/encryption/mock"
 
 	"github.com/ONSdigital/dp-upload-service/encryption"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/upload"
-	"github.com/ONSdigital/dp-upload-service/upload/mock"
+	upload_mock "github.com/ONSdigital/dp-upload-service/upload/mock"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -50,8 +51,8 @@ var funcDoGetHTTPServerNil = func(bindAddr string, router http.Handler) HTTPServ
 }
 
 var funcDoGetEncryptionKeyGenerator = func() encryption.GenerateKey {
-	return func() []byte {
-		return []byte("")
+	return func() ([]byte, error) {
+		return []byte(""), nil
 	}
 }
 
