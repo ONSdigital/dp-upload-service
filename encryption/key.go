@@ -2,11 +2,13 @@ package encryption
 
 import "crypto/rand"
 
-type GenerateKey func() []byte
+type GenerateKey func() ([]byte, error)
 
-func CreateKey() []byte {
+func CreateKey() ([]byte, error) {
 	key := make([]byte, 16)
-	rand.Read(key) //nolint
-
-	return key
+	_, err := rand.Read(key)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
 }

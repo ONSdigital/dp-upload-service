@@ -3,9 +3,10 @@ package files_test
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"testing"
 
 	"github.com/stretchr/testify/suite"
 
@@ -13,7 +14,7 @@ import (
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	mock_aws "github.com/ONSdigital/dp-upload-service/aws/mock"
 	"github.com/ONSdigital/dp-upload-service/encryption"
-	"github.com/ONSdigital/dp-upload-service/encryption/mock"
+	mock_encryption "github.com/ONSdigital/dp-upload-service/encryption/mock"
 	"github.com/ONSdigital/dp-upload-service/files"
 	mock_files "github.com/ONSdigital/dp-upload-service/files/mock"
 )
@@ -72,7 +73,7 @@ func (s *StoreSuite) SetupTest() {
 			return nil
 		},
 	}
-	fakeKeyGenerator := func() []byte { return []byte("testing") }
+	fakeKeyGenerator := func() ([]byte, error) { return []byte("testing"), nil }
 	s.vault = encryption.NewVault(fakeKeyGenerator, s.mockVaultClient, vaultPath)
 }
 
@@ -95,6 +96,17 @@ func (s *StoreSuite) TestFileRegistrationFailsWithFilesApi() {
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, content)
 	s.Equal(expectedError, err)
+}
+
+func (s *StoreSuite) TestErrorGeneratingEncryptionKey() {
+	badKeyGenerator := func() ([]byte, error) { return nil, errors.New("no key available") }
+	s.vault = encryption.NewVault(badKeyGenerator, s.mockVaultClient, vaultPath)
+
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, []byte("CONTENT"))
+
+	s.Equal(encryption.ErrKeyGeneration, err)
 }
 
 func (s *StoreSuite) TestErrorStoringEncryptionKeyInVault() {

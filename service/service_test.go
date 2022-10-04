@@ -50,8 +50,8 @@ var funcDoGetHTTPServerNil = func(bindAddr string, router http.Handler) service.
 }
 
 var funcDoGetEncryptionKeyGenerator = func() encryption.GenerateKey {
-	return func() []byte {
-		return []byte("")
+	return func() ([]byte, error) {
+		return []byte(""), nil
 	}
 }
 

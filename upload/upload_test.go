@@ -27,7 +27,7 @@ var (
 	s3Bucket = "test-bucket"
 
 	expectedPayload  = []byte(`some test file bytes to be uploaded`)
-	fakeKeyGenerator = func() []byte { return []byte("testing") }
+	fakeKeyGenerator = func() ([]byte, error) { return []byte("testing"), nil }
 )
 
 func TestGetUpload(t *testing.T) {

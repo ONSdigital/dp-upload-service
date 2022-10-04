@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	s3client "github.com/ONSdigital/dp-s3/v2"
-	"github.com/ONSdigital/dp-upload-service/encryption"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -15,6 +13,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	s3client "github.com/ONSdigital/dp-s3/v2"
+	"github.com/ONSdigital/dp-upload-service/encryption"
 
 	"github.com/ONSdigital/dp-net/v2/request"
 
@@ -122,7 +123,7 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 	}))
 
 	pathAndFilename := path + "/" + filename
-	encryptedKey := encryption.CreateKey()
+	encryptedKey, _ := encryption.CreateKey()
 
 	//setup vault
 	cfg, _ := config.Get()
