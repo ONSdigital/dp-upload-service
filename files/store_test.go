@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ONSdigital/dp-upload-service/aws"
+	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/aws/aws-sdk-go/service/s3"
 
 	"github.com/stretchr/testify/suite"
@@ -79,7 +80,7 @@ func (s *StoreSuite) SetupTest() {
 
 // Upload
 func (s *StoreSuite) TestFileUploadIsRegisteredWithFilesApi() {
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, content)
 	s.NoError(err)
@@ -92,7 +93,7 @@ func (s *StoreSuite) TestFileRegistrationFailsWithFilesApi() {
 		return expectedError
 	}
 
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, content)
 	s.Equal(expectedError, err)
@@ -102,7 +103,7 @@ func (s *StoreSuite) TestErrorGeneratingEncryptionKey() {
 	badKeyGenerator := func() ([]byte, error) { return nil, errors.New("no key available") }
 	s.vault = encryption.NewVault(badKeyGenerator, s.mockVaultClient, vaultPath)
 
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, []byte("CONTENT"))
 
@@ -114,7 +115,7 @@ func (s *StoreSuite) TestErrorStoringEncryptionKeyInVault() {
 		return errors.New("failed writing to vault")
 	}
 
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, content)
 
@@ -126,7 +127,7 @@ func (s *StoreSuite) TestErrorReadingEncryptionKeyFromValue() {
 		return "", errors.New("failed writing to vault")
 	}
 
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
 
@@ -138,7 +139,7 @@ func (s *StoreSuite) TestEncryptionKeyContainsNonHexCharacters() {
 		return "NON HEX CHARACTERS", nil
 	}
 
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
 
@@ -150,7 +151,7 @@ func (s StoreSuite) TestUploadPartReturnsAnError() {
 		return s3client.MultipartUploadResponse{}, s3client.NewError(errors.New("broken"), nil)
 	}
 
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
 	s.Equal(files.ErrS3Upload, err)
@@ -161,7 +162,7 @@ func (s StoreSuite) TestUploadChunkTooSmallReturnsErrChuckTooSmall() {
 		return s3client.MultipartUploadResponse{}, s3client.NewChunkTooSmallError(errors.New("chunk size below minimum 5MB"), nil)
 	}
 
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
 	s.Equal(files.ErrChunkTooSmall, err)
@@ -172,7 +173,7 @@ func (s StoreSuite) TestErrorMarkingAsUploaded() {
 	s.mockFiles.MarkFileUploadedFunc = func(ctx context.Context, path string, etag string) error {
 		return expectedError
 	}
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
 	s.Equal(expectedError, err)
@@ -180,7 +181,7 @@ func (s StoreSuite) TestErrorMarkingAsUploaded() {
 
 //Status
 func (s *StoreSuite) TestStatusHappyPath() {
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 	response, err := store.Status(context.Background(), "valid")
 	s.NoError(err)
 	s.True(response.EncryptionKey.Value)
@@ -194,7 +195,7 @@ func (s *StoreSuite) TestStatusWhenErrorOnFilesAPIGetCall() {
 	s.mockFiles.GetFileFunc = func(ctx context.Context, path string, authToken string) (filesAPI.FileMetaData, error) {
 		return filesAPI.FileMetaData{}, errors.New("downstream error")
 	}
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 	_, err := store.Status(context.Background(), "invalid-path")
 	s.Equal(files.ErrFilesAPINotFound, err)
 	s.Len(s.mockFiles.GetFileCalls(), 1)
@@ -209,7 +210,7 @@ func (s *StoreSuite) TestStatusStillReturnedIfVaultAndBucketReadFails() {
 	s.mockVaultClient.ReadKeyFunc = func(path string, key string) (string, error) {
 		return "", errors.New("downstream error")
 	}
-	store := files.NewStore(s.mockFiles, s.bucket, s.vault)
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
 	response, err := store.Status(context.Background(), "valid")
 	s.NoError(err)
 	s.False(response.EncryptionKey.Value)

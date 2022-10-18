@@ -8,6 +8,7 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/v2/files"
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/aws"
+	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/encryption"
 	"github.com/ONSdigital/log.go/v2/log"
 )
@@ -35,6 +36,7 @@ type Store struct {
 	files  FilesClienter
 	bucket *aws.Bucket
 	vault  *encryption.Vault
+	cfg    *config.Config
 }
 
 type Resumable struct {
@@ -55,13 +57,13 @@ type Status struct {
 	FileContent   StatusMessage      `json:"file_content"`
 }
 
-func NewStore(files FilesClienter, bucket *aws.Bucket, vault *encryption.Vault) Store {
-	return Store{files, bucket, vault}
+func NewStore(files FilesClienter, bucket *aws.Bucket, vault *encryption.Vault, cfg *config.Config) Store {
+	return Store{files, bucket, vault, cfg}
 }
 
 func (s Store) Status(ctx context.Context, path string) (*Status, error) {
 	//metadata
-	metadata, err := s.files.GetFile(ctx, path, "")
+	metadata, err := s.files.GetFile(ctx, path, s.cfg.ServiceAuthToken)
 	if err != nil {
 		log.Error(ctx, "failed to get file metadata", err, log.Data{"path": path})
 		return nil, ErrFilesAPINotFound
