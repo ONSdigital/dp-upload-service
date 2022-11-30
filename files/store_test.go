@@ -58,10 +58,11 @@ func (s *StoreSuite) SetupTest() {
 	s.mockS3 = &mock_aws.S3ClienterMock{
 		HeadFunc: func(key string) (*s3.HeadObjectOutput, error) {
 			size := int64(100)
-			return &s3.HeadObjectOutput{ContentLength: &size}, nil
+			etag := "head-object-etag"
+			return &s3.HeadObjectOutput{ContentLength: &size, ETag: &etag}, nil
 		},
 		UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
-			return s3client.MultipartUploadResponse{Etag: "123456789", AllPartsUploaded: true}, nil
+			return s3client.MultipartUploadResponse{Etag: "uploaded-part-etag", AllPartsUploaded: true}, nil
 		},
 	}
 	s.bucket = aws.NewBucket("region", "name", s.mockS3)
@@ -168,6 +169,29 @@ func (s StoreSuite) TestUploadChunkTooSmallReturnsErrChuckTooSmall() {
 	s.Equal(files.ErrChunkTooSmall, err)
 }
 
+func (s StoreSuite) TestHeadReturnsAnError() {
+	s.mockS3.HeadFunc = func(key string) (*s3.HeadObjectOutput, error) {
+		return nil, errors.New("head error")
+	}
+
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
+
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	s.ErrorIs(err, files.ErrS3Head)
+}
+
+func (s StoreSuite) TestHeadReturnsNoEtag() {
+	s.mockS3.HeadFunc = func(key string) (*s3.HeadObjectOutput, error) {
+		size := int64(100)
+		return &s3.HeadObjectOutput{ContentLength: &size}, nil
+	}
+
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
+
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	s.ErrorIs(err, files.ErrS3Head)
+}
+
 func (s StoreSuite) TestErrorMarkingAsUploaded() {
 	expectedError := errors.New("marking error")
 	s.mockFiles.MarkFileUploadedFunc = func(ctx context.Context, path string, etag string) error {
@@ -177,6 +201,17 @@ func (s StoreSuite) TestErrorMarkingAsUploaded() {
 
 	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
 	s.Equal(expectedError, err)
+}
+
+func (s StoreSuite) TestMarkingAsUploadedAddsCorrectEtag() {
+	s.mockFiles.MarkFileUploadedFunc = func(ctx context.Context, path string, etag string) error {
+		s.Equal("head-object-etag", etag)
+		return nil
+	}
+	store := files.NewStore(s.mockFiles, s.bucket, s.vault, &config.Config{})
+
+	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	s.NoError(err)
 }
 
 //Status

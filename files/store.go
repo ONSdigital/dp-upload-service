@@ -21,6 +21,7 @@ var (
 	ErrFileAPICreateInvalidData = errors.New("invalid data sent to Files API")
 	ErrS3Upload                 = errors.New("uploading part failed")
 	ErrS3Download               = errors.New("downloading file failed")
+	ErrS3Head                   = errors.New("getting file info failed")
 	ErrChunkTooSmall            = errors.New("chunk size below minimum 5MB")
 	ErrFilesServer              = errors.New("file api returning internal server errors")
 	ErrFilesUnauthorised        = errors.New("access unauthorised")
@@ -116,7 +117,17 @@ func (s Store) UploadFile(ctx context.Context, metadata files.FileMetaData, resu
 	}
 
 	if response.AllPartsUploaded {
-		return true, s.files.MarkFileUploaded(ctx, metadata.Path, strings.Trim(response.Etag, "\""))
+		head, err := s.bucket.Head(metadata.Path)
+		if err != nil {
+			log.Error(ctx, "failed to get completed file info from s3", err, log.Data{"key": metadata.Path})
+			return false, ErrS3Head
+		}
+		if head.ETag == nil {
+			log.Error(ctx, "failed to get completed file etag from s3", err, log.Data{"key": metadata.Path})
+			return false, ErrS3Head
+		}
+
+		return true, s.files.MarkFileUploaded(ctx, metadata.Path, strings.Trim(*head.ETag, "\""))
 	}
 
 	return false, nil
