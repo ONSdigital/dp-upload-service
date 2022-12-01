@@ -22,5 +22,5 @@ services:
       - EDGE_PORT=4566
     volumes:
       - ./aws:/docker-entrypoint-initaws.d
-      - "${TMPDIR:-/tmp}/localstack:/tmp/localstack"
+      - "${TMPDIR:-/tmp}/localstack:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"

@@ -43,7 +43,7 @@ Feature: Collection ID Optional
         """
         {
           "state": "UPLOADED",
-          "etag": "014e5ce3eb6d33344da544b0831140b4"
+          "etag": "32204b5b34cd2e635d6d69a443916584-1"
         }
         """
     And the encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf" should be stored against file "data/populations.csv"
