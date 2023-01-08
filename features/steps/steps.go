@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -95,7 +94,7 @@ func (c *UploadComponent) theDataFile(filename string, fileContent *godog.DocStr
 func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) error {
 	requests = make(map[string]string)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := ioutil.ReadAll(r.Body)
+		body, _ := io.ReadAll(r.Body)
 		requests[fmt.Sprintf("%s|%s", r.URL.Path, r.Method)] = string(body)
 		requests[fmt.Sprintf("%s|%s|auth", r.URL.Path, r.Method)] = r.Header.Get(request.AuthHeaderKey)
 
@@ -355,7 +354,7 @@ func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(fi
 
 	d, _ := hex.DecodeString(encryptionKey)
 	reader := &cryptoReader{
-		reader:    ioutil.NopCloser(bytes.NewReader(buf.Bytes())),
+		reader:    io.NopCloser(bytes.NewReader(buf.Bytes())),
 		psk:       d,
 		chunkSize: 5 * 1024 * 1024,
 		currChunk: nil,

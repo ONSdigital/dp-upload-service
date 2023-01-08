@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 
@@ -78,7 +78,7 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 		}
 		defer content.Close()
 
-		payload, err := ioutil.ReadAll(content)
+		payload, err := io.ReadAll(content)
 		if err != nil {
 			log.Error(augmentedContext, "error getting file from form", err)
 			w.WriteHeader(http.StatusInternalServerError)

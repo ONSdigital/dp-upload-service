@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-upload-service
 
-go 1.18
+go 1.19
 
 replace (
 	github.com/go-ldap/ldap/v3 => github.com/go-ldap/ldap/v3 v3.4.3
@@ -9,13 +9,13 @@ replace (
 )
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.162.0
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.187.0
 	github.com/ONSdigital/dp-component-test v0.7.0
-	github.com/ONSdigital/dp-healthcheck v1.3.0
-	github.com/ONSdigital/dp-net/v2 v2.4.0
+	github.com/ONSdigital/dp-healthcheck v1.5.0
+	github.com/ONSdigital/dp-net/v2 v2.6.0
 	github.com/ONSdigital/dp-s3/v2 v2.0.0-beta.2
 	github.com/ONSdigital/dp-vault v1.1.2
-	github.com/ONSdigital/log.go/v2 v2.2.0
+	github.com/ONSdigital/log.go/v2 v2.3.0
 	github.com/aws/aws-sdk-go v1.44.76
 	github.com/cucumber/godog v0.12.2
 	github.com/go-playground/validator v9.31.0+incompatible
