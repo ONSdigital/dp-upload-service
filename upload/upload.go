@@ -3,14 +3,15 @@ package upload
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/encryption"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
-	"io/ioutil"
-	"net/http"
 )
 
 var decoder = schema.NewDecoder()
@@ -43,8 +44,8 @@ func (resum *Resumable) createS3Request() *s3client.UploadPartRequest {
 
 // Uploader represents the necessary configuration for uploading a file
 type Uploader struct {
-	bucket   *aws.Bucket
-	vault    *encryption.Vault
+	bucket *aws.Bucket
+	vault  *encryption.Vault
 }
 
 // New returns a new Uploader from the provided clients and vault path
@@ -109,7 +110,7 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 
 	defer content.Close()
 
-	payload, err := ioutil.ReadAll(content)
+	payload, err := io.ReadAll(content)
 	if err != nil {
 		log.Error(req.Context(), "error reading file", err)
 		w.WriteHeader(http.StatusInternalServerError)

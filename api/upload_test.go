@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -45,7 +45,7 @@ func (s UploadTestSuite) TestJsonProvidedRatherThanMultiPartForm() {
 
 	h.ServeHTTP(rec, req)
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "ParsingForm")
 }
 
@@ -69,7 +69,7 @@ func (s UploadTestSuite) TestRequiredFields() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 
 	s.Contains(string(response), "Path required")
 	s.Contains(string(response), "IsPublishable required")
@@ -89,7 +89,7 @@ func (s UploadTestSuite) TestPathValid() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "Path aws-upload-key")
 }
 
@@ -101,7 +101,7 @@ func (s UploadTestSuite) TestIsPublishableSetToFalseInNotARequireFailure() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.NotContains(string(response), "IsPublishable required")
 }
 
@@ -114,7 +114,7 @@ func (s UploadTestSuite) TestFileWasSupplied() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "FileForm")
 }
 
@@ -175,7 +175,7 @@ func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "DuplicateFile")
 }
 
@@ -193,7 +193,7 @@ func (s UploadTestSuite) TestInvalidContentReturns500() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "RemoteValidationError")
 }
 
@@ -211,7 +211,7 @@ func (s UploadTestSuite) TestServerErrorReturns500() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "RemoteServerError")
 }
 
@@ -229,7 +229,7 @@ func (s UploadTestSuite) TestFileUnathorisedErrorReturnsForbidden() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusForbidden, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "Unauthorised")
 }
 
