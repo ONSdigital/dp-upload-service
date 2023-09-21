@@ -1,8 +1,9 @@
-FROM golang:1.18-stretch as build
+FROM golang:1.20.5-bullseye as build
 
-RUN apt-get update && apt-get upgrade -y
+ENV GOCACHE=/go/.go/cache GOPATH=/go/.go/path TZ=Europe/London
 
-WORKDIR /service
-CMD tail -f /dev/null
+RUN GOBIN=/bin go install github.com/cespare/reflex@latest
 
-FROM build as test
+# Map between the working directories of dev and live
+RUN ln -s /go /dp-upload-service
+WORKDIR /dp-upload-service
