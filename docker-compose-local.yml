@@ -9,7 +9,7 @@ services:
       - "25100:25100"
     environment:
       BIND_ADDR: 'localhost:25100'
-      AWS_REGION: 'eu-west-1' # http://localstack:4572
+      AWS_REGION: 'eu-west-2' # http://localstack:4572
       UPLOAD_BUCKET_NAME: 'deprecated'
       STATIC_FILES_ENCRYPTED_BUCKET_NAME: 'testing'
       ENCRYPTION_DISABLED: 'false'

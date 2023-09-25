@@ -18,7 +18,7 @@ services:
     environment:
       - SERVICES=s3
       - DEBUG=0
-      - AWS_DEFAULT_REGION=eu-west-1
+      - AWS_DEFAULT_REGION=eu-west-2
       - EDGE_PORT=4566
     volumes:
       - ./aws:/docker-entrypoint-initaws.d

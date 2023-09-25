@@ -57,7 +57,7 @@ encryption enabled, encryption is always enabled for the `/upload-new` endpoint
 | Environment variable               | Default               | Description                                                                                                        |
 |------------------------------------|-----------------------|--------------------------------------------------------------------------------------------------------------------|
 | BIND_ADDR                          | :25100                | The host and port to bind to                                                                                       |
-| AWS_REGION                         | eu-west-1             | S3 region to use. This region has to match the region where the bucket was created                                 |
+| AWS_REGION                         | eu-west-2             | S3 region to use. This region has to match the region where the bucket was created                                 |
 | UPLOAD_BUCKET_NAME                 | testing               | Name of the S3 bucket that dataset uploads are sent to                                                             | 
 | STATIC_FILES_ENCRYPTED_BUCKET_NAME | -                     | Name of the S3 bucket that static file uploads are sent to                                                         | 
 | ENCRYPTION_DISABLED                | false                 | Determines whether encryption is disabled or enabled                                                               |    

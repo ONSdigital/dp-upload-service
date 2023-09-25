@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/ONSdigital/dp-net/v2/request"
 	"time"
+
+	"github.com/ONSdigital/dp-net/v2/request"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -36,7 +37,7 @@ type Config struct {
 func Get() (*Config, error) {
 	cfg := &Config{
 		BindAddr:                       ":25100",
-		AwsRegion:                      "eu-west-1",
+		AwsRegion:                      "eu-west-2",
 		UploadBucketName:               "deprecated",
 		StaticFilesEncryptedBucketName: "testing",
 		EncryptionDisabled:             false,

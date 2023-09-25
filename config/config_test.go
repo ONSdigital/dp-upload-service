@@ -23,7 +23,7 @@ func TestConfig(t *testing.T) {
 
 			Convey("Then the values should be set to the expected defaults", func() {
 				So(testCfg.BindAddr, ShouldEqual, ":25100")
-				So(testCfg.AwsRegion, ShouldEqual, "eu-west-1")
+				So(testCfg.AwsRegion, ShouldEqual, "eu-west-2")
 				So(testCfg.UploadBucketName, ShouldEqual, "deprecated")
 				So(testCfg.StaticFilesEncryptedBucketName, ShouldEqual, "testing")
 				So(testCfg.EncryptionDisabled, ShouldBeFalse)

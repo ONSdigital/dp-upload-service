@@ -23,7 +23,7 @@ import (
 var (
 	vaultRootPath = "secret/path"
 
-	s3Region = "eu-west-1"
+	s3Region = "eu-west-2"
 	s3Bucket = "test-bucket"
 
 	expectedPayload  = []byte(`some test file bytes to be uploaded`)
@@ -280,7 +280,7 @@ func TestGetS3Url(t *testing.T) {
 
 			// Validations
 			So(w.Code, ShouldEqual, 200)
-			So(w.Body.String(), ShouldEqual, `{"url":"https://s3-eu-west-1.amazonaws.com/test-bucket/173849-helloworldtxt"}`)
+			So(w.Body.String(), ShouldEqual, `{"url":"https://s3-eu-west-2.amazonaws.com/test-bucket/173849-helloworldtxt"}`)
 			So(w.Header().Get("Content-Type"), ShouldEqual, "application/json")
 		})
 	})
