@@ -69,7 +69,7 @@ encryption enabled, encryption is always enabled for the `/upload-new` endpoint
 | VAULT_PATH                         | secret/shared/psk     | The path where the psks will be stored in vault                                                                    |
 | FILES_API_URL                      | -                     |                                                                                                                    |
 | LOCALSTACK_HOST                    | -                     | The hostname of the localstack server used for integration testing                                                 |
-
+ 
 ## To Test using Curl
 
 To test upload functionality using `curl`, you need to pass the following query string parameters in the URL - to
