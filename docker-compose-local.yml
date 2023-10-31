@@ -4,7 +4,7 @@ services:
   upload-service:
     build:
       context: ./
-      dockerfile: Dockerfile-test
+      dockerfile: Dockerfile-local
     ports:
       - "25100:25100"
     environment:
