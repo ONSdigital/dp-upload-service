@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-upload-service
 
-go 1.19
+go 1.21
 
 replace (
 	github.com/go-ldap/ldap/v3 => github.com/go-ldap/ldap/v3 v3.4.3
