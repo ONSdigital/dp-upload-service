@@ -26,13 +26,10 @@ debug:
 test:
 	go test -count=1 -race -cover ./...
 
-.PHONY: docker-test-component
-docker-test-component:
-	docker-compose  -f docker-compose-services.yml -f docker-compose.yml down
-	docker build -f Dockerfile . -t template_test --target=test
-	docker-compose  -f docker-compose-services.yml -f docker-compose.yml up -d
-	docker-compose  -f docker-compose-services.yml -f docker-compose.yml exec -T http go test -component
-	docker-compose  -f docker-compose-services.yml -f docker-compose.yml down
+.PHONY: test-component
+test-component:
+	cd features/compose; docker-compose up --abort-on-container-exit
+	echo "please ignore error codes 0, like so: ERRO[xxxx] 0, as error code 0 means that there was no error"
 
 .PHONY: docker-test
 docker-test:

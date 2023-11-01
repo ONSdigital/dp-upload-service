@@ -1,10 +1,23 @@
 version: "3"
 
 services:
-  http:
-    image: template_test
+  dp-upload-service:
+    build:
+        context: ../../../dp-upload-service
+        dockerfile: Dockerfile-local
+    command:
+        - go
+        - test
+        - -cover
+        - -coverpkg=github.com/ONSdigital/dp-upload-service/...
+        - -component
+    volumes:
+      - ../../:/dp-upload-service
     ports:
       - "25100:25100"
+    depends_on:
+      - localstack
+      - vault
     environment:
       BIND_ADDR: ':25100'
       AWS_REGION: 'eu-west-2' # http://localstack:4572
