@@ -27,6 +27,7 @@ services:
       GRACEFUL_SHUTDOWN_TIMEOUT: '5s'
       HEALTHCHECK_INTERVAL: '5s'
       HEALTHCHECK_CRITICAL_TIMEOUT: '5s'
+      LOCALSTACK_HOST: 'http://localstack:4566'
       VAULT_TOKEN: '0000-0000-0000-0000'
       VAULT_ADDR: 'http://vault:8200'
       VAULT_PATH: 'secret/shared/psk'
