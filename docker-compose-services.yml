@@ -13,7 +13,7 @@ services:
 
   localstack:
     container_name: "${LOCALSTACK_DOCKER_NAME-localstack}"
-    image: localstack/localstack:2.3.0
+    image: localstack/localstack:2.2.0
     ports:
       - "4566:4566"
     environment:
