@@ -1,4 +1,4 @@
-package service
+package service_test
 
 import (
 	"context"
@@ -6,12 +6,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ONSdigital/dp-upload-service/aws"
+	mock_aws "github.com/ONSdigital/dp-upload-service/aws/mock"
 	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/ONSdigital/dp-upload-service/upload"
-	"github.com/ONSdigital/dp-upload-service/upload/mock"
+	"github.com/ONSdigital/dp-upload-service/encryption"
+	mock_encryption "github.com/ONSdigital/dp-upload-service/encryption/mock"
+	"github.com/ONSdigital/dp-upload-service/service"
+	mock_service "github.com/ONSdigital/dp-upload-service/service/mock"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -23,14 +28,14 @@ var cfg, _ = config.Get()
 
 func TestGetHTTPServer(t *testing.T) {
 	Convey("Given a service list that includes a mocked server", t, func() {
-		serverMock := &HTTPServerMock{}
-		newServiceMock := &InitialiserMock{
-			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) HTTPServer {
+		serverMock := &mock_service.HTTPServerMock{}
+		newServiceMock := &mock_service.InitialiserMock{
+			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer {
 				return serverMock
 			},
 		}
 		r := mux.NewRouter()
-		svcList := NewServiceList(newServiceMock)
+		svcList := service.NewServiceList(newServiceMock)
 		Convey("When GetHTTPServer is called", func() {
 			server := svcList.GetHTTPServer(cfg.BindAddr, r)
 			Convey("Then the mock server is returned and has been initialised with the correct bind address", func() {
@@ -42,18 +47,18 @@ func TestGetHTTPServer(t *testing.T) {
 	})
 
 	Convey("Given a service list returns a mocked server that errors on ListenAndServe", t, func() {
-		serverMock := &HTTPServerMock{
+		serverMock := &mock_service.HTTPServerMock{
 			ListenAndServeFunc: errFunc,
 		}
-		newServiceMock := &InitialiserMock{
-			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) HTTPServer {
+		newServiceMock := &mock_service.InitialiserMock{
+			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer {
 				return serverMock
 			},
 		}
 		svcErrors := make(chan error, 1)
 		r := mux.NewRouter()
 		var err error
-		svcList := NewServiceList(newServiceMock)
+		svcList := service.NewServiceList(newServiceMock)
 		Convey("When the server is retrieved and started", func() {
 			server := svcList.GetHTTPServer(cfg.BindAddr, r)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -77,18 +82,18 @@ func TestGetHTTPServer(t *testing.T) {
 	})
 
 	Convey("Given a service list that includes a mocked server", t, func() {
-		serverMock := &HTTPServerMock{
+		serverMock := &mock_service.HTTPServerMock{
 			ListenAndServeFunc: func() error {
 				return nil
 			},
 		}
-		newServiceMock := &InitialiserMock{
-			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) HTTPServer {
+		newServiceMock := &mock_service.InitialiserMock{
+			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer {
 				return serverMock
 			},
 		}
 		r := mux.NewRouter()
-		svcList := NewServiceList(newServiceMock)
+		svcList := service.NewServiceList(newServiceMock)
 		svcErrors := make(chan error, 1)
 		Convey("When GetHTTPServer is called", func() {
 			server := svcList.GetHTTPServer(cfg.BindAddr, r)
@@ -120,13 +125,13 @@ func TestGetHTTPServer(t *testing.T) {
 
 func TestGetVault(t *testing.T) {
 	Convey("Given a service list that includes a mocked vault", t, func() {
-		vaultMock := &mock.VaultClienterMock{}
-		newServiceMock := &InitialiserMock{
-			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+		vaultMock := &mock_encryption.VaultClienterMock{}
+		newServiceMock := &mock_service.InitialiserMock{
+			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 				return vaultMock, nil
 			},
 		}
-		svcList := NewServiceList(newServiceMock)
+		svcList := service.NewServiceList(newServiceMock)
 		Convey("When GetVault is called", func() {
 			vault, _ := svcList.GetVault(ctx, cfg)
 			Convey("Then the vault is returned and vault flag is set to true", func() {
@@ -138,12 +143,12 @@ func TestGetVault(t *testing.T) {
 	})
 
 	Convey("Given a service list that returns nil for vault client", t, func() {
-		newServiceMock := &InitialiserMock{
-			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+		newServiceMock := &mock_service.InitialiserMock{
+			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 				return nil, errVault
 			},
 		}
-		svcList := NewServiceList(newServiceMock)
+		svcList := service.NewServiceList(newServiceMock)
 		Convey("When GetVault is called", func() {
 			vault, err := svcList.GetVault(ctx, cfg)
 			Convey("Then the vault flag is set to false and vault is nil", func() {
@@ -159,13 +164,13 @@ func TestGetS3Uploaded(t *testing.T) {
 
 	Convey("Given a service list that includes a mocked s3Client", t, func() {
 
-		s3UploadedMock := &mock.S3ClienterMock{}
-		newServiceMock := &InitialiserMock{
-			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+		s3UploadedMock := &mock_aws.S3ClienterMock{}
+		newServiceMock := &mock_service.InitialiserMock{
+			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (aws.S3Clienter, error) {
 				return s3UploadedMock, nil
 			},
 		}
-		svcList := NewServiceList(newServiceMock)
+		svcList := service.NewServiceList(newServiceMock)
 		Convey("When GetS3Uploaded is called", func() {
 			s3Client, err := svcList.GetS3Uploaded(ctx, cfg)
 			Convey("Then the S3Uploaded flag is set to true s3Client is returned", func() {
@@ -178,12 +183,12 @@ func TestGetS3Uploaded(t *testing.T) {
 	})
 
 	Convey("Given a service list returns nil for mocked S3 client", t, func() {
-		newServiceMock := &InitialiserMock{
-			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+		newServiceMock := &mock_service.InitialiserMock{
+			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (aws.S3Clienter, error) {
 				return nil, errS3Uploaded
 			},
 		}
-		svcList := NewServiceList(newServiceMock)
+		svcList := service.NewServiceList(newServiceMock)
 		Convey("When GetS3Uploaded is called", func() {
 			s3Client, err := svcList.GetS3Uploaded(ctx, cfg)
 			Convey("Then the S3Uploaded flag is set to false and s3Client returns nil ", func() {
@@ -199,15 +204,15 @@ func TestGetHealthCheck(t *testing.T) {
 
 	Convey("Given a service list that returns a mocked healthchecker", t, func() {
 
-		hcMock := &HealthCheckerMock{}
+		hcMock := &mock_service.HealthCheckerMock{}
 
-		newServiceMock := &InitialiserMock{
-			DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (HealthChecker, error) {
+		newServiceMock := &mock_service.InitialiserMock{
+			DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 				return hcMock, nil
 
 			},
 		}
-		svcList := NewServiceList(newServiceMock)
+		svcList := service.NewServiceList(newServiceMock)
 		Convey("When GetHealthCheck is called", func() {
 			hc, err := svcList.GetHealthCheck(cfg, testBuildTime, testGitCommit, testVersion)
 			Convey("Then the HealthCheck flag is set to true and HealthCheck is returned", func() {
@@ -220,12 +225,12 @@ func TestGetHealthCheck(t *testing.T) {
 	})
 
 	Convey("Given a service list that returns nil for healthcheck", t, func() {
-		newServiceMock := &InitialiserMock{
-			DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (HealthChecker, error) {
+		newServiceMock := &mock_service.InitialiserMock{
+			DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 				return nil, errHealthcheck
 			},
 		}
-		svcList := NewServiceList(newServiceMock)
+		svcList := service.NewServiceList(newServiceMock)
 		Convey("When GetHealthCheck is called", func() {
 			hc, err := svcList.GetHealthCheck(cfg, testBuildTime, testGitCommit, testVersion)
 			Convey("Then the HealthCheck flag is set to false and HealthCheck is nil", func() {
@@ -239,7 +244,7 @@ func TestGetHealthCheck(t *testing.T) {
 
 func TestInit_DoGetVault(t *testing.T) {
 	Convey("Given a an empty initialiser struct", t, func() {
-		init := Init{}
+		init := service.Init{}
 		cfg, err := config.Get()
 
 		Convey("When DoGetVault is called with encryption disabled", func() {

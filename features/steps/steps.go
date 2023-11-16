@@ -6,12 +6,15 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"strings"
+
+	s3client "github.com/ONSdigital/dp-s3/v2"
+	"github.com/ONSdigital/dp-upload-service/encryption"
 
 	"github.com/ONSdigital/dp-net/v2/request"
 
@@ -34,6 +37,7 @@ const filesURI = "/files"
 func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	// Givens
 	ctx.Step(`^dp-files-api does not have a file "([^"]*)" registered$`, c.dpfilesapiDoesNotHaveAFileRegistered)
+	ctx.Step(`^dp-files-api has a file with path "([^"]*)" and filename "([^"]*)" registered with meta-data:$`, c.dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMetadata)
 	ctx.Step(`^the data file "([^"]*)" with content:$`, c.theDataFile)
 	ctx.Step(`^the file meta-data is:$`, c.theFileMetadataIs)
 	ctx.Step(`^the 1st part of the file "([^"]*)" has been uploaded with resumable parameters:$`, c.the1StPartOfTheFileHasBeenUploaded)
@@ -49,8 +53,8 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file "([^"]*)" should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
 	ctx.Step(`^the stored file "([^"]*)" should match the sent file "([^"]*)" using encryption key "([^"]*)"$`, c.theStoredFileShouldMatchTheSentFile)
 	ctx.Step(`^the encryption key "([^"]*)" should be stored against file "([^"]*)"$`, c.theEncryptionKeyShouldBeStored)
-	ctx.Step(`^the files api POST request should contain an authorization header containing "([^"]*)"$`, c.theFilesapiPOSTRequestShouldContainAnAuthorizationHeaderContaining)
-	ctx.Step(`^the files api PATCH request with path \("([^"]*)"\) should contain an authorization header containing "([^"]*)"$`, c.theFilesApiPATCHRequestWithPathShouldContainAnAuthorizationHeaderContaining)
+	ctx.Step(`^the files api POST request should contain a default authorization header$`, c.theFilesApiPOSTRequestShouldContainADefaultAuthorizationHeader)
+	ctx.Step(`^the files api PATCH request with path \("([^"]*)"\) should contain a default authorization header$`, c.theFilesApiPATCHRequestWithPathShouldContainADefaultAuthorizationHeader)
 	// Buts
 	ctx.Step(`^the file should not be marked as uploaded$`, c.theFileShouldNotBeMarkedAsUploaded)
 	ctx.Step(`^the file upload should not have been registered again$`, c.theFileUploadShouldNotHaveBeenRegisteredAgain)
@@ -90,7 +94,7 @@ func (c *UploadComponent) theDataFile(filename string, fileContent *godog.DocStr
 func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) error {
 	requests = make(map[string]string)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := ioutil.ReadAll(r.Body)
+		body, _ := io.ReadAll(r.Body)
 		requests[fmt.Sprintf("%s|%s", r.URL.Path, r.Method)] = string(body)
 		requests[fmt.Sprintf("%s|%s|auth", r.URL.Path, r.Method)] = r.Header.Get(request.AuthHeaderKey)
 
@@ -104,6 +108,40 @@ func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) 
 	os.Setenv("FILES_API_URL", s.URL)
 
 	return nil
+}
+
+func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMetadata(path, filename string, jsonResponse *godog.DocString) error {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/valid") {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(jsonResponse.Content))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	pathAndFilename := path + "/" + filename
+	encryptedKey, _ := encryption.CreateKey()
+
+	//setup vault
+	cfg, _ := config.Get()
+	vault, _ := c.svcList.GetVault(context.Background(), cfg)
+	_ = vault.WriteKey(fmt.Sprintf("%s/%s", cfg.VaultPath, pathAndFilename), "key", hex.EncodeToString(encryptedKey))
+
+	//setup s3
+	s3Client, _ := c.svcList.GetS3StaticFileUploader(context.Background(), cfg)
+	_, err := s3Client.UploadPartWithPsk(context.Background(), &s3client.UploadPartRequest{
+		UploadKey:   pathAndFilename,
+		Type:        "type",
+		ChunkNumber: 1,
+		TotalChunks: 1,
+		FileName:    filename,
+	}, []byte("content"), encryptedKey)
+
+	os.Setenv("FILES_API_URL", s.URL)
+
+	return err
 }
 
 func (c *UploadComponent) theFileMetadataIs(table *godog.Table) error {
@@ -316,7 +354,7 @@ func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(fi
 
 	d, _ := hex.DecodeString(encryptionKey)
 	reader := &cryptoReader{
-		reader:    ioutil.NopCloser(bytes.NewReader(buf.Bytes())),
+		reader:    io.NopCloser(bytes.NewReader(buf.Bytes())),
 		psk:       d,
 		chunkSize: 5 * 1024 * 1024,
 		currChunk: nil,
@@ -369,12 +407,14 @@ func (c *UploadComponent) theEncryptionKeyShouldBeStored(expectedEncryptionKey, 
 	return c.ApiFeature.StepError()
 }
 
-func (c *UploadComponent) theFilesapiPOSTRequestShouldContainAnAuthorizationHeaderContaining(expectedAuthHeader string) error {
-	assert.Equal(c.ApiFeature, expectedAuthHeader, requests[fmt.Sprintf("%s|%s|auth", filesURI, http.MethodPost)])
+func (c *UploadComponent) theFilesApiPOSTRequestShouldContainADefaultAuthorizationHeader() error {
+	cfg, _ := config.Get()
+	assert.Equal(c.ApiFeature, "Bearer "+cfg.ServiceAuthToken, requests[fmt.Sprintf("%s|%s|auth", filesURI, http.MethodPost)])
 	return c.ApiFeature.StepError()
 }
 
-func (c *UploadComponent) theFilesApiPATCHRequestWithPathShouldContainAnAuthorizationHeaderContaining(filepath, expectedAuthHeader string) error {
-	assert.Equal(c.ApiFeature, expectedAuthHeader, requests[fmt.Sprintf("%s/%s|%s|auth", filesURI, filepath, http.MethodPatch)])
+func (c *UploadComponent) theFilesApiPATCHRequestWithPathShouldContainADefaultAuthorizationHeader(filepath string) error {
+	cfg, _ := config.Get()
+	assert.Equal(c.ApiFeature, "Bearer "+cfg.ServiceAuthToken, requests[fmt.Sprintf("%s/%s|%s|auth", filesURI, filepath, http.MethodPatch)])
 	return c.ApiFeature.StepError()
 }

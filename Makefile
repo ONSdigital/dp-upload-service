@@ -26,7 +26,7 @@ debug:
 test:
 	go test -count=1 -race -cover ./...
 
-.PHONY: docker-test
+.PHONY: docker-test-component
 docker-test-component:
 	docker-compose  -f docker-compose-services.yml -f docker-compose.yml down
 	docker build -f Dockerfile . -t template_test --target=test
@@ -34,6 +34,15 @@ docker-test-component:
 	docker-compose  -f docker-compose-services.yml -f docker-compose.yml exec -T http go test -component
 	docker-compose  -f docker-compose-services.yml -f docker-compose.yml down
 
+.PHONY: docker-test
+docker-test:
+	docker-compose  -f docker-compose-services.yml -f docker-compose.yml down
+	docker build -f Dockerfile . -t template_test --target=test
+	docker-compose  -f docker-compose-services.yml -f docker-compose.yml up -d
+	docker-compose  -f docker-compose-services.yml -f docker-compose.yml exec -T http go test -v ./...
+	docker-compose  -f docker-compose-services.yml -f docker-compose.yml down
+
+.PHONY: docker-local
 docker-local:
 	docker-compose -f docker-compose-services.yml -f docker-compose-local.yml down
 	docker-compose -f docker-compose-services.yml -f docker-compose-local.yml up -d
@@ -41,4 +50,4 @@ docker-local:
 
 .PHONY: lint
 lint:
-	golangci-lint run ./... --timeout 2m --tests=false --skip-dirs=features
+	golangci-lint run ./... --timeout 3m --tests=false --skip-dirs=features

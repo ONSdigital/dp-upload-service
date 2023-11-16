@@ -1,8 +1,7 @@
-FROM golang:1.16-stretch as build
+FROM golang:1.21.3-bullseye as build
 
 RUN apt-get update && apt-get upgrade -y
 
 WORKDIR /service
 CMD tail -f /dev/null
-
 FROM build as test

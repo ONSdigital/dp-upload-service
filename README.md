@@ -54,21 +54,21 @@ encryption enabled, encryption is always enabled for the `/upload-new` endpoint
 
 ## Configuration
 
-| Environment variable               | Default                           | Description                                                                                                        |
-|------------------------------------|-----------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| BIND_ADDR                          | :25100                            | The host and port to bind to                                                                                       |
-| AWS_REGION                         | eu-west-1                         | S3 region to use. This region has to match the region where the bucket was created                                 |
-| UPLOAD_BUCKET_NAME                 | dp-frontend-florence-file-uploads | Name of the S3 bucket that dataset uploads are sent to                                                             | 
-| STATIC_FILES_ENCRYPTED_BUCKET_NAME | -                                 | Name of the S3 bucket that static file uploads are sent to                                                         | 
-| ENCRYPTION_DISABLED                | false                             | Determines whether encryption is disabled or enabled                                                               |    
-| GRACEFUL_SHUTDOWN_TIMEOUT          | 5s                                | The graceful shutdown timeout in seconds (`time.Duration` format)                                                  |
-| HEALTHCHECK_INTERVAL               | 30s                               | Time between self-healthchecks (`time.Duration` format)                                                            |
-| HEALTHCHECK_CRITICAL_TIMEOUT       | 90s                               | Time to wait until an unhealthy dependent propagates its state to make this app unhealthy (`time.Duration` format) |
-| VAULT_TOKEN                        | -                                 | Vault token required for the client to talk to vault. (Use `make debug` to create a vault token)                   |
-| VAULT_ADDR                         | http://localhost:8200             | The vault address                                                                                                  |
-| VAULT_PATH                         | secret/shared/psk                 | The path where the psks will be stored in vault                                                                    |
-| FILES_API_URL                      | -                                 |                                                                                                                    |
-| LOCALSTACK_HOST                    | -                                 | The hostname of the localstack server used for integration testing                                                 |
+| Environment variable               | Default               | Description                                                                                                        |
+|------------------------------------|-----------------------|--------------------------------------------------------------------------------------------------------------------|
+| BIND_ADDR                          | :25100                | The host and port to bind to                                                                                       |
+| AWS_REGION                         | eu-west-2             | S3 region to use. This region has to match the region where the bucket was created                                 |
+| UPLOAD_BUCKET_NAME                 | testing               | Name of the S3 bucket that dataset uploads are sent to                                                             | 
+| STATIC_FILES_ENCRYPTED_BUCKET_NAME | -                     | Name of the S3 bucket that static file uploads are sent to                                                         | 
+| ENCRYPTION_DISABLED                | false                 | Determines whether encryption is disabled or enabled                                                               |    
+| GRACEFUL_SHUTDOWN_TIMEOUT          | 5s                    | The graceful shutdown timeout in seconds (`time.Duration` format)                                                  |
+| HEALTHCHECK_INTERVAL               | 30s                   | Time between self-healthchecks (`time.Duration` format)                                                            |
+| HEALTHCHECK_CRITICAL_TIMEOUT       | 90s                   | Time to wait until an unhealthy dependent propagates its state to make this app unhealthy (`time.Duration` format) |
+| VAULT_TOKEN                        | -                     | Vault token required for the client to talk to vault. (Use `make debug` to create a vault token)                   |
+| VAULT_ADDR                         | http://localhost:8200 | The vault address                                                                                                  |
+| VAULT_PATH                         | secret/shared/psk     | The path where the psks will be stored in vault                                                                    |
+| FILES_API_URL                      | -                     |                                                                                                                    |
+| LOCALSTACK_HOST                    | -                     | The hostname of the localstack server used for integration testing                                                 |
 
 ## To Test using Curl
 

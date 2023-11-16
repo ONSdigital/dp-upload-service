@@ -4,19 +4,21 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/stretchr/testify/suite"
-	"io/ioutil"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
+	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
 	"github.com/ONSdigital/dp-upload-service/files"
 
 	"github.com/ONSdigital/dp-upload-service/api"
 )
 
-var stubStoreFunction = func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, c []byte) (bool, error) {
+var stubStoreFunction = func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, c []byte) (bool, error) {
 	return false, nil
 }
 
@@ -43,7 +45,7 @@ func (s UploadTestSuite) TestJsonProvidedRatherThanMultiPartForm() {
 
 	h.ServeHTTP(rec, req)
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "ParsingForm")
 }
 
@@ -67,7 +69,7 @@ func (s UploadTestSuite) TestRequiredFields() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 
 	s.Contains(string(response), "Path required")
 	s.Contains(string(response), "IsPublishable required")
@@ -87,7 +89,7 @@ func (s UploadTestSuite) TestPathValid() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "Path aws-upload-key")
 }
 
@@ -99,7 +101,7 @@ func (s UploadTestSuite) TestIsPublishableSetToFalseInNotARequireFailure() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.NotContains(string(response), "IsPublishable required")
 }
 
@@ -112,14 +114,14 @@ func (s UploadTestSuite) TestFileWasSupplied() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "FileForm")
 }
 
 func (s UploadTestSuite) TestSuccessfulStorageOfCompleteFileReturns201() {
 	payload := "TEST DATA"
 	funcCalled := false
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		funcCalled = true
 		s.Equal(payload, string(fileContent))
 		return true, nil
@@ -140,7 +142,7 @@ func (s UploadTestSuite) TestSuccessfulStorageOfCompleteFileReturns201() {
 
 func (s UploadTestSuite) TestChunkTooSmallReturns400() {
 	payload := "TEST DATA"
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		return true, files.ErrChunkTooSmall
 	}
 
@@ -160,7 +162,7 @@ func (s UploadTestSuite) TestChunkTooSmallReturns400() {
 }
 
 func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFilesAPIDuplicateFile
 	}
 
@@ -173,12 +175,12 @@ func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusBadRequest, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "DuplicateFile")
 }
 
 func (s UploadTestSuite) TestInvalidContentReturns500() {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFileAPICreateInvalidData
 	}
 
@@ -191,12 +193,12 @@ func (s UploadTestSuite) TestInvalidContentReturns500() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "RemoteValidationError")
 }
 
 func (s UploadTestSuite) TestServerErrorReturns500() {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFilesServer
 	}
 
@@ -209,12 +211,12 @@ func (s UploadTestSuite) TestServerErrorReturns500() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "RemoteServerError")
 }
 
 func (s UploadTestSuite) TestFileUnathorisedErrorReturnsForbidden() {
-	st := func(ctx context.Context, uf files.StoreMetadata, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFilesUnauthorised
 	}
 
@@ -227,7 +229,7 @@ func (s UploadTestSuite) TestFileUnathorisedErrorReturnsForbidden() {
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
 	s.Equal(http.StatusForbidden, rec.Code)
-	response, _ := ioutil.ReadAll(rec.Body)
+	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "Unauthorised")
 }
 

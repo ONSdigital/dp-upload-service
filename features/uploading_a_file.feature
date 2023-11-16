@@ -48,7 +48,7 @@ Feature: Uploading a file
         """
         {
           "state": "UPLOADED",
-          "etag": "014e5ce3eb6d33344da544b0831140b4"
+          "etag": "32204b5b34cd2e635d6d69a443916584-1"
         }
         """
     And the encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf" should be stored against file "data/populations.csv"
@@ -94,7 +94,7 @@ Feature: Uploading a file
         """
         {
           "state": "UPLOADED",
-          "etag": "2da887c94287adc1d46fdc336f8d7852"
+          "etag": "3db28e65d8488fd4bd538c4930726e97-2"
         }
         """
     And the stored file "data/countries.csv" should match the sent file "features/countries.csv" using encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf"
@@ -106,14 +106,14 @@ Feature: Uploading a file
         brian,1
         russ,2
         """
-      When I upload the file "test-data/authorized.csv" with the following form resumable parameters and auth header "auth-header-total-secure"
+      When I upload the file "test-data/authorized.csv" with the following form resumable parameters:
         | resumableFilename    | authorized.csv       |
         | resumableType        | text/csv             |
         | resumableTotalChunks | 1                    |
         | resumableChunkNumber | 1                    |
         | path                 | data                 |
-      Then the files api POST request should contain an authorization header containing "auth-header-total-secure"
-      And the files api PATCH request with path ("data/authorized.csv") should contain an authorization header containing "auth-header-total-secure"
+      Then the files api POST request should contain a default authorization header
+      And the files api PATCH request with path ("data/authorized.csv") should contain a default authorization header
       And the HTTP status code should be "201"
 
 

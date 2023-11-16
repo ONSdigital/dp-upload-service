@@ -1,252 +1,43 @@
 package files
 
 import (
-	"bytes"
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"net/http"
 	"strings"
 
-	dphttp "github.com/ONSdigital/dp-net/v2/http"
-	"github.com/ONSdigital/dp-net/v2/request"
-
-	"github.com/ONSdigital/log.go/v2/log"
-
-	"github.com/ONSdigital/dp-upload-service/encryption"
-
+	"github.com/ONSdigital/dp-api-clients-go/v2/files"
 	s3client "github.com/ONSdigital/dp-s3/v2"
-
-	"github.com/ONSdigital/dp-upload-service/upload"
+	"github.com/ONSdigital/dp-upload-service/aws"
+	"github.com/ONSdigital/dp-upload-service/config"
+	"github.com/ONSdigital/dp-upload-service/encryption"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
-const (
-	StateUploaded = "UPLOADED"
-	vaultKey      = "key"
-)
+//go:generate moq -out mock/files.go -pkg mock_files . FilesClienter
 
 var (
 	ErrFilesAPIDuplicateFile    = errors.New("files API already contains a file with this path")
+	ErrFilesAPINotFound         = errors.New("cannot find a file with this path")
 	ErrFileAPICreateInvalidData = errors.New("invalid data sent to Files API")
-	ErrUnknownError             = errors.New("unknown error")
-	ErrConnectingToFilesApi     = errors.New("could not connect to files API")
 	ErrS3Upload                 = errors.New("uploading part failed")
-	ErrFileNotFound             = errors.New("file not found")
-	ErrFileStateConflict        = errors.New("file was not in the expected state")
+	ErrS3Download               = errors.New("downloading file failed")
+	ErrS3Head                   = errors.New("getting file info failed")
 	ErrChunkTooSmall            = errors.New("chunk size below minimum 5MB")
-	ErrVaultWrite               = errors.New("failed to write to vault")
-	ErrVaultRead                = errors.New("failed to read from vault")
-	ErrInvalidEncryptionKey     = errors.New("encryption key invalid")
 	ErrFilesServer              = errors.New("file api returning internal server errors")
 	ErrFilesUnauthorised        = errors.New("access unauthorised")
 )
 
-type ContextKey string
+type FilesClienter interface {
+	GetFile(ctx context.Context, path string, authToken string) (files.FileMetaData, error)
+	RegisterFile(ctx context.Context, metadata files.FileMetaData) error
+	MarkFileUploaded(ctx context.Context, path string, etag string) error
+}
 
 type Store struct {
-	hostname     string
-	s3           upload.S3Clienter
-	keyGenerator encryption.GenerateKey
-	vault        upload.VaultClienter
-	vaultPath    string
-}
-
-func NewStore(hostname string, s3 upload.S3Clienter, keyGenerator encryption.GenerateKey, vault upload.VaultClienter, vaultPath string) Store {
-	return Store{hostname, s3, keyGenerator, vault, vaultPath}
-}
-
-func (s Store) UploadFile(ctx context.Context, metadata StoreMetadata, resumable Resumable, content []byte) (bool, error) {
-	var encryptionKey []byte
-	var err error
-
-	if firstChunk(resumable.CurrentChunk) {
-		if err = s.registerFileUpload(ctx, metadata); err != nil {
-			log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
-			return false, err
-		}
-
-		encryptionKey, err = s.generateEncryptionKey(ctx, metadata.Path)
-		if err != nil {
-			return false, err
-		}
-	} else {
-		encryptionKey, err = s.getEncryptionKey(ctx, metadata.Path)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	part := s.generateUploadPart(metadata, resumable)
-	response, err := s.s3.UploadPartWithPsk(ctx, part, content, encryptionKey)
-	if err != nil {
-		log.Error(ctx, "failed to write chunk to s3", err, log.Data{"s3-upload-part": part})
-		if _, ok := err.(*s3client.ErrChunkTooSmall); ok {
-			return false, ErrChunkTooSmall
-		}
-		return false, ErrS3Upload
-	}
-
-	if response.AllPartsUploaded {
-		return true, s.markUploadComplete(ctx, metadata.Path, response.Etag)
-	}
-
-	return false, nil
-}
-
-func (s Store) generateEncryptionKey(ctx context.Context, filepath string) ([]byte, error) {
-	encryptionKey := s.keyGenerator()
-	if err := s.vault.WriteKey(s.getVaultPath(filepath), vaultKey, hex.EncodeToString(encryptionKey)); err != nil {
-		log.Error(ctx, "failed to write encryption encryptionKey to vault", err, log.Data{"vault-path": s.getVaultPath(filepath), "vault-encryptionKey": vaultKey})
-		return nil, ErrVaultWrite
-	}
-
-	return encryptionKey, nil
-}
-
-func (s Store) getEncryptionKey(ctx context.Context, filepath string) ([]byte, error) {
-	strKey, err := s.vault.ReadKey(s.getVaultPath(filepath), vaultKey)
-	if err != nil {
-		log.Error(ctx, "failed to read encryption encryptionkey from vault", err, log.Data{"vault-path": s.getVaultPath(filepath), "vault-encryptionkey": vaultKey})
-		return nil, ErrVaultRead
-	}
-
-	encryptionKey, err := hex.DecodeString(strKey)
-	if err != nil {
-		log.Error(ctx, "encryption key contains non-hexadecimal characters", err, log.Data{"vault-path": s.getVaultPath(filepath), "vault-encryptionkey": vaultKey})
-		return nil, ErrInvalidEncryptionKey
-	}
-	return encryptionKey, nil
-}
-
-func (s Store) getVaultPath(filepath string) string {
-	return fmt.Sprintf("%s/%s", s.vaultPath, filepath)
-}
-
-func firstChunk(currentChunk int64) bool { return currentChunk == 1 }
-
-func (s Store) generateUploadPart(metadata StoreMetadata, resumable Resumable) *s3client.UploadPartRequest {
-	return &s3client.UploadPartRequest{
-		UploadKey:   metadata.Path,
-		Type:        resumable.Type,
-		ChunkNumber: resumable.CurrentChunk,
-		TotalChunks: resumable.TotalChunks,
-		FileName:    resumable.FileName,
-	}
-}
-
-func (s Store) markUploadComplete(ctx context.Context, path, etag string) error {
-	uc := uploadComplete{StateUploaded, strings.Trim(etag, "\"")}
-
-	req, _ := http.NewRequest(http.MethodPatch, fmt.Sprintf("%s/files/%s", s.hostname, path), jsonEncode(uc))
-	req.Header.Set("Content-Type", "application/json")
-	s.setAuthHeader(ctx, req)
-
-	resp, err := dphttp.NewClient().Do(ctx, req)
-
-	logData := log.Data{"upload-complete": uc, "request": req, "response": resp}
-	if err != nil {
-		log.Error(ctx, fmt.Sprintf("making patch request to mark file %s", StateUploaded), err, logData)
-		return ErrConnectingToFilesApi
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-
-	switch resp.StatusCode {
-	case http.StatusNotFound:
-		log.Error(ctx, "could not file file to mark uploaded", ErrFileNotFound, logData)
-		return ErrFileNotFound
-	case http.StatusConflict:
-		log.Error(ctx, "file in wrong state to be marked uploaded", ErrFileStateConflict, logData)
-		return ErrFileStateConflict
-	case http.StatusInternalServerError:
-		err := ErrFilesServer
-		log.Error(ctx, "file api returning internal server errors", err, logData)
-		return err
-	case http.StatusForbidden:
-		log.Error(ctx, "unauthorised access", ErrFilesUnauthorised, logData)
-		return ErrFilesUnauthorised
-	default:
-		log.Error(ctx, "unexpected error morning file uploaded", ErrUnknownError, logData)
-		return ErrUnknownError
-	}
-}
-
-func (s Store) registerFileUpload(ctx context.Context, metadata StoreMetadata) error {
-	log.Info(ctx, "Register files API Call", log.Data{"hostname": s.hostname})
-
-	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/files", s.hostname), jsonEncode(metadata))
-	req.Header.Set("Content-Type", "application/json")
-	s.setAuthHeader(ctx, req)
-
-	resp, err := dphttp.NewClient().Do(ctx, req)
-
-	if err != nil {
-		log.Error(ctx, "failed to connect to files API", err, log.Data{"hostname": s.hostname})
-		return ErrConnectingToFilesApi
-	}
-
-	if resp.StatusCode == http.StatusCreated {
-		return nil
-	}
-
-	switch resp.StatusCode {
-	case http.StatusInternalServerError:
-		return ErrFilesServer
-	case http.StatusForbidden:
-		return ErrFilesUnauthorised
-	case http.StatusBadRequest:
-		return s.handleBadRequestResponse(resp)
-	default:
-		return ErrUnknownError
-	}
-}
-
-func (s Store) setAuthHeader(ctx context.Context, req *http.Request) {
-	const authContextKey ContextKey = request.AuthHeaderKey
-
-	authHeaderValue := ctx.Value(authContextKey)
-	if authHeaderValue != nil {
-		req.Header.Set(request.AuthHeaderKey, authHeaderValue.(string))
-	} else {
-		log.Info(ctx, fmt.Sprintf("no %s set in context, this may cause auth issues", request.AuthHeaderKey), log.Data{"Request:": req})
-	}
-}
-
-func (s Store) handleBadRequestResponse(resp *http.Response) error {
-	jsonErrors := jsonErrors{}
-	if err := json.NewDecoder(resp.Body).Decode(&jsonErrors); err != nil {
-		return err
-	}
-
-	switch jsonErrors.Error[0].Code {
-	case "DuplicateFileError":
-		return ErrFilesAPIDuplicateFile
-	case "ValidationError":
-		return ErrFileAPICreateInvalidData
-	default:
-		return ErrUnknownError
-	}
-}
-
-func jsonEncode(data interface{}) *bytes.Buffer {
-	b := &bytes.Buffer{}
-	json.NewEncoder(b).Encode(data) // nolint // Only fails due to coding error
-	return b
-}
-
-type StoreMetadata struct {
-	Path          string  `json:"path"`
-	IsPublishable bool    `json:"is_publishable"`
-	CollectionId  *string `json:"collection_id,omitempty"`
-	Title         string  `json:"title"`
-	SizeInBytes   int     `json:"size_in_bytes"`
-	Type          string  `json:"type"`
-	Licence       string  `json:"licence"`
-	LicenceUrl    string  `json:"licence_url"`
+	files  FilesClienter
+	bucket *aws.Bucket
+	vault  *encryption.Vault
+	cfg    *config.Config
 }
 
 type Resumable struct {
@@ -256,16 +47,108 @@ type Resumable struct {
 	TotalChunks  int    `schema:"resumableTotalChunks"`
 }
 
-type uploadComplete struct {
-	State string `json:"state"`
-	ETag  string `json:"etag"`
+type StatusMessage struct {
+	Value bool   `json:"valid"`
+	Err   string `json:"error,omitempty"`
 }
 
-type jsonError struct {
-	Code        string `json:"code"`
-	Description string `json:"description"`
+type Status struct {
+	Metadata      files.FileMetaData `json:"metadata"`
+	EncryptionKey StatusMessage      `json:"encryption_key"`
+	FileContent   StatusMessage      `json:"file_content"`
 }
 
-type jsonErrors struct {
-	Error []jsonError `json:"errors"`
+func NewStore(files FilesClienter, bucket *aws.Bucket, vault *encryption.Vault, cfg *config.Config) Store {
+	return Store{files, bucket, vault, cfg}
+}
+
+func (s Store) Status(ctx context.Context, path string) (*Status, error) {
+	//metadata
+	metadata, err := s.files.GetFile(ctx, path, s.cfg.ServiceAuthToken)
+	if err != nil {
+		log.Error(ctx, "failed to get file metadata", err, log.Data{"path": path})
+		return nil, ErrFilesAPINotFound
+	}
+
+	//vault
+	k, err := s.vault.EncryptionKey(ctx, path)
+	encryptionKey := newStatusMessage(len(k) > 0, err)
+
+	//file content
+	head, err := s.bucket.Head(path)
+	fileContent := newStatusMessage(head != nil && head.ContentLength != nil && *head.ContentLength > 0, err)
+
+	return &Status{
+		Metadata:      metadata,
+		EncryptionKey: encryptionKey,
+		FileContent:   fileContent,
+	}, nil
+}
+
+func (s Store) UploadFile(ctx context.Context, metadata files.FileMetaData, resumable Resumable, content []byte) (bool, error) {
+	var encryptionKey []byte
+	var err error
+
+	if resumable.CurrentChunk == 1 {
+		if err = s.files.RegisterFile(ctx, metadata); err != nil {
+			log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
+			return false, err
+		}
+
+		encryptionKey, err = s.vault.GenerateEncryptionKey(ctx, metadata.Path)
+		if err != nil {
+			return false, err
+		}
+	} else {
+		encryptionKey, err = s.vault.EncryptionKey(ctx, metadata.Path)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	part := generateUploadPart(metadata, resumable)
+	response, err := s.bucket.UploadPartWithPsk(ctx, part, content, encryptionKey)
+	if err != nil {
+		log.Error(ctx, "failed to write chunk to s3", err, log.Data{"s3-upload-part": part})
+		if _, ok := err.(*s3client.ErrChunkTooSmall); ok {
+			return false, ErrChunkTooSmall
+		}
+		return false, ErrS3Upload
+	}
+
+	if response.AllPartsUploaded {
+		head, err := s.bucket.Head(metadata.Path)
+		if err != nil {
+			log.Error(ctx, "failed to get completed file info from s3", err, log.Data{"key": metadata.Path})
+			return false, ErrS3Head
+		}
+		if head.ETag == nil {
+			log.Error(ctx, "failed to get completed file etag from s3", err, log.Data{"key": metadata.Path})
+			return false, ErrS3Head
+		}
+
+		return true, s.files.MarkFileUploaded(ctx, metadata.Path, strings.Trim(*head.ETag, "\""))
+	}
+
+	return false, nil
+}
+
+func generateUploadPart(metadata files.FileMetaData, resumable Resumable) *s3client.UploadPartRequest {
+	return &s3client.UploadPartRequest{
+		UploadKey:   metadata.Path,
+		Type:        resumable.Type,
+		ChunkNumber: resumable.CurrentChunk,
+		TotalChunks: resumable.TotalChunks,
+		FileName:    resumable.FileName,
+	}
+}
+
+func newStatusMessage(val bool, err error) StatusMessage {
+	msg := StatusMessage{
+		Value: val && err == nil,
+	}
+	if err != nil {
+		msg.Err = err.Error()
+	}
+	return msg
 }

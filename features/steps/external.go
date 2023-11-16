@@ -3,6 +3,7 @@ package steps
 import (
 	"context"
 	"fmt"
+	dpaws "github.com/ONSdigital/dp-upload-service/aws"
 	"net/http"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/service"
-	"github.com/ONSdigital/dp-upload-service/upload"
 	vault "github.com/ONSdigital/dp-vault"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -32,7 +32,7 @@ func (e external) DoGetHTTPServer(bindAddr string, router http.Handler) service.
 	return e.Server
 }
 
-func (e external) DoGetVault(ctx context.Context, cfg *config.Config) (upload.VaultClienter, error) {
+func (e external) DoGetVault(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
 	v, err := vault.CreateClient(cfg.VaultToken, cfg.VaultAddress, 5)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -47,15 +47,15 @@ func (e external) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, ver
 	return &check, nil
 }
 
-func (e external) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+func (e external) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
 	return generateS3Client(cfg, cfg.UploadBucketName)
 }
 
-func (e external) DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (upload.S3Clienter, error) {
+func (e external) DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
 	return generateS3Client(cfg, cfg.StaticFilesEncryptedBucketName)
 }
 
-func generateS3Client(cfg *config.Config, bucketName string) (upload.S3Clienter, error) {
+func generateS3Client(cfg *config.Config, bucketName string) (dpaws.S3Clienter, error) {
 	s, err := session.NewSession(&aws.Config{
 		Endpoint:         aws.String(localStackHost),
 		Region:           aws.String(cfg.AwsRegion),
@@ -71,5 +71,5 @@ func generateS3Client(cfg *config.Config, bucketName string) (upload.S3Clienter,
 }
 
 func (e external) DoGetEncryptionKeyGenerator() encryption.GenerateKey {
-	return func() []byte { return e.EncryptionKey }
+	return func() ([]byte, error) { return e.EncryptionKey, nil }
 }
