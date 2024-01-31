@@ -18,31 +18,28 @@ var _ aws.S3Clienter = &S3ClienterMock{}
 
 // S3ClienterMock is a mock implementation of aws.S3Clienter.
 //
-// 	func TestSomethingThatUsesS3Clienter(t *testing.T) {
+//	func TestSomethingThatUsesS3Clienter(t *testing.T) {
 //
-// 		// make and configure a mocked aws.S3Clienter
-// 		mockedS3Clienter := &S3ClienterMock{
-// 			CheckPartUploadedFunc: func(ctx context.Context, req *s3client.UploadPartRequest) (bool, error) {
-// 				panic("mock out the CheckPartUploaded method")
-// 			},
-// 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
-// 				panic("mock out the Checker method")
-// 			},
-// 			HeadFunc: func(key string) (*s3.HeadObjectOutput, error) {
-// 				panic("mock out the Head method")
-// 			},
-// 			UploadPartFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
-// 				panic("mock out the UploadPart method")
-// 			},
-// 			UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
-// 				panic("mock out the UploadPartWithPsk method")
-// 			},
-// 		}
+//		// make and configure a mocked aws.S3Clienter
+//		mockedS3Clienter := &S3ClienterMock{
+//			CheckPartUploadedFunc: func(ctx context.Context, req *s3client.UploadPartRequest) (bool, error) {
+//				panic("mock out the CheckPartUploaded method")
+//			},
+//			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+//				panic("mock out the Checker method")
+//			},
+//			HeadFunc: func(key string) (*s3.HeadObjectOutput, error) {
+//				panic("mock out the Head method")
+//			},
+//			UploadPartFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
+//				panic("mock out the UploadPart method")
+//			},
+//		}
 //
-// 		// use mockedS3Clienter in code that requires aws.S3Clienter
-// 		// and then make assertions.
+//		// use mockedS3Clienter in code that requires aws.S3Clienter
+//		// and then make assertions.
 //
-// 	}
+//	}
 type S3ClienterMock struct {
 	// CheckPartUploadedFunc mocks the CheckPartUploaded method.
 	CheckPartUploadedFunc func(ctx context.Context, req *s3client.UploadPartRequest) (bool, error)
@@ -55,9 +52,6 @@ type S3ClienterMock struct {
 
 	// UploadPartFunc mocks the UploadPart method.
 	UploadPartFunc func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error)
-
-	// UploadPartWithPskFunc mocks the UploadPartWithPsk method.
-	UploadPartWithPskFunc func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -89,23 +83,11 @@ type S3ClienterMock struct {
 			// Payload is the payload argument value.
 			Payload []byte
 		}
-		// UploadPartWithPsk holds details about calls to the UploadPartWithPsk method.
-		UploadPartWithPsk []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Req is the req argument value.
-			Req *s3client.UploadPartRequest
-			// Payload is the payload argument value.
-			Payload []byte
-			// Psk is the psk argument value.
-			Psk []byte
-		}
 	}
 	lockCheckPartUploaded sync.RWMutex
 	lockChecker           sync.RWMutex
 	lockHead              sync.RWMutex
 	lockUploadPart        sync.RWMutex
-	lockUploadPartWithPsk sync.RWMutex
 }
 
 // CheckPartUploaded calls CheckPartUploadedFunc.
@@ -128,7 +110,8 @@ func (mock *S3ClienterMock) CheckPartUploaded(ctx context.Context, req *s3client
 
 // CheckPartUploadedCalls gets all the calls that were made to CheckPartUploaded.
 // Check the length with:
-//     len(mockedS3Clienter.CheckPartUploadedCalls())
+//
+//	len(mockedS3Clienter.CheckPartUploadedCalls())
 func (mock *S3ClienterMock) CheckPartUploadedCalls() []struct {
 	Ctx context.Context
 	Req *s3client.UploadPartRequest
@@ -163,7 +146,8 @@ func (mock *S3ClienterMock) Checker(ctx context.Context, state *healthcheck.Chec
 
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
-//     len(mockedS3Clienter.CheckerCalls())
+//
+//	len(mockedS3Clienter.CheckerCalls())
 func (mock *S3ClienterMock) CheckerCalls() []struct {
 	Ctx   context.Context
 	State *healthcheck.CheckState
@@ -196,7 +180,8 @@ func (mock *S3ClienterMock) Head(key string) (*s3.HeadObjectOutput, error) {
 
 // HeadCalls gets all the calls that were made to Head.
 // Check the length with:
-//     len(mockedS3Clienter.HeadCalls())
+//
+//	len(mockedS3Clienter.HeadCalls())
 func (mock *S3ClienterMock) HeadCalls() []struct {
 	Key string
 } {
@@ -231,7 +216,8 @@ func (mock *S3ClienterMock) UploadPart(ctx context.Context, req *s3client.Upload
 
 // UploadPartCalls gets all the calls that were made to UploadPart.
 // Check the length with:
-//     len(mockedS3Clienter.UploadPartCalls())
+//
+//	len(mockedS3Clienter.UploadPartCalls())
 func (mock *S3ClienterMock) UploadPartCalls() []struct {
 	Ctx     context.Context
 	Req     *s3client.UploadPartRequest
@@ -245,48 +231,5 @@ func (mock *S3ClienterMock) UploadPartCalls() []struct {
 	mock.lockUploadPart.RLock()
 	calls = mock.calls.UploadPart
 	mock.lockUploadPart.RUnlock()
-	return calls
-}
-
-// UploadPartWithPsk calls UploadPartWithPskFunc.
-func (mock *S3ClienterMock) UploadPartWithPsk(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
-	if mock.UploadPartWithPskFunc == nil {
-		panic("S3ClienterMock.UploadPartWithPskFunc: method is nil but S3Clienter.UploadPartWithPsk was just called")
-	}
-	callInfo := struct {
-		Ctx     context.Context
-		Req     *s3client.UploadPartRequest
-		Payload []byte
-		Psk     []byte
-	}{
-		Ctx:     ctx,
-		Req:     req,
-		Payload: payload,
-		Psk:     psk,
-	}
-	mock.lockUploadPartWithPsk.Lock()
-	mock.calls.UploadPartWithPsk = append(mock.calls.UploadPartWithPsk, callInfo)
-	mock.lockUploadPartWithPsk.Unlock()
-	return mock.UploadPartWithPskFunc(ctx, req, payload, psk)
-}
-
-// UploadPartWithPskCalls gets all the calls that were made to UploadPartWithPsk.
-// Check the length with:
-//     len(mockedS3Clienter.UploadPartWithPskCalls())
-func (mock *S3ClienterMock) UploadPartWithPskCalls() []struct {
-	Ctx     context.Context
-	Req     *s3client.UploadPartRequest
-	Payload []byte
-	Psk     []byte
-} {
-	var calls []struct {
-		Ctx     context.Context
-		Req     *s3client.UploadPartRequest
-		Payload []byte
-		Psk     []byte
-	}
-	mock.lockUploadPartWithPsk.RLock()
-	calls = mock.calls.UploadPartWithPsk
-	mock.lockUploadPartWithPsk.RUnlock()
 	return calls
 }

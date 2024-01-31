@@ -17,7 +17,7 @@ import (
 )
 
 var componentFlag = flag.Bool("component", false, "perform component tests")
-var loggingFlag   = flag.Bool("logging", false, "print logging")
+var loggingFlag = flag.Bool("logging", false, "print logging")
 
 type ComponentTest struct {
 }

@@ -7,7 +7,6 @@ Feature: Collection ID Optional
       | resumableTotalSize | 14794                                                                     |
       | licence            | OGL v3                                                                    |
       | licenceUrl         | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
-    And encryption key will be "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf"
     And the data file "populations.csv" with content:
         """
         mark,1
@@ -21,7 +20,7 @@ Feature: Collection ID Optional
       | resumableChunkNumber | 1                    |
       | path                 | data                 |
     Then the HTTP status code should be "201"
-    And the path "/data/populations.csv" should be available in the S3 bucket matching content using encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf":
+    And the path "/data/populations.csv" should be available in the S3 bucket:
         """
         mark,1
         jon,2
@@ -46,4 +45,3 @@ Feature: Collection ID Optional
           "etag": "32204b5b34cd2e635d6d69a443916584-1"
         }
         """
-    And the encryption key "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf" should be stored against file "data/populations.csv"

@@ -9,8 +9,6 @@ import (
 	dps3 "github.com/ONSdigital/dp-s3/v2"
 	dpaws "github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/ONSdigital/dp-upload-service/encryption"
-	dpvault "github.com/ONSdigital/dp-vault"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -18,7 +16,6 @@ import (
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
 type ExternalServiceList struct {
-	Vault       bool
 	S3Uploaded  bool
 	HealthCheck bool
 	Init        Initialiser
@@ -27,7 +24,6 @@ type ExternalServiceList struct {
 // NewServiceList creates a new service list with the provided initialiser
 func NewServiceList(initialiser Initialiser) *ExternalServiceList {
 	return &ExternalServiceList{
-		Vault:       false,
 		S3Uploaded:  false,
 		HealthCheck: false,
 		Init:        initialiser,
@@ -41,16 +37,6 @@ type Init struct{}
 func (e *ExternalServiceList) GetHTTPServer(bindAddr string, router http.Handler) HTTPServer {
 	s := e.Init.DoGetHTTPServer(bindAddr, router)
 	return s
-}
-
-// GetVault creates a Vault client and sets the Vault flag to true
-func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
-	vault, err := e.Init.DoGetVault(ctx, cfg)
-	if err != nil {
-		return nil, err
-	}
-	e.Vault = true
-	return vault, nil
 }
 
 // GetS3Uploaded creates a S3 client and sets the S3Uploaded flag to true
@@ -77,10 +63,6 @@ func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitC
 	return hc, nil
 }
 
-func (e *ExternalServiceList) GetEncryptionKeyGenerator() encryption.GenerateKey {
-	return e.Init.DoGetEncryptionKeyGenerator()
-}
-
 // DoGetHTTPServer creates an HTTP Server with the provided bind address and router
 func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer {
 	s := dphttp.NewServer(bindAddr, router)
@@ -95,7 +77,7 @@ func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (dpaws.S
 
 // DoGetStaticFileS3Uploader returns a S3Client
 func (e *Init) DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
-	return generateS3Client(cfg, cfg.StaticFilesEncryptedBucketName)
+	return generateS3Client(cfg, cfg.StaticFilesBucketName)
 }
 
 func generateS3Client(cfg *config.Config, bucketName string) (dpaws.S3Clienter, error) {
@@ -121,20 +103,6 @@ func generateS3Client(cfg *config.Config, bucketName string) (dpaws.S3Clienter, 
 	return s3Client, nil
 }
 
-// DoGetVault returns a VaultClient unless encryption is disabled
-//
-// If cfg.EncryptionDisabled is true then the function returns nil
-func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
-	if cfg.EncryptionDisabled {
-		return nil, nil
-	}
-	vault, err := dpvault.CreateClient(cfg.VaultToken, cfg.VaultAddress, 3)
-	if err != nil {
-		return nil, err
-	}
-	return vault, nil
-}
-
 // DoGetHealthCheck creates a healthcheck with versionInfo
 func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error) {
 	versionInfo, err := healthcheck.NewVersionInfo(buildTime, gitCommit, version)
@@ -143,8 +111,4 @@ func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, versio
 	}
 	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
 	return &hc, nil
-}
-
-func (e *Init) DoGetEncryptionKeyGenerator() encryption.GenerateKey {
-	return encryption.CreateKey
 }

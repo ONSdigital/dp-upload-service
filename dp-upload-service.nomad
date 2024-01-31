@@ -67,10 +67,6 @@ job "dp-upload-service" {
         source      = "${NOMAD_TASK_DIR}/vars-template"
         destination = "${NOMAD_TASK_DIR}/vars"
       }
-
-      vault {
-        policies = ["dp-upload-service"]
-      }
     }
   }
 }

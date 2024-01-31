@@ -9,7 +9,6 @@ import (
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/ONSdigital/dp-upload-service/encryption"
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
@@ -36,7 +35,6 @@ type FilesClienter interface {
 type Store struct {
 	files  FilesClienter
 	bucket *aws.Bucket
-	vault  *encryption.Vault
 	cfg    *config.Config
 }
 
@@ -53,13 +51,12 @@ type StatusMessage struct {
 }
 
 type Status struct {
-	Metadata      files.FileMetaData `json:"metadata"`
-	EncryptionKey StatusMessage      `json:"encryption_key"`
-	FileContent   StatusMessage      `json:"file_content"`
+	Metadata    files.FileMetaData `json:"metadata"`
+	FileContent StatusMessage      `json:"file_content"`
 }
 
-func NewStore(files FilesClienter, bucket *aws.Bucket, vault *encryption.Vault, cfg *config.Config) Store {
-	return Store{files, bucket, vault, cfg}
+func NewStore(files FilesClienter, bucket *aws.Bucket, cfg *config.Config) Store {
+	return Store{files, bucket, cfg}
 }
 
 func (s Store) Status(ctx context.Context, path string) (*Status, error) {
@@ -70,44 +67,25 @@ func (s Store) Status(ctx context.Context, path string) (*Status, error) {
 		return nil, ErrFilesAPINotFound
 	}
 
-	//vault
-	k, err := s.vault.EncryptionKey(ctx, path)
-	encryptionKey := newStatusMessage(len(k) > 0, err)
-
 	//file content
 	head, err := s.bucket.Head(path)
 	fileContent := newStatusMessage(head != nil && head.ContentLength != nil && *head.ContentLength > 0, err)
 
 	return &Status{
-		Metadata:      metadata,
-		EncryptionKey: encryptionKey,
-		FileContent:   fileContent,
+		Metadata:    metadata,
+		FileContent: fileContent,
 	}, nil
 }
 
 func (s Store) UploadFile(ctx context.Context, metadata files.FileMetaData, resumable Resumable, content []byte) (bool, error) {
-	var encryptionKey []byte
 	var err error
-
-	if resumable.CurrentChunk == 1 {
-		if err = s.files.RegisterFile(ctx, metadata); err != nil {
-			log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
-			return false, err
-		}
-
-		encryptionKey, err = s.vault.GenerateEncryptionKey(ctx, metadata.Path)
-		if err != nil {
-			return false, err
-		}
-	} else {
-		encryptionKey, err = s.vault.EncryptionKey(ctx, metadata.Path)
-		if err != nil {
-			return false, err
-		}
+	if err = s.files.RegisterFile(ctx, metadata); err != nil {
+		log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
+		return false, err
 	}
 
 	part := generateUploadPart(metadata, resumable)
-	response, err := s.bucket.UploadPartWithPsk(ctx, part, content, encryptionKey)
+	response, err := s.bucket.UploadPart(ctx, part, content)
 	if err != nil {
 		log.Error(ctx, "failed to write chunk to s3", err, log.Data{"s3-upload-part": part})
 		if _, ok := err.(*s3client.ErrChunkTooSmall); ok {

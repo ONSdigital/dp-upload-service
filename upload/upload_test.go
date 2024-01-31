@@ -13,16 +13,12 @@ import (
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/aws"
 	mock_aws "github.com/ONSdigital/dp-upload-service/aws/mock"
-	"github.com/ONSdigital/dp-upload-service/encryption"
-	mock_encryption "github.com/ONSdigital/dp-upload-service/encryption/mock"
 	"github.com/ONSdigital/dp-upload-service/upload"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 var (
-	vaultRootPath = "secret/path"
-
 	s3Region = "eu-west-2"
 	s3Bucket = "test-bucket"
 
@@ -126,7 +122,7 @@ func TestPostUpload(t *testing.T) {
 		req, err := createTestFileUploadPart(expectedPayload)
 		So(err, ShouldBeNil)
 
-		Convey("test upload successfully uploads with only one chunk and no vault client", func() {
+		Convey("test upload successfully uploads with only one chunk", func() {
 			addQueryParams(req, "1", "1")
 
 			// S3 client returns generic error if ListMultipartUploads fails
@@ -151,89 +147,6 @@ func TestPostUpload(t *testing.T) {
 			So(s3.UploadPartCalls()[0].Payload, ShouldResemble, expectedPayload)
 			So(w.Code, ShouldEqual, 200)
 
-		})
-
-		Convey("test upload successfully uploads with only one chunk and a valid vault client with no existing PSK", func() {
-			addQueryParams(req, "1", "1")
-
-			// S3 client returns generic error if ListMultipartUploads fails
-			s3 := &mock_aws.S3ClienterMock{
-				UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
-					return s3client.MultipartUploadResponse{}, nil
-				},
-			}
-
-			// Vault client mock
-			vc := &mock_encryption.VaultClienterMock{
-				ReadKeyFunc: func(path string, key string) (string, error) {
-					return "", errors.New("no key created yet - better go create one")
-				},
-				WriteKeyFunc: func(path string, key string, value string) error {
-					return nil
-				},
-			}
-			vault := encryption.NewVault(fakeKeyGenerator, vc, "secret/path")
-			bucket := aws.NewBucket(s3Region, s3Bucket, s3)
-			up := upload.New(bucket, vault)
-			up.Upload(w, req)
-
-			// Validations
-			So(len(s3.UploadPartWithPskCalls()), ShouldEqual, 1)
-			So(s3.UploadPartWithPskCalls()[0].Req, ShouldResemble, &s3client.UploadPartRequest{
-				UploadKey:   "12345",
-				Type:        "text/plain",
-				ChunkNumber: 1,
-				TotalChunks: 1,
-				FileName:    "helloworld",
-			})
-			So(s3.UploadPartWithPskCalls()[0].Payload, ShouldResemble, expectedPayload)
-			So(string(s3.UploadPartWithPskCalls()[0].Psk), ShouldEqual, "testing")
-			So(len(vc.ReadKeyCalls()), ShouldEqual, 1)
-			So(len(vc.WriteKeyCalls()), ShouldEqual, 1)
-			So(w.Code, ShouldEqual, 200)
-		})
-
-		Convey("test upload successfully uploads with only one chunk and a valid vault client with existing PSK", func() {
-			addQueryParams(req, "1", "1")
-
-			// S3 client returns generic error if ListMultipartUploads fails
-			s3 := &mock_aws.S3ClienterMock{
-				UploadPartWithPskFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte, psk []byte) (s3client.MultipartUploadResponse, error) {
-					return s3client.MultipartUploadResponse{}, nil
-				},
-			}
-
-			// The expected vault path is the root path plus the S3 Key (i.e. path in bucket) of the upload request
-			vaultPath := vaultRootPath + "/12345"
-			encodedPSK := "48656C6C6F20576F726C64"
-			psk, err := hex.DecodeString(encodedPSK)
-
-			// Vault client mock
-			So(err, ShouldBeNil)
-			vc := &mock_encryption.VaultClienterMock{
-				ReadKeyFunc: func(path string, key string) (string, error) {
-					return encodedPSK, nil
-				},
-			}
-			vault := encryption.NewVault(fakeKeyGenerator, vc, "secret/path")
-			bucket := aws.NewBucket(s3Region, s3Bucket, s3)
-			up := upload.New(bucket, vault)
-			up.Upload(w, req)
-
-			// Validations
-			So(len(s3.UploadPartWithPskCalls()), ShouldEqual, 1)
-			So(s3.UploadPartWithPskCalls()[0].Req, ShouldResemble, &s3client.UploadPartRequest{
-				UploadKey:   "12345",
-				Type:        "text/plain",
-				ChunkNumber: 1,
-				TotalChunks: 1,
-				FileName:    "helloworld",
-			})
-			So(s3.UploadPartWithPskCalls()[0].Payload, ShouldResemble, expectedPayload)
-			So(s3.UploadPartWithPskCalls()[0].Psk, ShouldResemble, psk)
-			So(len(vc.ReadKeyCalls()), ShouldEqual, 1)
-			So(vc.ReadKeyCalls()[0].Path, ShouldEqual, vaultPath)
-			So(w.Code, ShouldEqual, 200)
 		})
 
 		Convey("test 500 status returned if client throws an error", func() {

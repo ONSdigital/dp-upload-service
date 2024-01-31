@@ -9,8 +9,6 @@ import (
 	"github.com/ONSdigital/dp-upload-service/aws"
 	mock_aws "github.com/ONSdigital/dp-upload-service/aws/mock"
 	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/ONSdigital/dp-upload-service/encryption"
-	mock_encryption "github.com/ONSdigital/dp-upload-service/encryption/mock"
 	"github.com/ONSdigital/dp-upload-service/service"
 	mock_service "github.com/ONSdigital/dp-upload-service/service/mock"
 
@@ -123,43 +121,6 @@ func TestGetHTTPServer(t *testing.T) {
 
 }
 
-func TestGetVault(t *testing.T) {
-	Convey("Given a service list that includes a mocked vault", t, func() {
-		vaultMock := &mock_encryption.VaultClienterMock{}
-		newServiceMock := &mock_service.InitialiserMock{
-			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
-				return vaultMock, nil
-			},
-		}
-		svcList := service.NewServiceList(newServiceMock)
-		Convey("When GetVault is called", func() {
-			vault, _ := svcList.GetVault(ctx, cfg)
-			Convey("Then the vault is returned and vault flag is set to true", func() {
-				So(svcList.Vault, ShouldBeTrue)
-				So(vault, ShouldEqual, vaultMock)
-				So(len(newServiceMock.DoGetVaultCalls()), ShouldEqual, 1)
-			})
-		})
-	})
-
-	Convey("Given a service list that returns nil for vault client", t, func() {
-		newServiceMock := &mock_service.InitialiserMock{
-			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
-				return nil, errVault
-			},
-		}
-		svcList := service.NewServiceList(newServiceMock)
-		Convey("When GetVault is called", func() {
-			vault, err := svcList.GetVault(ctx, cfg)
-			Convey("Then the vault flag is set to false and vault is nil", func() {
-				So(vault, ShouldBeNil)
-				So(err, ShouldResemble, errVault)
-				So(svcList.Vault, ShouldBeFalse)
-			})
-		})
-	})
-}
-
 func TestGetS3Uploaded(t *testing.T) {
 
 	Convey("Given a service list that includes a mocked s3Client", t, func() {
@@ -237,33 +198,6 @@ func TestGetHealthCheck(t *testing.T) {
 				So(hc, ShouldBeNil)
 				So(err, ShouldResemble, errHealthcheck)
 				So(svcList.HealthCheck, ShouldBeFalse)
-			})
-		})
-	})
-}
-
-func TestInit_DoGetVault(t *testing.T) {
-	Convey("Given a an empty initialiser struct", t, func() {
-		init := service.Init{}
-		cfg, err := config.Get()
-
-		Convey("When DoGetVault is called with encryption disabled", func() {
-			cfg.EncryptionDisabled = true
-			So(err, ShouldBeNil)
-			vault, err := init.DoGetVault(ctx, cfg)
-			So(err, ShouldBeNil)
-			Convey("Then the returned vault client should be nil", func() {
-				So(vault, ShouldBeNil)
-			})
-		})
-
-		Convey("When DoGetVault is called with encryption enabled", func() {
-			cfg.EncryptionDisabled = false
-			So(err, ShouldBeNil)
-			vault, err := init.DoGetVault(ctx, cfg)
-			So(err, ShouldBeNil)
-			Convey("Then the returned vault client should not be nil", func() {
-				So(vault, ShouldNotBeNil)
 			})
 		})
 	})

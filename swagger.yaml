@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   title: "dp-upload-service"
-  description: "Digital Publishing resumable file upload service that handles on-the-fly encryption and writing to S3. It updates images through the CMS."
+  description: "Digital Publishing resumable file upload service that handles writing to S3. It updates images through the CMS."
   version: 1.0.0
   license:
     name: "Open Government Licence v3.0"

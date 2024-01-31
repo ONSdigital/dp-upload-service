@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	s3client "github.com/ONSdigital/dp-s3/v2"
-	"github.com/ONSdigital/dp-upload-service/encryption"
 
 	"github.com/ONSdigital/dp-net/v2/request"
 
@@ -41,18 +40,14 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the data file "([^"]*)" with content:$`, c.theDataFile)
 	ctx.Step(`^the file meta-data is:$`, c.theFileMetadataIs)
 	ctx.Step(`^the 1st part of the file "([^"]*)" has been uploaded with resumable parameters:$`, c.the1StPartOfTheFileHasBeenUploaded)
-	ctx.Step(`^encryption key will be "([^"]*)"$`, c.encryptionKeyWillBe)
 
 	// Whens
 	ctx.Step(`^I upload the file "([^"]*)" with the following form resumable parameters:$`, c.iUploadTheFileWithTheFollowingFormResumableParameters)
 	ctx.Step(`^I upload the file "([^"]*)" with the following form resumable parameters and auth header "([^"]*)"$`, c.iUploadTheFileWithTheFollowingFormResumableParametersAndAuthHeader)
 
 	// Thens
-	ctx.Step(`^the path "([^"]*)" should be available in the S3 bucket matching content using encryption key "([^"]*)":`, c.theFileShouldBeAvailableInTheSBucketMatchingContent)
 	ctx.Step(`^the file upload should be marked as started using payload:$`, c.theFileUploadOfShouldBeMarkedAsStartedUsingPayload)
 	ctx.Step(`^the file "([^"]*)" should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
-	ctx.Step(`^the stored file "([^"]*)" should match the sent file "([^"]*)" using encryption key "([^"]*)"$`, c.theStoredFileShouldMatchTheSentFile)
-	ctx.Step(`^the encryption key "([^"]*)" should be stored against file "([^"]*)"$`, c.theEncryptionKeyShouldBeStored)
 	ctx.Step(`^the files api POST request should contain a default authorization header$`, c.theFilesApiPOSTRequestShouldContainADefaultAuthorizationHeader)
 	ctx.Step(`^the files api PATCH request with path \("([^"]*)"\) should contain a default authorization header$`, c.theFilesApiPATCHRequestWithPathShouldContainADefaultAuthorizationHeader)
 	// Buts
@@ -64,16 +59,6 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 // ------
 // Givens
 // ------
-
-func (c *UploadComponent) encryptionKeyWillBe(key string) error {
-	bytes, err := hex.DecodeString(key)
-	if err != nil {
-		return err
-	}
-
-	c.EncryptionKey = bytes
-	return nil
-}
 
 func (c *UploadComponent) theDataFile(filename string, fileContent *godog.DocString) error {
 	file, err := os.Create(fmt.Sprintf("%s/%s", testFilePath, filename))
@@ -122,22 +107,16 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 	}))
 
 	pathAndFilename := path + "/" + filename
-	encryptedKey, _ := encryption.CreateKey()
-
-	//setup vault
-	cfg, _ := config.Get()
-	vault, _ := c.svcList.GetVault(context.Background(), cfg)
-	_ = vault.WriteKey(fmt.Sprintf("%s/%s", cfg.VaultPath, pathAndFilename), "key", hex.EncodeToString(encryptedKey))
 
 	//setup s3
 	s3Client, _ := c.svcList.GetS3StaticFileUploader(context.Background(), cfg)
-	_, err := s3Client.UploadPartWithPsk(context.Background(), &s3client.UploadPartRequest{
+	_, err := s3Client.UploadPart(context.Background(), &s3client.UploadPartRequest{
 		UploadKey:   pathAndFilename,
 		Type:        "type",
 		ChunkNumber: 1,
 		TotalChunks: 1,
 		FileName:    filename,
-	}, []byte("content"), encryptedKey)
+	}, []byte("content"))
 
 	os.Setenv("FILES_API_URL", s.URL)
 
@@ -315,16 +294,16 @@ func (c *UploadComponent) iUploadTheFileWithMetaData(filename string, table *god
 // Thens
 // -----
 
-func (c *UploadComponent) theStoredFileShouldMatchTheSentFile(s3Filename, localFilename, encryptionKey string) error {
+func (c *UploadComponent) theStoredFileShouldMatchTheSentFile(s3Filename, localFilename) error {
 	expectedPayload, err := os.ReadFile(localFilename)
 	if err != nil {
 		return err
 	}
 
-	return c.theFileShouldBeAvailableInTheSBucketMatchingContent(s3Filename, encryptionKey, &godog.DocString{Content: string(expectedPayload)})
+	return c.theFileShouldBeAvailableInTheSBucketMatchingContent(s3Filename, &godog.DocString{Content: string(expectedPayload)})
 }
 
-func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(filename, encryptionKey string, expectedFileContent *godog.DocString) error {
+func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(filename, expectedFileContent *godog.DocString) error {
 	cfg, _ := config.Get()
 	s, _ := session.NewSession(&aws.Config{
 		Endpoint:         aws.String(localStackHost),
@@ -339,30 +318,24 @@ func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(fi
 	dl := s3manager.NewDownloaderWithClient(s3client)
 
 	_, err := s3client.HeadObject(&s3.HeadObjectInput{
-		Bucket: aws.String(cfg.StaticFilesEncryptedBucketName),
+		Bucket: aws.String(cfg.StaticFilesBucketName),
 		Key:    aws.String(filename),
 	})
 
 	assert.NoError(c.ApiFeature, err)
 
 	_, err = dl.Download(&buf, &s3.GetObjectInput{
-		Bucket: aws.String(cfg.StaticFilesEncryptedBucketName),
+		Bucket: aws.String(cfg.StaticFilesBucketName),
 		Key:    aws.String(filename),
 	})
 
 	assert.NoError(c.ApiFeature, err)
 
-	d, _ := hex.DecodeString(encryptionKey)
 	reader := &cryptoReader{
 		reader:    io.NopCloser(bytes.NewReader(buf.Bytes())),
-		psk:       d,
 		chunkSize: 5 * 1024 * 1024,
 		currChunk: nil,
 	}
-
-	unencryptedBytes, _ := io.ReadAll(reader)
-
-	assert.Equal(c.ApiFeature, expectedFileContent.Content, string(unencryptedBytes))
 
 	return c.ApiFeature.StepError()
 }
@@ -392,18 +365,6 @@ func (c *UploadComponent) the1StPartOfTheFileHasBeenUploaded(filename string, ta
 
 func (c *UploadComponent) theFileUploadShouldNotHaveBeenRegisteredAgain() error {
 	assert.NotContains(c.ApiFeature, requests, "/files")
-	return c.ApiFeature.StepError()
-}
-
-func (c *UploadComponent) theEncryptionKeyShouldBeStored(expectedEncryptionKey, filepath string) error {
-	cfg, _ := config.Get()
-
-	vault, _ := c.svcList.GetVault(context.Background(), cfg)
-	actualEncryptionKey, err := vault.ReadKey(fmt.Sprintf("%s/%s", cfg.VaultPath, filepath), "key")
-
-	assert.NoError(c.ApiFeature, err)
-	assert.Equal(c.ApiFeature, expectedEncryptionKey, actualEncryptionKey)
-
 	return c.ApiFeature.StepError()
 }
 

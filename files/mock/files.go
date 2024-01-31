@@ -16,25 +16,25 @@ var _ dpuploadservicefiles.FilesClienter = &FilesClienterMock{}
 
 // FilesClienterMock is a mock implementation of dpuploadservicefiles.FilesClienter.
 //
-// 	func TestSomethingThatUsesFilesClienter(t *testing.T) {
+//	func TestSomethingThatUsesFilesClienter(t *testing.T) {
 //
-// 		// make and configure a mocked dpuploadservicefiles.FilesClienter
-// 		mockedFilesClienter := &FilesClienterMock{
-// 			GetFileFunc: func(ctx context.Context, path string, authToken string) (v2files.FileMetaData, error) {
-// 				panic("mock out the GetFile method")
-// 			},
-// 			MarkFileUploadedFunc: func(ctx context.Context, path string, etag string) error {
-// 				panic("mock out the MarkFileUploaded method")
-// 			},
-// 			RegisterFileFunc: func(ctx context.Context, metadata v2files.FileMetaData) error {
-// 				panic("mock out the RegisterFile method")
-// 			},
-// 		}
+//		// make and configure a mocked dpuploadservicefiles.FilesClienter
+//		mockedFilesClienter := &FilesClienterMock{
+//			GetFileFunc: func(ctx context.Context, path string, authToken string) (v2files.FileMetaData, error) {
+//				panic("mock out the GetFile method")
+//			},
+//			MarkFileUploadedFunc: func(ctx context.Context, path string, etag string) error {
+//				panic("mock out the MarkFileUploaded method")
+//			},
+//			RegisterFileFunc: func(ctx context.Context, metadata v2files.FileMetaData) error {
+//				panic("mock out the RegisterFile method")
+//			},
+//		}
 //
-// 		// use mockedFilesClienter in code that requires dpuploadservicefiles.FilesClienter
-// 		// and then make assertions.
+//		// use mockedFilesClienter in code that requires dpuploadservicefiles.FilesClienter
+//		// and then make assertions.
 //
-// 	}
+//	}
 type FilesClienterMock struct {
 	// GetFileFunc mocks the GetFile method.
 	GetFileFunc func(ctx context.Context, path string, authToken string) (v2files.FileMetaData, error)
@@ -100,7 +100,8 @@ func (mock *FilesClienterMock) GetFile(ctx context.Context, path string, authTok
 
 // GetFileCalls gets all the calls that were made to GetFile.
 // Check the length with:
-//     len(mockedFilesClienter.GetFileCalls())
+//
+//	len(mockedFilesClienter.GetFileCalls())
 func (mock *FilesClienterMock) GetFileCalls() []struct {
 	Ctx       context.Context
 	Path      string
@@ -139,7 +140,8 @@ func (mock *FilesClienterMock) MarkFileUploaded(ctx context.Context, path string
 
 // MarkFileUploadedCalls gets all the calls that were made to MarkFileUploaded.
 // Check the length with:
-//     len(mockedFilesClienter.MarkFileUploadedCalls())
+//
+//	len(mockedFilesClienter.MarkFileUploadedCalls())
 func (mock *FilesClienterMock) MarkFileUploadedCalls() []struct {
 	Ctx  context.Context
 	Path string
@@ -176,7 +178,8 @@ func (mock *FilesClienterMock) RegisterFile(ctx context.Context, metadata v2file
 
 // RegisterFileCalls gets all the calls that were made to RegisterFile.
 // Check the length with:
-//     len(mockedFilesClienter.RegisterFileCalls())
+//
+//	len(mockedFilesClienter.RegisterFileCalls())
 func (mock *FilesClienterMock) RegisterFileCalls() []struct {
 	Ctx      context.Context
 	Metadata v2files.FileMetaData

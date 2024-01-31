@@ -7,7 +7,6 @@ import (
 	"context"
 	dpaws "github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/ONSdigital/dp-upload-service/encryption"
 	"github.com/ONSdigital/dp-upload-service/service"
 	"net/http"
 	"sync"
@@ -19,38 +18,29 @@ var _ service.Initialiser = &InitialiserMock{}
 
 // InitialiserMock is a mock implementation of service.Initialiser.
 //
-// 	func TestSomethingThatUsesInitialiser(t *testing.T) {
+//	func TestSomethingThatUsesInitialiser(t *testing.T) {
 //
-// 		// make and configure a mocked service.Initialiser
-// 		mockedInitialiser := &InitialiserMock{
-// 			DoGetEncryptionKeyGeneratorFunc: func() encryption.GenerateKey {
-// 				panic("mock out the DoGetEncryptionKeyGenerator method")
-// 			},
-// 			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer {
-// 				panic("mock out the DoGetHTTPServer method")
-// 			},
-// 			DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
-// 				panic("mock out the DoGetHealthCheck method")
-// 			},
-// 			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
-// 				panic("mock out the DoGetS3Uploaded method")
-// 			},
-// 			DoGetStaticFileS3UploaderFunc: func(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
-// 				panic("mock out the DoGetStaticFileS3Uploader method")
-// 			},
-// 			DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
-// 				panic("mock out the DoGetVault method")
-// 			},
-// 		}
+//		// make and configure a mocked service.Initialiser
+//		mockedInitialiser := &InitialiserMock{
+//			DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer {
+//				panic("mock out the DoGetHTTPServer method")
+//			},
+//			DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
+//				panic("mock out the DoGetHealthCheck method")
+//			},
+//			DoGetS3UploadedFunc: func(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
+//				panic("mock out the DoGetS3Uploaded method")
+//			},
+//			DoGetStaticFileS3UploaderFunc: func(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
+//				panic("mock out the DoGetStaticFileS3Uploader method")
+//			},
+//		}
 //
-// 		// use mockedInitialiser in code that requires service.Initialiser
-// 		// and then make assertions.
+//		// use mockedInitialiser in code that requires service.Initialiser
+//		// and then make assertions.
 //
-// 	}
+//	}
 type InitialiserMock struct {
-	// DoGetEncryptionKeyGeneratorFunc mocks the DoGetEncryptionKeyGenerator method.
-	DoGetEncryptionKeyGeneratorFunc func() encryption.GenerateKey
-
 	// DoGetHTTPServerFunc mocks the DoGetHTTPServer method.
 	DoGetHTTPServerFunc func(bindAddr string, router http.Handler) service.HTTPServer
 
@@ -63,14 +53,8 @@ type InitialiserMock struct {
 	// DoGetStaticFileS3UploaderFunc mocks the DoGetStaticFileS3Uploader method.
 	DoGetStaticFileS3UploaderFunc func(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error)
 
-	// DoGetVaultFunc mocks the DoGetVault method.
-	DoGetVaultFunc func(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error)
-
 	// calls tracks calls to the methods.
 	calls struct {
-		// DoGetEncryptionKeyGenerator holds details about calls to the DoGetEncryptionKeyGenerator method.
-		DoGetEncryptionKeyGenerator []struct {
-		}
 		// DoGetHTTPServer holds details about calls to the DoGetHTTPServer method.
 		DoGetHTTPServer []struct {
 			// BindAddr is the bindAddr argument value.
@@ -103,46 +87,11 @@ type InitialiserMock struct {
 			// Cfg is the cfg argument value.
 			Cfg *config.Config
 		}
-		// DoGetVault holds details about calls to the DoGetVault method.
-		DoGetVault []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Cfg is the cfg argument value.
-			Cfg *config.Config
-		}
 	}
-	lockDoGetEncryptionKeyGenerator sync.RWMutex
-	lockDoGetHTTPServer             sync.RWMutex
-	lockDoGetHealthCheck            sync.RWMutex
-	lockDoGetS3Uploaded             sync.RWMutex
-	lockDoGetStaticFileS3Uploader   sync.RWMutex
-	lockDoGetVault                  sync.RWMutex
-}
-
-// DoGetEncryptionKeyGenerator calls DoGetEncryptionKeyGeneratorFunc.
-func (mock *InitialiserMock) DoGetEncryptionKeyGenerator() encryption.GenerateKey {
-	if mock.DoGetEncryptionKeyGeneratorFunc == nil {
-		panic("InitialiserMock.DoGetEncryptionKeyGeneratorFunc: method is nil but Initialiser.DoGetEncryptionKeyGenerator was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockDoGetEncryptionKeyGenerator.Lock()
-	mock.calls.DoGetEncryptionKeyGenerator = append(mock.calls.DoGetEncryptionKeyGenerator, callInfo)
-	mock.lockDoGetEncryptionKeyGenerator.Unlock()
-	return mock.DoGetEncryptionKeyGeneratorFunc()
-}
-
-// DoGetEncryptionKeyGeneratorCalls gets all the calls that were made to DoGetEncryptionKeyGenerator.
-// Check the length with:
-//     len(mockedInitialiser.DoGetEncryptionKeyGeneratorCalls())
-func (mock *InitialiserMock) DoGetEncryptionKeyGeneratorCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockDoGetEncryptionKeyGenerator.RLock()
-	calls = mock.calls.DoGetEncryptionKeyGenerator
-	mock.lockDoGetEncryptionKeyGenerator.RUnlock()
-	return calls
+	lockDoGetHTTPServer           sync.RWMutex
+	lockDoGetHealthCheck          sync.RWMutex
+	lockDoGetS3Uploaded           sync.RWMutex
+	lockDoGetStaticFileS3Uploader sync.RWMutex
 }
 
 // DoGetHTTPServer calls DoGetHTTPServerFunc.
@@ -165,7 +114,8 @@ func (mock *InitialiserMock) DoGetHTTPServer(bindAddr string, router http.Handle
 
 // DoGetHTTPServerCalls gets all the calls that were made to DoGetHTTPServer.
 // Check the length with:
-//     len(mockedInitialiser.DoGetHTTPServerCalls())
+//
+//	len(mockedInitialiser.DoGetHTTPServerCalls())
 func (mock *InitialiserMock) DoGetHTTPServerCalls() []struct {
 	BindAddr string
 	Router   http.Handler
@@ -204,7 +154,8 @@ func (mock *InitialiserMock) DoGetHealthCheck(cfg *config.Config, buildTime stri
 
 // DoGetHealthCheckCalls gets all the calls that were made to DoGetHealthCheck.
 // Check the length with:
-//     len(mockedInitialiser.DoGetHealthCheckCalls())
+//
+//	len(mockedInitialiser.DoGetHealthCheckCalls())
 func (mock *InitialiserMock) DoGetHealthCheckCalls() []struct {
 	Cfg       *config.Config
 	BuildTime string
@@ -243,7 +194,8 @@ func (mock *InitialiserMock) DoGetS3Uploaded(ctx context.Context, cfg *config.Co
 
 // DoGetS3UploadedCalls gets all the calls that were made to DoGetS3Uploaded.
 // Check the length with:
-//     len(mockedInitialiser.DoGetS3UploadedCalls())
+//
+//	len(mockedInitialiser.DoGetS3UploadedCalls())
 func (mock *InitialiserMock) DoGetS3UploadedCalls() []struct {
 	Ctx context.Context
 	Cfg *config.Config
@@ -278,7 +230,8 @@ func (mock *InitialiserMock) DoGetStaticFileS3Uploader(ctx context.Context, cfg 
 
 // DoGetStaticFileS3UploaderCalls gets all the calls that were made to DoGetStaticFileS3Uploader.
 // Check the length with:
-//     len(mockedInitialiser.DoGetStaticFileS3UploaderCalls())
+//
+//	len(mockedInitialiser.DoGetStaticFileS3UploaderCalls())
 func (mock *InitialiserMock) DoGetStaticFileS3UploaderCalls() []struct {
 	Ctx context.Context
 	Cfg *config.Config
@@ -290,40 +243,5 @@ func (mock *InitialiserMock) DoGetStaticFileS3UploaderCalls() []struct {
 	mock.lockDoGetStaticFileS3Uploader.RLock()
 	calls = mock.calls.DoGetStaticFileS3Uploader
 	mock.lockDoGetStaticFileS3Uploader.RUnlock()
-	return calls
-}
-
-// DoGetVault calls DoGetVaultFunc.
-func (mock *InitialiserMock) DoGetVault(ctx context.Context, cfg *config.Config) (encryption.VaultClienter, error) {
-	if mock.DoGetVaultFunc == nil {
-		panic("InitialiserMock.DoGetVaultFunc: method is nil but Initialiser.DoGetVault was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-		Cfg *config.Config
-	}{
-		Ctx: ctx,
-		Cfg: cfg,
-	}
-	mock.lockDoGetVault.Lock()
-	mock.calls.DoGetVault = append(mock.calls.DoGetVault, callInfo)
-	mock.lockDoGetVault.Unlock()
-	return mock.DoGetVaultFunc(ctx, cfg)
-}
-
-// DoGetVaultCalls gets all the calls that were made to DoGetVault.
-// Check the length with:
-//     len(mockedInitialiser.DoGetVaultCalls())
-func (mock *InitialiserMock) DoGetVaultCalls() []struct {
-	Ctx context.Context
-	Cfg *config.Config
-} {
-	var calls []struct {
-		Ctx context.Context
-		Cfg *config.Config
-	}
-	mock.lockDoGetVault.RLock()
-	calls = mock.calls.DoGetVault
-	mock.lockDoGetVault.RUnlock()
 	return calls
 }

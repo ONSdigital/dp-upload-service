@@ -8,7 +8,6 @@ import (
 
 	s3client "github.com/ONSdigital/dp-s3/v2"
 	"github.com/ONSdigital/dp-upload-service/aws"
-	"github.com/ONSdigital/dp-upload-service/encryption"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -45,14 +44,12 @@ func (resum *Resumable) createS3Request() *s3client.UploadPartRequest {
 // Uploader represents the necessary configuration for uploading a file
 type Uploader struct {
 	bucket *aws.Bucket
-	vault  *encryption.Vault
 }
 
-// New returns a new Uploader from the provided clients and vault path
-func New(bucket *aws.Bucket, vault *encryption.Vault) *Uploader {
+// New returns a new Uploader from the provided clients
+func New(bucket *aws.Bucket) *Uploader {
 	return &Uploader{
 		bucket: bucket,
-		vault:  vault,
 	}
 }
 
@@ -117,32 +114,9 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if u.vault == nil {
-		// Perform upload without PSK
-		if _, err := u.bucket.UploadPart(req.Context(), resum.createS3Request(), payload); err != nil {
-			log.Error(req.Context(), "error returned from upload without PSK", err)
-			w.WriteHeader(statusCodeFromS3Error(err))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	// Get PSK from Vault. If the vault PSK is not found for this file, then create one and use it
-	psk, err := u.vault.EncryptionKey(req.Context(), resum.Identifier)
-	if err != nil {
-		// Create PSK and write it to Vault
-		psk, err = u.vault.GenerateEncryptionKey(req.Context(), resum.Identifier)
-		if err != nil {
-			log.Error(req.Context(), "error writing key to vault", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// Perform upload using vault PSK
-	if _, err = u.bucket.UploadPartWithPsk(req.Context(), resum.createS3Request(), payload, psk); err != nil {
-		log.Error(req.Context(), "error returned from upload using vault PSK", err)
+	// Perform upload
+	if _, err := u.bucket.UploadPart(req.Context(), resum.createS3Request(), payload); err != nil {
+		log.Error(req.Context(), "error returned from upload", err)
 		w.WriteHeader(statusCodeFromS3Error(err))
 		return
 	}

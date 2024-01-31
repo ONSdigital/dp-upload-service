@@ -15,9 +15,8 @@ Feature: Status for a single file
                 "etag": "49c602a643eab72e8dd68d4e7048883b"
             }
             """
-    And encryption key will be "0aaf0aaf0aaf0aaf0aaf0aaf0aaf0aaf"
 
-  Scenario: Status returns with valid metadata and status messages for vault and bucket
+  Scenario: Status returns with valid metadata and status messages for bucket
     Given I GET "/upload-new/files/testing/valid/status"
     Then I should receive the following JSON response with status "200":
             """
@@ -32,9 +31,6 @@ Feature: Status for a single file
                       "licence_url": "na",
                       "state": "UPLOADED",
                       "etag": "49c602a643eab72e8dd68d4e7048883b"
-                  },
-                  "encryption_key": {
-                      "valid": true
                   },
                   "file_content": {
                       "valid": true
