@@ -35,7 +35,7 @@ is uploaded, other services within DP take the file for further processing. Once
 are stored in a separate S3 bucket ready for download/decryption.
 
 The `/upload-new` endpoint saves files to the S3 bucket configured in
-the `STATIC_FILES_BUCKET_NAME` environment
+the `STATIC_FILES_ENCRYPTED_BUCKET_NAME` environment
 variable. This S3 bucket is the same one used for uploading files at the end of CMD Dataset file processing.
 
 ## Getting started
@@ -54,7 +54,7 @@ variable. This S3 bucket is the same one used for uploading files at the end of 
 | BIND_ADDR                          | :25100                | The host and port to bind to                                                                                       |
 | AWS_REGION                         | eu-west-2             | S3 region to use. This region has to match the region where the bucket was created                                 |
 | UPLOAD_BUCKET_NAME                 | testing               | Name of the S3 bucket that dataset uploads are sent to                                                             | 
-| STATIC_FILES_BUCKET_NAME | -                     | Name of the S3 bucket that static file uploads are sent to                                                         | 
+| STATIC_FILES_ENCRYPTED_BUCKET_NAME | -                     | Name of the S3 bucket that static file uploads are sent to                                                         | 
 | GRACEFUL_SHUTDOWN_TIMEOUT          | 5s                    | The graceful shutdown timeout in seconds (`time.Duration` format)                                                  |
 | HEALTHCHECK_INTERVAL               | 30s                   | Time between self-healthchecks (`time.Duration` format)                                                            |
 | HEALTHCHECK_CRITICAL_TIMEOUT       | 90s                   | Time to wait until an unhealthy dependent propagates its state to make this app unhealthy (`time.Duration` format) |

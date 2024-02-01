@@ -25,7 +25,7 @@ func TestConfig(t *testing.T) {
 				So(testCfg.BindAddr, ShouldEqual, ":25100")
 				So(testCfg.AwsRegion, ShouldEqual, "eu-west-2")
 				So(testCfg.UploadBucketName, ShouldEqual, "deprecated")
-				So(testCfg.StaticFilesBucketName, ShouldEqual, "testing")
+				So(testCfg.StaticFilesEncryptedBucketName, ShouldEqual, "testing")
 				So(testCfg.GracefulShutdownTimeout, ShouldEqual, 5*time.Second)
 				So(testCfg.HealthCheckInterval, ShouldEqual, 30*time.Second)
 				So(testCfg.HealthCheckCriticalTimeout, ShouldEqual, 90*time.Second)

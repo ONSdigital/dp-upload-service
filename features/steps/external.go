@@ -39,7 +39,7 @@ func (e external) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (dpaw
 }
 
 func (e external) DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
-	return generateS3Client(cfg, cfg.StaticFilesBucketName)
+	return generateS3Client(cfg, cfg.StaticFilesEncryptedBucketName)
 }
 
 func generateS3Client(cfg *config.Config, bucketName string) (dpaws.S3Clienter, error) {

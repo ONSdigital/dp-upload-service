@@ -20,7 +20,7 @@ type Config struct {
 	AwsRegion                  string        `envconfig:"AWS_REGION"`
 	LocalstackHost             string        `envconfig:"LOCALSTACK_HOST"`
 	UploadBucketName           string        `envconfig:"UPLOAD_BUCKET_NAME"`
-	StaticFilesBucketName      string        `envconfig:"STATIC_FILES_BUCKET_NAME"`
+	StaticFilesEncryptedBucketName      string        `envconfig:"STATIC_FILES_ENCRYPTED_BUCKET_NAME"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
@@ -35,7 +35,7 @@ func Get() (*Config, error) {
 		BindAddr:                   ":25100",
 		AwsRegion:                  "eu-west-2",
 		UploadBucketName:           "deprecated",
-		StaticFilesBucketName:      "testing",
+		StaticFilesEncryptedBucketName:      "testing",
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,

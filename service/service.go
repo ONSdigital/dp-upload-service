@@ -55,7 +55,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		log.Fatal(ctx, "failed to initialise Static File S3 client for uploaded bucket", err)
 		return nil, err
 	}
-	staticBucket := aws.NewBucket(cfg.AwsRegion, cfg.StaticFilesBucketName, s3StaticFileUploader)
+	staticBucket := aws.NewBucket(cfg.AwsRegion, cfg.StaticFilesEncryptedBucketName, s3StaticFileUploader)
 
 	// Create Uploader with S3 client
 	uploader := upload.New(uploadBucket)
