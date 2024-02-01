@@ -3,7 +3,6 @@ package upload_test
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"errors"
 	"mime/multipart"
 	"net/http"
@@ -45,7 +44,7 @@ func TestGetUpload(t *testing.T) {
 				},
 			}
 			bucket := aws.NewBucket(s3Region, s3Bucket, s3)
-			up := upload.New(bucket, nil)
+			up := upload.New(bucket)
 			up.CheckUploaded(w, req)
 
 			// Validations
@@ -71,7 +70,7 @@ func TestGetUpload(t *testing.T) {
 				},
 			}
 			bucket := aws.NewBucket(s3Region, s3Bucket, s3)
-			up := upload.New(bucket, nil)
+			up := upload.New(bucket)
 			up.CheckUploaded(w, req)
 
 			// Validations
@@ -97,7 +96,7 @@ func TestGetUpload(t *testing.T) {
 				},
 			}
 			bucket := aws.NewBucket(s3Region, s3Bucket, s3)
-			up := upload.New(bucket, nil)
+			up := upload.New(bucket)
 			up.CheckUploaded(w, req)
 
 			// Validations
@@ -132,7 +131,7 @@ func TestPostUpload(t *testing.T) {
 				},
 			}
 			bucket := aws.NewBucket(s3Region, s3Bucket, s3)
-			up := upload.New(bucket, nil)
+			up := upload.New(bucket)
 			up.Upload(w, req)
 
 			// Validations
@@ -159,7 +158,7 @@ func TestPostUpload(t *testing.T) {
 				},
 			}
 			bucket := aws.NewBucket(s3Region, s3Bucket, s3)
-			up := upload.New(bucket, nil)
+			up := upload.New(bucket)
 			up.Upload(w, req)
 
 			// Validations
@@ -188,7 +187,7 @@ func TestGetS3Url(t *testing.T) {
 
 		Convey("A 200 OK status is returned, with the fully qualified s3 url for the region, bucket and s3 key", func() {
 			bucket := aws.NewBucket(s3Region, s3Bucket, &mock_aws.S3ClienterMock{})
-			up := upload.New(bucket, nil)
+			up := upload.New(bucket)
 			up.GetS3URL(w, req)
 
 			// Validations

@@ -3,7 +3,6 @@ package steps
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -18,11 +17,6 @@ import (
 	"github.com/ONSdigital/dp-net/v2/request"
 
 	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/cucumber/godog"
 	"github.com/pkg/errors"
 	"github.com/rdumont/assistdog"
@@ -107,6 +101,7 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 	}))
 
 	pathAndFilename := path + "/" + filename
+	cfg, _ := config.Get()
 
 	//setup s3
 	s3Client, _ := c.svcList.GetS3StaticFileUploader(context.Background(), cfg)
@@ -293,52 +288,6 @@ func (c *UploadComponent) iUploadTheFileWithMetaData(filename string, table *god
 // -----
 // Thens
 // -----
-
-func (c *UploadComponent) theStoredFileShouldMatchTheSentFile(s3Filename, localFilename) error {
-	expectedPayload, err := os.ReadFile(localFilename)
-	if err != nil {
-		return err
-	}
-
-	return c.theFileShouldBeAvailableInTheSBucketMatchingContent(s3Filename, &godog.DocString{Content: string(expectedPayload)})
-}
-
-func (c *UploadComponent) theFileShouldBeAvailableInTheSBucketMatchingContent(filename, expectedFileContent *godog.DocString) error {
-	cfg, _ := config.Get()
-	s, _ := session.NewSession(&aws.Config{
-		Endpoint:         aws.String(localStackHost),
-		Region:           aws.String(cfg.AwsRegion),
-		S3ForcePathStyle: aws.Bool(true),
-		Credentials:      credentials.NewStaticCredentials("test", "test", ""),
-	})
-
-	buf := aws.WriteAtBuffer{}
-	s3client := s3.New(s)
-
-	dl := s3manager.NewDownloaderWithClient(s3client)
-
-	_, err := s3client.HeadObject(&s3.HeadObjectInput{
-		Bucket: aws.String(cfg.StaticFilesBucketName),
-		Key:    aws.String(filename),
-	})
-
-	assert.NoError(c.ApiFeature, err)
-
-	_, err = dl.Download(&buf, &s3.GetObjectInput{
-		Bucket: aws.String(cfg.StaticFilesBucketName),
-		Key:    aws.String(filename),
-	})
-
-	assert.NoError(c.ApiFeature, err)
-
-	reader := &cryptoReader{
-		reader:    io.NopCloser(bytes.NewReader(buf.Bytes())),
-		chunkSize: 5 * 1024 * 1024,
-		currChunk: nil,
-	}
-
-	return c.ApiFeature.StepError()
-}
 
 func (c *UploadComponent) theFileUploadOfShouldBeMarkedAsStartedUsingPayload(expectedFilesPayload *godog.DocString) error {
 	assert.JSONEq(c.ApiFeature, expectedFilesPayload.Content, requests[fmt.Sprintf("%s|%s", filesURI, http.MethodPost)])
