@@ -92,7 +92,7 @@ Feature: Uploading a file
         """
         {
           "state": "UPLOADED",
-          "etag": "3db28e65d8488fd4bd538c4930726e97-2"
+          "etag": "5d363622e69e68f5baadc6cef11cbd9f-2"
         }
         """
     And the stored file "data/countries.csv" should match the sent file "features/countries.csv"

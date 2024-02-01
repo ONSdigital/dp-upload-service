@@ -49,7 +49,7 @@ func (c *UploadComponent) Initialiser() (http.Handler, error) {
 	var err error
 	c.svcList = service.NewServiceList(external{Server: c.server})
 	c.svc, err = service.Run(context.Background(), c.svcList, "1", "1", "1", c.errChan)
-	time.Sleep(1 * time.Second) // Wait for healthchecks to run before executing tests. TODO consider moving to a Given step for healthchecks
+	time.Sleep(5 * time.Second) // Wait for healthchecks to run before executing tests. TODO consider moving to a Given step for healthchecks
 	return c.server.Handler, err
 }
 
