@@ -6,10 +6,11 @@ replace (
 	github.com/go-ldap/ldap/v3 => github.com/go-ldap/ldap/v3 v3.4.3
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.12.2
 	github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
+	// to fix: [CVE-2023-32731] CWE-Other
+	google.golang.org/grpc => google.golang.org/grpc v1.55.0
+	// [CVE-2024-24786] CWE-835: Loop with Unreachable Exit Condition ('Infinite Loop')
+	google.golang.org/protobuf => google.golang.org/protobuf v1.33.0
 )
-
-// to fix: [CVE-2023-32731] CWE-Other
-replace google.golang.org/grpc => google.golang.org/grpc v1.55.0
 
 require (
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.254.1
@@ -77,7 +78,6 @@ require (
 	golang.org/x/sync v0.4.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/time v0.3.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
