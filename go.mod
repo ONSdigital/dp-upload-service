@@ -3,12 +3,13 @@ module github.com/ONSdigital/dp-upload-service
 go 1.21
 
 replace (
+	github.com/ONSdigital/dp-component-test => github.com/ONSdigital/dp-component-test v0.9.0
 	github.com/go-ldap/ldap/v3 => github.com/go-ldap/ldap/v3 v3.4.3
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.12.2
 	github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
 	// to fix: [CVE-2023-32731] CWE-Other
 	google.golang.org/grpc => google.golang.org/grpc v1.55.0
-	// [CVE-2024-24786] CWE-835: Loop with Unreachable Exit Condition ('Infinite Loop')
+	// to fix: [CVE-2024-24786] CWE-835: Loop with Unreachable Exit Condition ('Infinite Loop')
 	google.golang.org/protobuf => google.golang.org/protobuf v1.33.0
 )
 
