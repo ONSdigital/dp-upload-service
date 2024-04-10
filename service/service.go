@@ -15,7 +15,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/swaggo/http-swagger"
 )
 
 //	@title			dp-upload-service
