@@ -119,7 +119,16 @@ func (mock *HealthCheckerMock) AddCheckCalls() []struct {
 	return calls
 }
 
-// Handler calls HandlerFunc.
+// Handler godoc
+// @Description  returns a health check
+// @Tags         upload
+// @Accept       json
+// @Produce      json
+// @Success      200
+// @Failure      400
+// @Failure      404
+// @Failure      500
+// @Router       /health [get]
 func (mock *HealthCheckerMock) Handler(w http.ResponseWriter, req *http.Request) {
 	if mock.HandlerFunc == nil {
 		panic("HealthCheckerMock.HandlerFunc: method is nil but HealthChecker.Handler was just called")

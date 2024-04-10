@@ -1,0 +1,174 @@
+host: localhost:25100
+info:
+  contact: {}
+  description: Digital Publishing resumable file upload service that handles writing
+    to S3. It updates images through the CMS.
+  license:
+    name: Open Government Licence v3.0
+    url: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+  title: dp-upload-service
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: returns a health check
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+      - upload
+  /upload:
+    get:
+      consumes:
+      - application/json
+      description: checks to see if a chunk has been uploaded
+      parameters:
+      - in: formData
+        name: aliasName
+        required: true
+        type: string
+      - in: formData
+        name: chunkNumber
+        required: true
+        type: integer
+      - in: formData
+        name: chunkSize
+        required: true
+        type: integer
+      - in: formData
+        name: currentChunkSize
+        required: true
+        type: integer
+      - in: formData
+        name: fileName
+        required: true
+        type: string
+      - in: formData
+        name: identifier
+        required: true
+        type: string
+      - in: formData
+        name: relativePath
+        required: true
+        type: string
+      - in: formData
+        name: totalChunks
+        required: true
+        type: integer
+      - in: formData
+        name: totalSize
+        required: true
+        type: integer
+      - in: formData
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+      - upload
+    post:
+      consumes:
+      - application/json
+      description: handles the uploading of a file to AWS s3
+      parameters:
+      - in: formData
+        name: aliasName
+        required: true
+        type: string
+      - in: formData
+        name: chunkNumber
+        required: true
+        type: integer
+      - in: formData
+        name: chunkSize
+        required: true
+        type: integer
+      - in: formData
+        name: currentChunkSize
+        required: true
+        type: integer
+      - in: formData
+        name: fileName
+        required: true
+        type: string
+      - in: formData
+        name: identifier
+        required: true
+        type: string
+      - in: formData
+        name: relativePath
+        required: true
+        type: string
+      - in: formData
+        name: totalChunks
+        required: true
+        type: integer
+      - in: formData
+        name: totalSize
+        required: true
+        type: integer
+      - in: formData
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+      - upload
+  /upload/{id}:
+    get:
+      consumes:
+      - application/json
+      description: returns an S3 URL for a requested path, and the client's region
+        and bucket name
+      parameters:
+      - description: S3 object key
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+      - upload
+swagger: "2.0"
+tags:
+- name: private

@@ -48,6 +48,10 @@ docker-local:
 	docker-compose -f docker-compose-services.yml -f docker-compose-local.yml up -d
 	docker-compose -f docker-compose-services.yml -f docker-compose-local.yml exec upload-service bash
 
+.PHONY: generate-swagger
+generate-swagger:
+	swag i -g service/service.go
+
 .PHONY: lint
 lint:
 	golangci-lint run ./... --timeout 3m --tests=false --skip-dirs=features

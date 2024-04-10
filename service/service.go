@@ -11,10 +11,23 @@ import (
 	"github.com/ONSdigital/dp-upload-service/files"
 	"github.com/ONSdigital/dp-upload-service/upload"
 	"github.com/ONSdigital/log.go/v2/log"
+	_ "github/com/ONSdigital/dp-upload-service/mock"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/swaggo/http-swagger"
 )
+
+//	@title			dp-upload-service
+//	@version		1.0.0
+//	@description	Digital Publishing resumable file upload service that handles writing to S3. It updates images through the CMS.
+
+//	@license.name	Open Government Licence v3.0
+//	@license.url	http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+
+//	@host		    localhost:25100
+
+//  @tag.name       private
 
 // Service contains all the configs, server and clients to run the dp-upload-service API
 type Service struct {
