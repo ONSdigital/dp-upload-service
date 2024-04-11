@@ -275,7 +275,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0.0",
 	Host:             "localhost:25100",
 	BasePath:         "",
-	Schemes:          []string{},
+	Schemes:          []string{"http"},
 	Title:            "dp-upload-service",
 	Description:      "Digital Publishing resumable file upload service that handles writing to S3. It updates images through the CMS.",
 	InfoInstanceName: "swagger",

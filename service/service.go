@@ -25,6 +25,7 @@ import (
 //	@license.url	http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
 
 //	@host		    localhost:25100
+//  @schemes		http
 
 //  @tag.name       private
 

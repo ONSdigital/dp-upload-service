@@ -169,6 +169,8 @@ paths:
           description: Internal Server Error
       tags:
       - upload
+schemes:
+- http
 swagger: "2.0"
 tags:
 - name: private
