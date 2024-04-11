@@ -11,7 +11,6 @@ import (
 	"github.com/ONSdigital/dp-upload-service/files"
 	"github.com/ONSdigital/dp-upload-service/upload"
 	"github.com/ONSdigital/log.go/v2/log"
-	// _ "github.com/ONSdigital/dp-upload-service/mock"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
