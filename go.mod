@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-upload-service
 
-go 1.21
+go 1.22
 
 replace (
 	github.com/ONSdigital/dp-component-test => github.com/ONSdigital/dp-component-test v0.9.0
