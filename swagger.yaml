@@ -1,0 +1,311 @@
+host: localhost:25100
+info:
+  contact: {}
+  description:
+    Digital Publishing resumable file upload service that handles writing
+    to S3. It updates images through the CMS.
+  license:
+    name: Open Government Licence v3.0
+    url: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+  title: dp-upload-service
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      consumes:
+        - application/json
+      description: returns a health check
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload
+  /upload:
+    get:
+      consumes:
+        - application/json
+        - application/x-www-form-urlencoded
+        - multipart/form-data
+      description: checks to see if a chunk has been uploaded
+      parameters:
+        - in: formData
+          name: aliasName
+          required: true
+          type: string
+        - in: formData
+          name: chunkNumber
+          required: true
+          type: integer
+        - in: formData
+          name: chunkSize
+          required: true
+          type: integer
+        - in: formData
+          name: currentChunkSize
+          required: true
+          type: integer
+        - in: formData
+          name: fileName
+          required: true
+          type: string
+        - in: formData
+          name: identifier
+          required: true
+          type: string
+        - in: formData
+          name: relativePath
+          required: true
+          type: string
+        - in: formData
+          name: totalChunks
+          required: true
+          type: integer
+        - in: formData
+          name: totalSize
+          required: true
+          type: integer
+        - in: formData
+          name: type
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload
+    post:
+      consumes:
+        - application/json
+        - application/x-www-form-urlencoded
+        - multipart/form-data
+      description: handles the uploading of a file to AWS S3
+      parameters:
+        - in: formData
+          name: aliasName
+          required: true
+          type: string
+        - in: formData
+          name: chunkNumber
+          required: true
+          type: integer
+        - in: formData
+          name: chunkSize
+          required: true
+          type: integer
+        - in: formData
+          name: currentChunkSize
+          required: true
+          type: integer
+        - in: formData
+          name: fileName
+          required: true
+          type: string
+        - in: formData
+          name: identifier
+          required: true
+          type: string
+        - in: formData
+          name: relativePath
+          required: true
+          type: string
+        - in: formData
+          name: totalChunks
+          required: true
+          type: integer
+        - in: formData
+          name: totalSize
+          required: true
+          type: integer
+        - in: formData
+          name: type
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload
+  /upload/{id}:
+    get:
+      consumes:
+        - application/json
+      description:
+        returns an S3 URL for a requested path, and the client's region
+        and bucket name
+      parameters:
+        - description: S3 object key
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload
+  /upload-new:
+    post:
+      consumes:
+        - multipart/form-data
+      description: Handles the uploading of a file in chunks to AWS S3
+      parameters:
+        - in: formData
+          name: resumableFilename
+          required: true
+          type: string
+        - in: formData
+          name: resumableChunkNumber
+          required: true
+          type: integer
+        - in: formData
+          name: resumableType
+          required: true
+          type: string
+        - in: formData
+          name: resumableTotalChunks
+          required: true
+          type: integer
+        - in: formData
+          name: resumableChunkSize
+          required: true
+          type: integer
+        - in: formData
+          name: aliasName
+          required: true
+          type: string
+        - in: formData
+          name: resumableTotalSize
+          required: true
+          type: integer
+        - in: formData
+          name: resumableIdentifier
+          required: true
+          type: string
+        - in: formData
+          name: licenceUrl
+          required: true
+          type: string
+        - in: formData
+          name: isPublishable
+          required: true
+          type: string
+        - in: formData
+          name: licence
+          required: true
+          type: string
+        - in: formData
+          name: path
+          required: true
+          type: string
+        - in: formData
+          name: collectionId
+          required: true
+          type: string
+        - in: formData
+          name: file
+          required: true
+          type: file
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload-new
+  /upload-new/files/{path}/{file-name}/status:
+    get:
+      consumes:
+        - application/json
+      description: Gets the status of a file upload
+      parameters:
+        - in: path
+          name: path
+          required: true
+          type: string
+        - in: path
+          name: file-name
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+            properties:
+              metadata:
+                type: object
+                properties:
+                  path:
+                    type: string
+                  is_publishable:
+                    type: boolean
+                  collection_id:
+                    type: string
+                  title:
+                    type: string
+                  size_in_bytes:
+                    type: integer
+                  type:
+                    type: string
+                  licence:
+                    type: string
+                  licence_url:
+                    type: string
+                  state:
+                    type: string
+                  etag:
+                    type: string
+              file_content:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload-new
+schemes:
+  - http
+swagger: "2.0"
