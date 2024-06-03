@@ -61,14 +61,26 @@ variable. This S3 bucket is the same one used for uploading files at the end of 
 | FILES_API_URL                      | -                     |                                                                                                                    |
 | LOCALSTACK_HOST                    | -                     | The hostname of the localstack server used for integration testing                                                 |
 
-## To Test using Curl
+## Testing uploads and downloading using cURL
 
-To test upload functionality using `curl`, you need to pass the following query string parameters in the URL - to
-satisfy the schema mentioned in the `Resumable` struct and pass the file as form-data
+### Uploading
 
-Please refer [Resumable struct](upload/upload.go).
+To upload a file, send a `POST`request in a URI, pass the query string parameters used by `Resumable struct` [here](upload/upload.go) and pass the file as form-data, for example:
 
-* `curl -i -X POST -H 'content-type: multipart/form-data' -F file=@README.md 'http://localhost:25100/upload\?resumableFilename=README.md&resumableChunkNumber=1&resumableType=text/plain&resumableTotalChunks=1&resumableChunkSize=1000000&aliasName=somealias'`
+```
+curl -i -X POST -H 'content-type: multipart/form-data' -H 'X-Florence-Token: ' -F file=@test_results1.csv http://localhost:25100/upload-new?resumableFilename=countries-short.csv&resumableChunkNumber=1&resumableType=text/csv&resumableTotalChunks=1&resumableChunkSize=5242880&aliasName=countries-short.csv&resumableTotalSize=25222&resumableIdentifier=30052415109-countries-short-csv&licenceUrl=https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/&isPublishable=False&licence=Open-Government-Licence-v3.0&path=testingpath&collectionId=collectionId-fromflorencesandboxcollectionurl
+```
+The file can then be viewed as XML in a browser at http://localhost:25100/upload-new
+
+### Downloading
+
+To download an uploaded file, make a `GET` request in a URI that uses the bucket name endpoint `/testing` followed by the key `<key>path/filename</key>`, for example: 
+
+```
+curl -X GET -L -O http://localhost:14566/testing/testingpath/test_results1.csv 
+```
+
+The command downloads the uploaded file to the directory from which it is run.
 
 ## API Client
 
