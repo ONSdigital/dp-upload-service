@@ -65,10 +65,10 @@ variable. This S3 bucket is the same one used for uploading files at the end of 
 
 ### Uploading a file
 
-To upload a file using the `curl` command, send a `POST` request as `form-data` using the parameters specified by `Resumable struct` [here](upload/upload.go) to pass in your values into the payload. For example, this command uploads a `csv` file:
+To upload a file using the `curl` command, send a `POST` request as `form-data` using the parameters specified by `Resumable struct` [here](upload/upload.go) to pass in your values into the payload. For example, this command uploads this `README.md` file:
 
 ```
-curl 'http://localhost:25100/upload-new' -i -X POST -H 'Content-Type: multipart/form-data' -H 'X-Florence-Token;' -H 'Cache-Control: no-cache' -F 'resumableFilename="countries-short.csv"' -F 'path="countries-short-csv"' -F 'isPublishable="False"' -F 'collectionId="testcollectionid"' -F 'title="countries-short" ' -F 'resumableTotalSize="25222"' -F 'resumableType="text/csv"' -F 'licence="Open Government Licence v3.0"' -F 'licenceUrl="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"' -F 'resumableChunkNumber="1"' -F 'resumableTotalChunks="1"' -F 'file=@"/Users/username/Downloads/countries-short.csv"' -F 'resumableChunkSize="5242880"' -F 'aliasName="somealias"' -F 'resumableIdentifier="30052415109-countries-short-csv"'
+curl 'http://localhost:25100/upload-new' -H 'Content-Type: multipart/form-data' -H 'X-Florence-Token;' -H 'Cache-Control: no-cache' -F 'resumableFilename="README.md"' -F 'path="readme-md"' -F 'isPublishable="False"' -F 'collectionId="test-collection-id"' -F 'title="readme-file"' -F 'resumableTotalSize="6144"' -F 'resumableType="text/markdown"' -F 'licence="Open Government Licence v3.0"' -F 'licenceUrl="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"' -F 'resumableChunkNumber="1"' -F 'resumableTotalChunks="1"' -F 'file=@"/Users/dominic/Downloads/README.md"' -F 'resumableChunkSize="5242880"' -F 'aliasName="readme"' -F 'resumableIdentifier="12345"'
 ```
 The uploaded file can then be viewed as `XML` in the `testing`bucket at http://localhost:14566/testing
 
@@ -78,7 +78,7 @@ The uploaded file can then be viewed as `XML` in the `testing`bucket at http://l
 To download an uploaded file using the `curl` command, a `GET` request can be made using the bucket name endpoint `/testing` followed by the key `<key>path/filename</key>`, for example: 
 
 ```
-curl 'http://localhost:14566/testing/countries-short-csv/countries-short.csv' -X GET -L -O 
+curl 'http://localhost:14566/testing/readme-md/README.md' -X GET -L -O 
 ```
 
 The command downloads the uploaded file to the directory from which it is run.
