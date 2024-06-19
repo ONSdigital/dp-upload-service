@@ -5,7 +5,7 @@
 The Upload Service is part of the [Static Files System](https://github.com/ONSdigital/dp-static-files-compose).
 This service is responsible for storing the metadata and state of files.
 
-The service enables consumers to upload a large file (Maximum 50GB) in multiple parts (Maximum 1000 - Each part must be
+The service enables consumers to upload a large file (Maximum 5GB) in multiple parts (Maximum 1000 - Each part must be
 5MB, except the last part, which can be smaller)
 
 The file will be stored in AWS S3.
@@ -61,21 +61,21 @@ variable. This S3 bucket is the same one used for uploading files at the end of 
 | FILES_API_URL                      | -                     |                                                                                                                    |
 | LOCALSTACK_HOST                    | -                     | The hostname of the localstack server used for integration testing                                                 |
 
-## Testing uploads and downloading using cURL
+## Testing ≤ 5MB file uploads using cURL
 
 ### Uploading a file
 
-To upload a file, send a `POST` request in a URI, pass the query string parameters used by `Resumable struct` [here](upload/upload.go) and pass the file as form-data. For example, using a file of your choice, which would replace `countries-short.csv` in the following, run:
+To upload a file using the `curl` command, send a `POST` request as `form-data` using the parameters specified by `Resumable struct` [here](upload/upload.go) to pass in your values into the payload. For example, this command uploads a `csv` file:
 
 ```
-curl 'http://localhost:25100/upload-new' -i -X POST -H 'Content-Type: multipart/form-data' -H 'X-Florence-Token;' -H 'Cache-Control: no-cache' -F 'resumableFilename="countries-short.csv"' -F 'path="countries-short-csv"' -F 'isPublishable="False"' -F 'collectionId="testcollectionid3"' -F 'title="countries-short" ' -F 'resumableTotalSize="25222"' -F 'resumableType="text/csv"' -F 'licence="Open Government Licence v3.0"' -F 'licenceUrl="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"' -F 'resumableChunkNumber="1"' -F 'resumableTotalChunks="1"' -F 'file=@"/Users/dominic/Downloads/countries.csv"' -F 'resumableChunkSize="5242880"' -F 'aliasName="somealias"' -F 'resumableIdentifier="30052415109-countries-short-csv"'
+curl 'http://localhost:25100/upload-new' -i -X POST -H 'Content-Type: multipart/form-data' -H 'X-Florence-Token;' -H 'Cache-Control: no-cache' -F 'resumableFilename="countries-short.csv"' -F 'path="countries-short-csv"' -F 'isPublishable="False"' -F 'collectionId="testcollectionid"' -F 'title="countries-short" ' -F 'resumableTotalSize="25222"' -F 'resumableType="text/csv"' -F 'licence="Open Government Licence v3.0"' -F 'licenceUrl="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"' -F 'resumableChunkNumber="1"' -F 'resumableTotalChunks="1"' -F 'file=@"/Users/username/Downloads/countries-short.csv"' -F 'resumableChunkSize="5242880"' -F 'aliasName="somealias"' -F 'resumableIdentifier="30052415109-countries-short-csv"'
 ```
-The file can then be viewed as XML in a the `testing`bucket at http://localhost:14566/testing
+The uploaded file can then be viewed as `XML` in the `testing`bucket at http://localhost:14566/testing
 
 
 ### Downloading a file
 
-To download an uploaded file, make a `GET` request in a URI that uses the bucket name endpoint `/testing` followed by the key `<key>path/filename</key>`, for example: 
+To download an uploaded file using the `curl` command, a `GET` request can be made using the bucket name endpoint `/testing` followed by the key `<key>path/filename</key>`, for example: 
 
 ```
 curl 'http://localhost:14566/testing/countries-short-csv/countries-short.csv' -X GET -L -O 
@@ -85,9 +85,7 @@ The command downloads the uploaded file to the directory from which it is run.
 
 ## API Client
 
-There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/upload) for the Upload API this is
-part
-of [dp-api-clients-go](https://github.com/ONSdigital/dp-api-clients-go) package.
+There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/upload) for the Upload API this is part of [dp-api-clients-go](https://github.com/ONSdigital/dp-api-clients-go) package.
 
 ## Contributing
 
