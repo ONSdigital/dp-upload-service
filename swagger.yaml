@@ -38,42 +38,52 @@ paths:
       parameters:
         - in: formData
           name: aliasName
+          description: An alias name for the file
           required: true
           type: string
         - in: formData
           name: chunkNumber
+          description: The index of the current chunk being uploaded, the first chunk is 1 not base 0
           required: true
           type: integer
         - in: formData
           name: chunkSize
+          description: The size of each chunk in bytes
           required: true
           type: integer
         - in: formData
           name: currentChunkSize
+          description: The size of a current chunk
           required: true
           type: integer
         - in: formData
           name: fileName
+          description: The name of the file being uploaded
           required: true
           type: string
         - in: formData
           name: identifier
+          description: A unique identifier for the file upload session
           required: true
           type: string
         - in: formData
           name: relativePath
+          description: The path where the file will be stored
           required: true
           type: string
         - in: formData
           name: totalChunks
+          description: The total number of chunks the file is divided into
           required: true
           type: integer
         - in: formData
           name: totalSize
+          description: The total size of the file in bytes
           required: true
           type: integer
         - in: formData
           name: type
+          description: The MIME type of the file being uploaded
           required: true
           type: string
       produces:
@@ -98,42 +108,52 @@ paths:
       parameters:
         - in: formData
           name: aliasName
+          description: An alias name for the file
           required: true
           type: string
         - in: formData
           name: chunkNumber
+          description: The index of the current chunk being uploaded, the first chunk is 1 not base 0
           required: true
           type: integer
         - in: formData
           name: chunkSize
+          description: The size of each chunk in bytes
           required: true
           type: integer
         - in: formData
           name: currentChunkSize
+          description: The size of a current chunk
           required: true
           type: integer
         - in: formData
           name: fileName
+          description: The name of the file being uploaded
           required: true
           type: string
         - in: formData
           name: identifier
+          description: A unique identifier for the file upload session
           required: true
           type: string
         - in: formData
           name: relativePath
+          description: The path where the file will be stored
           required: true
           type: string
         - in: formData
           name: totalChunks
+          description: The total number of chunks the file is divided into
           required: true
           type: integer
         - in: formData
           name: totalSize
+          description: The total size of the file in bytes
           required: true
           type: integer
         - in: formData
           name: type
+          description: The MIME type of the file being uploaded
           required: true
           type: string
       produces:
@@ -182,61 +202,75 @@ paths:
       description: Handles the uploading of a file in chunks to AWS S3
       parameters:
         - in: formData
-          name: resumableFilename
-          required: true
-          type: string
-        - in: formData
-          name: resumableChunkNumber
-          required: true
-          type: integer
-        - in: formData
-          name: resumableType
-          required: true
-          type: string
-        - in: formData
-          name: resumableTotalChunks
-          required: true
-          type: integer
-        - in: formData
-          name: resumableChunkSize
-          required: true
-          type: integer
-        - in: formData
           name: aliasName
-          required: true
-          type: string
-        - in: formData
-          name: resumableTotalSize
-          required: true
-          type: integer
-        - in: formData
-          name: resumableIdentifier
-          required: true
-          type: string
-        - in: formData
-          name: licenceUrl
-          required: true
-          type: string
-        - in: formData
-          name: isPublishable
-          required: true
-          type: string
-        - in: formData
-          name: licence
-          required: true
-          type: string
-        - in: formData
-          name: path
+          description: An alias name for the file
           required: true
           type: string
         - in: formData
           name: collectionId
+          description: The ID of the collection to which the file belongs
           required: true
           type: string
         - in: formData
           name: file
+          description: Specifies the file to be uploaded
           required: true
           type: file
+        - in: formData
+          name: isPublishable
+          description: A boolean indicating whether the file is publishable
+          required: true
+          type: string
+        - in: formData
+          name: licence
+          description: The type of license associated with the file
+          required: true
+          type: string
+        - in: formData
+          name: licenceUrl
+          description: A URL linking to the license associated with the file
+          required: true
+          type: string
+        - in: formData
+          description: The path where the file will be stored
+          name: path
+          required: true
+          type: string
+        - in: formData
+          name: resumableChunkNumber
+          description: The index of the current chunk being uploaded, the first chunk is 1 not base 0 
+          required: true
+          type: integer
+        - in: formData
+          name: resumableChunkSize
+          description: The size of each chunk in bytes
+          required: true
+          type: integer
+        - in: formData
+          name: resumableFilename
+          description: The name of the file being uploaded
+          required: true
+          type: string
+        - in: formData
+          name: resumableIdentifier
+          description: A unique identifier for the file upload session
+          required: true
+          type: string
+        - in: formData
+          name: resumableType
+          description: The MIME type of the file being uploaded
+          required: true
+          type: string
+        - in: formData
+          name: resumableTotalChunks
+          description: The total number of chunks the file is divided into
+          required: true
+          type: integer
+        - in: formData
+          name: resumableTotalSize
+          description: The total size of the file in bytes
+          required: true
+          type: integer
       produces:
         - application/json
       responses:
@@ -258,10 +292,12 @@ paths:
       parameters:
         - in: path
           name: path
+          description: The path where the file will be stored
           required: true
           type: string
         - in: path
           name: file-name
+          description: The name of the file being uploaded
           required: true
           type: string
       produces:
