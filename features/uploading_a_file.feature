@@ -59,7 +59,7 @@ Feature: Uploading a file
       | resumableChunkNumber | 1                  |
       | path                 | data               |
     Then the HTTP status code should be "200"
-    And the file upload should be marked as started using payload:
+    And the file upload should be marked as created using payload:
         """
         {
         "path": "data/countries.csv",

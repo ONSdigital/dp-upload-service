@@ -78,12 +78,6 @@ func (s Store) Status(ctx context.Context, path string) (*Status, error) {
 }
 
 func (s Store) UploadFile(ctx context.Context, metadata files.FileMetaData, resumable Resumable, content []byte) (bool, error) {
-	var err error
-	if err = s.files.RegisterFile(ctx, metadata); err != nil {
-		log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
-		return false, err
-	}
-
 	part := generateUploadPart(metadata, resumable)
 	response, err := s.bucket.UploadPart(ctx, part, content)
 	if err != nil {
@@ -95,6 +89,12 @@ func (s Store) UploadFile(ctx context.Context, metadata files.FileMetaData, resu
 	}
 
 	if response.AllPartsUploaded {
+		var err error
+		if err = s.files.RegisterFile(ctx, metadata); err != nil {
+			log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
+			return false, err
+		}
+
 		head, err := s.bucket.Head(metadata.Path)
 		if err != nil {
 			log.Error(ctx, "failed to get completed file info from s3", err, log.Data{"key": metadata.Path})
