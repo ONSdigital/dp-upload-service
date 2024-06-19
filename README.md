@@ -61,7 +61,7 @@ variable. This S3 bucket is the same one used for uploading files at the end of 
 | FILES_API_URL                      | -                     |                                                                                                                    |
 | LOCALSTACK_HOST                    | -                     | The hostname of the localstack server used for integration testing                                                 |
 
-## Testing ≤ 5MB file uploads using cURL
+## 5MB or less file uploads using cURL
 
 ### Uploading a file
 
