@@ -16,6 +16,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+//	@title			dp-upload-service
+//	@version		1.0.0
+//	@description	Digital Publishing resumable file upload service that handles writing to S3. It updates images through the CMS.
+
+//	@license.name	Open Government Licence v3.0
+//	@license.url	http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+
+//	@host		    localhost:25100
+//  @schemes		http
+
+//  @tag.name       private
+
 // Service contains all the configs, server and clients to run the dp-upload-service API
 type Service struct {
 	config      *config.Config

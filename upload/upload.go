@@ -17,16 +17,16 @@ var decoder = schema.NewDecoder()
 
 // Resumable represents resumable js upload query pararmeters
 type Resumable struct {
-	ChunkNumber      int    `schema:"resumableChunkNumber"`
-	TotalChunks      int    `schema:"resumableTotalChunks"`
-	ChunkSize        int    `schema:"resumableChunkSize"`
-	CurrentChunkSize int    `schema:"resumableCurrentChunkSize"`
-	TotalSize        int    `schema:"resumableTotalSize"`
-	Type             string `schema:"resumableType"`
-	Identifier       string `schema:"resumableIdentifier"`
-	FileName         string `schema:"resumableFilename"`
-	RelativePath     string `schema:"resumableRelativePath"`
-	AliasName        string `schema:"aliasName"`
+	ChunkNumber      int    `schema:"resumableChunkNumber" validate:"required"`
+	TotalChunks      int    `schema:"resumableTotalChunks" validate:"required"`
+	ChunkSize        int    `schema:"resumableChunkSize" validate:"required"`
+	CurrentChunkSize int    `schema:"resumableCurrentChunkSize" validate:"required"`
+	TotalSize        int    `schema:"resumableTotalSize" validate:"required"`
+	Type             string `schema:"resumableType" validate:"required"`
+	Identifier       string `schema:"resumableIdentifier" validate:"required"`
+	FileName         string `schema:"resumableFilename" validate:"required"`
+	RelativePath     string `schema:"resumableRelativePath" validate:"required"`
+	AliasName        string `schema:"aliasName" validate:"required"`
 }
 
 // createS3Request creates a S3 UploadRequest struct from a Resumable struct
@@ -53,7 +53,17 @@ func New(bucket *aws.Bucket) *Uploader {
 	}
 }
 
-// CheckUploaded checks to see if a chunk has been uploaded
+// CheckUploaded godoc
+// @Description  checks to see if a chunk has been uploaded
+// @Tags         upload
+// @Accept       json
+// @Produce      json
+// @Param        request formData Resumable false "Resumable"
+// @Success      200
+// @Failure      400
+// @Failure      404
+// @Failure      500
+// @Router       /upload [get]
 func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 
 	if err := req.ParseForm(); err != nil {
@@ -82,7 +92,17 @@ func (u *Uploader) CheckUploaded(w http.ResponseWriter, req *http.Request) {
 
 }
 
-// Upload handles the uploading of a file to AWS s3
+// Upload godoc
+// @Description  handles the uploading of a file to AWS s3
+// @Tags         upload
+// @Accept       json
+// @Produce      json
+// @Param        request formData Resumable false "Resumable"
+// @Success      200
+// @Failure      400
+// @Failure      404
+// @Failure      500
+// @Router       /upload [post]
 func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		log.Error(req.Context(), "error parsing form", err)
@@ -123,8 +143,17 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// GetS3URL returns an S3 URL for a requested path, and the client's region and bucket name.
-// Path corresponds to the S3 object key
+// GetS3URL godoc
+// @Description  returns an S3 URL for a requested path, and the client's region and bucket name
+// @Tags         upload
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "S3 object key"
+// @Success      200
+// @Failure      400
+// @Failure      404
+// @Failure      500
+// @Router       /upload/{id} [get]
 func (u *Uploader) GetS3URL(w http.ResponseWriter, req *http.Request) {
 	param := req.URL.Query().Get(":id")
 	path := mux.Vars(req)["id"]

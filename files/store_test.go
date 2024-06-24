@@ -184,3 +184,29 @@ func (s *StoreSuite) TestStatusStillReturnedIfBucketReadFails() {
 	s.Len(s.mockFiles.GetFileCalls(), 1)
 	s.Len(s.mockS3.HeadCalls(), 1)
 }
+
+func (s *StoreSuite) TestNotAllPartsUploaded() {
+	s.mockS3.UploadPartFunc = func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
+		return s3client.MultipartUploadResponse{Etag: "uploaded-part-etag", AllPartsUploaded: false}, nil
+	}
+	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
+	flag, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	s.NoError(err)
+	s.False(flag)
+	s.Len(s.mockFiles.RegisterFileCalls(), 0)
+	s.Len(s.mockS3.HeadCalls(), 0)
+	s.Len(s.mockFiles.MarkFileUploadedCalls(), 0)
+}
+
+func (s *StoreSuite) TestAllPartsUploaded() {
+	s.mockS3.UploadPartFunc = func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
+		return s3client.MultipartUploadResponse{Etag: "uploaded-part-etag", AllPartsUploaded: true}, nil
+	}
+	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
+	flag, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	s.NoError(err)
+	s.True(flag)
+	s.Len(s.mockFiles.RegisterFileCalls(), 1)
+	s.Len(s.mockS3.HeadCalls(), 1)
+	s.Len(s.mockFiles.MarkFileUploadedCalls(), 1)
+}

@@ -5,7 +5,7 @@
 The Upload Service is part of the [Static Files System](https://github.com/ONSdigital/dp-static-files-compose).
 This service is responsible for storing the metadata and state of files.
 
-The service enables consumers to upload a large file (Maximum 50GB) in multiple parts (Maximum 1000 - Each part must be
+The service enables consumers to upload a large file (Maximum 5GB) in multiple parts (Maximum 1000 - Each part must be
 5MB, except the last part, which can be smaller)
 
 The file will be stored in AWS S3.
@@ -61,20 +61,31 @@ variable. This S3 bucket is the same one used for uploading files at the end of 
 | FILES_API_URL                      | -                     |                                                                                                                    |
 | LOCALSTACK_HOST                    | -                     | The hostname of the localstack server used for integration testing                                                 |
 
-## To Test using Curl
+## 5MB or less file uploads using cURL
 
-To test upload functionality using `curl`, you need to pass the following query string parameters in the URL - to
-satisfy the schema mentioned in the `Resumable` struct and pass the file as form-data
+### Uploading a file
 
-Please refer [Resumable struct](upload/upload.go).
+To upload a file using the `curl` command, send a `POST` request as `form-data` using the parameters specified by `Resumable struct` [here](upload/upload.go) to pass in your values into the payload. For example, this command uploads this `README.md` file:
 
-* `curl -i -X POST -H 'content-type: multipart/form-data' -F file=@README.md 'http://localhost:25100/upload\?resumableFilename=README.md&resumableChunkNumber=1&resumableType=text/plain&resumableTotalChunks=1&resumableChunkSize=1000000&aliasName=somealias'`
+```
+curl 'http://localhost:25100/upload-new' -H 'Content-Type: multipart/form-data' -H 'X-Florence-Token;' -H 'Cache-Control: no-cache' -F 'resumableFilename="README.md"' -F 'path="readme-md"' -F 'isPublishable="False"' -F 'collectionId="test-collection-id"' -F 'title="readme-file"' -F 'resumableTotalSize="6144"' -F 'resumableType="text/markdown"' -F 'licence="Open Government Licence v3.0"' -F 'licenceUrl="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"' -F 'resumableChunkNumber="1"' -F 'resumableTotalChunks="1"' -F 'file=@"/Users/username/Downloads/README.md"' -F 'resumableChunkSize="5242880"' -F 'aliasName="readme"' -F 'resumableIdentifier="12345"'
+```
+The uploaded file can then be viewed as `XML` in the `testing`bucket at http://localhost:14566/testing
+
+
+### Downloading a file
+
+To download an uploaded file using the `curl` command, a `GET` request can be made using the bucket name endpoint `/testing` followed by the key `<key>path/filename</key>`, for example: 
+
+```
+curl 'http://localhost:14566/testing/readme-md/README.md' -X GET -L -O 
+```
+
+The command downloads the uploaded file to the directory from which it is run.
 
 ## API Client
 
-There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/upload) for the Upload API this is
-part
-of [dp-api-clients-go](https://github.com/ONSdigital/dp-api-clients-go) package.
+There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/upload) for the Upload API this is part of [dp-api-clients-go](https://github.com/ONSdigital/dp-api-clients-go) package.
 
 ## Contributing
 

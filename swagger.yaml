@@ -1,117 +1,347 @@
-swagger: "2.0"
-info:
-  title: "dp-upload-service"
-  description: "Digital Publishing resumable file upload service that handles writing to S3. It updates images through the CMS."
-  version: 1.0.0
-  license:
-    name: "Open Government Licence v3.0"
-    url: "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
-
-schemes:
-  - http
-
 host: localhost:25100
-
-tags:
-  - name: "private"
-
+info:
+  contact: {}
+  description:
+    Digital Publishing resumable file upload service that handles writing
+    to S3. It updates images through the CMS.
+  license:
+    name: Open Government Licence v3.0
+    url: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+  title: dp-upload-service
+  version: 1.0.0
 paths:
+  /health:
+    get:
+      consumes:
+        - application/json
+      description: returns a health check
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload
+  /upload:
+    get:
+      consumes:
+        - application/json
+        - application/x-www-form-urlencoded
+        - multipart/form-data
+      description: checks to see if a chunk has been uploaded
+      parameters:
+        - in: formData
+          name: aliasName
+          description: An alias name for the file
+          required: true
+          type: string
+        - in: formData
+          name: chunkNumber
+          description: The index of the current chunk being uploaded, the first chunk is 1 not base 0
+          required: true
+          type: integer
+        - in: formData
+          name: chunkSize
+          description: The size of each chunk in bytes
+          required: true
+          type: integer
+        - in: formData
+          name: currentChunkSize
+          description: The size of a current chunk
+          required: true
+          type: integer
+        - in: formData
+          name: fileName
+          description: The name of the file being uploaded
+          required: true
+          type: string
+        - in: formData
+          name: identifier
+          description: A unique identifier for the file upload session
+          required: true
+          type: string
+        - in: formData
+          name: relativePath
+          description: The path where the file will be stored
+          required: true
+          type: string
+        - in: formData
+          name: totalChunks
+          description: The total number of chunks the file is divided into
+          required: true
+          type: integer
+        - in: formData
+          name: totalSize
+          description: The total size of the file in bytes
+          required: true
+          type: integer
+        - in: formData
+          name: type
+          description: The MIME type of the file being uploaded
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload
+    post:
+      consumes:
+        - application/json
+        - application/x-www-form-urlencoded
+        - multipart/form-data
+      description: handles the uploading of a file to AWS S3
+      parameters:
+        - in: formData
+          name: aliasName
+          description: An alias name for the file
+          required: true
+          type: string
+        - in: formData
+          name: chunkNumber
+          description: The index of the current chunk being uploaded, the first chunk is 1 not base 0
+          required: true
+          type: integer
+        - in: formData
+          name: chunkSize
+          description: The size of each chunk in bytes
+          required: true
+          type: integer
+        - in: formData
+          name: currentChunkSize
+          description: The size of a current chunk
+          required: true
+          type: integer
+        - in: formData
+          name: fileName
+          description: The name of the file being uploaded
+          required: true
+          type: string
+        - in: formData
+          name: identifier
+          description: A unique identifier for the file upload session
+          required: true
+          type: string
+        - in: formData
+          name: relativePath
+          description: The path where the file will be stored
+          required: true
+          type: string
+        - in: formData
+          name: totalChunks
+          description: The total number of chunks the file is divided into
+          required: true
+          type: integer
+        - in: formData
+          name: totalSize
+          description: The total size of the file in bytes
+          required: true
+          type: integer
+        - in: formData
+          name: type
+          description: The MIME type of the file being uploaded
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload
+  /upload/{id}:
+    get:
+      consumes:
+        - application/json
+      description:
+        returns an S3 URL for a requested path, and the client's region
+        and bucket name
+      parameters:
+        - description: S3 object key
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload
   /upload-new:
     post:
-      tags:
-         - Upload file and provide metadata
-      summary: POST's form with file to be uploaded and metadata
       consumes:
-         - multipart/form-data
+        - multipart/form-data
+      description: Handles the uploading of a file in chunks to AWS S3
       parameters:
-        - name: resumableFilename
-          type: string
-          in: formData
-          description: The name of the file being stored. Note that this will be part of the AWS S3 object name so should adhere to the S3 object naming guidelines https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html#:~:text=and%20AWS%20SDKs.-,Object%20key%20naming%20guidelines,-You%20can%20use
+        - in: formData
+          name: aliasName
+          description: An alias name for the file
           required: true
-        - name: path
           type: string
-          in: formData
-          description: The path to the file being stored. Note that this will be part of the AWS S3 bucket name so should adhere to the S3 bucket naming rules https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
+        - in: formData
+          name: collectionId
+          description: The ID of the collection to which the file belongs
           required: true
-        - name: isPublishable
-          type: boolean
-          in: formData
+          type: string
+        - in: formData
+          name: file
+          description: Specifies the file to be uploaded
           required: true
-        - name: collectionId
+          type: file
+        - in: formData
+          name: isPublishable
+          description: A boolean indicating whether the file is publishable
+          required: true
           type: string
-          in: formData
-          description: optional for upload, required before publishing
-        - name: title
+        - in: formData
+          name: licence
+          description: The type of license associated with the file
+          required: true
           type: string
-          in: formData
-        - name: resumableTotalSize
+        - in: formData
+          name: licenceUrl
+          description: A URL linking to the license associated with the file
+          required: true
+          type: string
+        - in: formData
+          description: The path where the file will be stored
+          name: path
+          required: true
+          type: string
+        - in: formData
+          name: resumableChunkNumber
+          description: The index of the current chunk being uploaded, the first chunk is 1 not base 0 
+          required: true
           type: integer
-          in: formData
-          description: this is the size in bytes of the file being uploaded.
+        - in: formData
+          name: resumableChunkSize
+          description: The size of each chunk in bytes
           required: true
-        - name: resumableType
-          type: string
-          in: formData
-          desciption: the mime type of the file being uploaded - used when being downloaded
-          required: true
-        - name: licence
-          type: string
-          in: formData
-          required: true
-        - name: licenceUrl
-          type: string
-          in: formData
-          required: true
-        - name: resumableChunkNumber
           type: integer
-          in: formData
+        - in: formData
+          name: resumableFilename
+          description: The name of the file being uploaded
           required: true
-        - name: resumableTotalChunks
-          type: integer
-          in: formData
-          description: this needs to be calculated - it is the files size in bytes, divided by 5MiB (5*1024*1024), 10,000 max.
-          required: true
-        - name: file
           type: string
-          in: formData
-          format: binary
-          description: actual raw, binary file content for the chunk being uploaded. No character or text conversion is made.
+        - in: formData
+          name: resumableIdentifier
+          description: A unique identifier for the file upload session
           required: true
+          type: string
+        - in: formData
+          name: resumableType
+          description: The MIME type of the file being uploaded
+          required: true
+          type: string
+        - in: formData
+          name: resumableTotalChunks
+          description: The total number of chunks the file is divided into
+          required: true
+          type: integer
+        - in: formData
+          name: resumableTotalSize
+          description: The total size of the file in bytes
+          required: true
+          type: integer
       produces:
-         - application/json
+        - application/json
       responses:
-        200:
-          description: Continue sending file chucks
-        201:
-          description: Upload complete and file registered
-        400:
-          $ref: '#/responses/JsonErrors'
-        404:
-          $ref: '#/responses/JsonErrors'
-        500:
-          $ref: '#/responses/InternalError'
-
-responses:
-  InternalError:
-    description: "Failed to process the request due to an internal error"
-  JsonErrors:
-    description: "Common error response format"
-    schema:
-      $ref: "#/definitions/Error"
-
-definitions:
-    Error:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload-new
+  /upload-new/files/{path}/{file-name}/status:
+    get:
+      consumes:
+        - application/json
+      description: Gets the status of a file upload
+      parameters:
+        - in: path
+          name: path
+          description: The path where the file will be stored
+          required: true
+          type: string
+        - in: path
+          name: file-name
+          description: The name of the file being uploaded
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
             type: object
             properties:
-              code:
-                type: string
-                example: BadJson
-              description:
-                type: string
-                example: The JSON is not in a valid format
+              metadata:
+                type: object
+                properties:
+                  path:
+                    type: string
+                  is_publishable:
+                    type: boolean
+                  collection_id:
+                    type: string
+                  title:
+                    type: string
+                  size_in_bytes:
+                    type: integer
+                  type:
+                    type: string
+                  licence:
+                    type: string
+                  licence_url:
+                    type: string
+                  state:
+                    type: string
+                  etag:
+                    type: string
+              file_content:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      tags:
+        - upload-new
+schemes:
+  - http
+swagger: "2.0"
