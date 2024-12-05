@@ -179,8 +179,7 @@ func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParameters(
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
-	c.ApiFeature.HttpResponse = w.Result()
-
+	c.ApiFeature.HTTPResponse = w.Result()
 	return nil
 }
 
@@ -236,7 +235,7 @@ func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParametersA
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
-	c.ApiFeature.HttpResponse = w.Result()
+	c.ApiFeature.HTTPResponse = w.Result()
 
 	return nil
 }
@@ -280,7 +279,7 @@ func (c *UploadComponent) iUploadTheFileWithMetaData(filename string, table *god
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
-	c.ApiFeature.HttpResponse = w.Result()
+	c.ApiFeature.HTTPResponse = w.Result()
 
 	return nil
 }
