@@ -54,4 +54,5 @@ generate-swagger:
 
 .PHONY: lint
 lint:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.1
 	golangci-lint run ./... --timeout 3m --tests=false --skip-dirs=features
