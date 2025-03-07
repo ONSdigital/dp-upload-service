@@ -6,9 +6,9 @@ package mock_aws
 import (
 	"context"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	s3client "github.com/ONSdigital/dp-s3/v2"
+	s3client "github.com/ONSdigital/dp-s3/v3"
 	"github.com/ONSdigital/dp-upload-service/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"sync"
 )
 
@@ -28,7 +28,7 @@ var _ aws.S3Clienter = &S3ClienterMock{}
 //			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 //				panic("mock out the Checker method")
 //			},
-//			HeadFunc: func(key string) (*s3.HeadObjectOutput, error) {
+//			HeadFunc: func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
 //				panic("mock out the Head method")
 //			},
 //			UploadPartFunc: func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
@@ -48,7 +48,7 @@ type S3ClienterMock struct {
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
 
 	// HeadFunc mocks the Head method.
-	HeadFunc func(key string) (*s3.HeadObjectOutput, error)
+	HeadFunc func(ctx context.Context, key string) (*s3.HeadObjectOutput, error)
 
 	// UploadPartFunc mocks the UploadPart method.
 	UploadPartFunc func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error)
@@ -71,6 +71,8 @@ type S3ClienterMock struct {
 		}
 		// Head holds details about calls to the Head method.
 		Head []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
 			// Key is the key argument value.
 			Key string
 		}
@@ -163,19 +165,21 @@ func (mock *S3ClienterMock) CheckerCalls() []struct {
 }
 
 // Head calls HeadFunc.
-func (mock *S3ClienterMock) Head(key string) (*s3.HeadObjectOutput, error) {
+func (mock *S3ClienterMock) Head(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
 	if mock.HeadFunc == nil {
 		panic("S3ClienterMock.HeadFunc: method is nil but S3Clienter.Head was just called")
 	}
 	callInfo := struct {
+		Ctx context.Context
 		Key string
 	}{
+		Ctx: ctx,
 		Key: key,
 	}
 	mock.lockHead.Lock()
 	mock.calls.Head = append(mock.calls.Head, callInfo)
 	mock.lockHead.Unlock()
-	return mock.HeadFunc(key)
+	return mock.HeadFunc(ctx, key)
 }
 
 // HeadCalls gets all the calls that were made to Head.
@@ -183,9 +187,11 @@ func (mock *S3ClienterMock) Head(key string) (*s3.HeadObjectOutput, error) {
 //
 //	len(mockedS3Clienter.HeadCalls())
 func (mock *S3ClienterMock) HeadCalls() []struct {
+	Ctx context.Context
 	Key string
 } {
 	var calls []struct {
+		Ctx context.Context
 		Key string
 	}
 	mock.lockHead.RLock()

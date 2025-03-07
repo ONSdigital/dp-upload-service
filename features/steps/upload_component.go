@@ -7,15 +7,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	componenttest "github.com/ONSdigital/dp-component-test"
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/service"
 )
 
@@ -56,23 +55,23 @@ func (c *UploadComponent) Initialiser() (http.Handler, error) {
 func (c *UploadComponent) Reset() {
 	// clear out test bucket
 	cfg, _ := config.Get()
-	s, _ := session.NewSession(&aws.Config{
-		Endpoint:         aws.String(localStackHost),
-		Region:           aws.String(cfg.AwsRegion),
-		S3ForcePathStyle: aws.Bool(true),
-		Credentials:      credentials.NewStaticCredentials("test", "test", ""),
-	})
+	var err error
 
-	s3client := s3.New(s)
-
-	err := s3manager.NewBatchDeleteWithClient(s3client).Delete(
-		aws.BackgroundContext(), s3manager.NewDeleteListIterator(s3client, &s3.ListObjectsInput{
-			Bucket: aws.String(cfg.UploadBucketName),
-		}))
+	AWSConfig, err := awsConfig.LoadDefaultConfig(
+		context.Background(),
+		awsConfig.WithRegion(cfg.AwsRegion),
+		awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("test", "test", "")),
+	)
 
 	if err != nil {
-		panic(fmt.Sprintf("Failed to empty localstack s3: %s", err.Error()))
+		panic(fmt.Sprintf("Failed to load default config s3: %s", err.Error()))
 	}
+
+	s3client := s3.NewFromConfig(AWSConfig, func(options *s3.Options) {
+		options.BaseEndpoint = aws.String(localStackHost)
+		options.UsePathStyle = true
+	})
+	deleteObjectsInBucket(cfg.UploadBucketName, s3client)
 
 	// removet
 	err = os.RemoveAll(testFilePath)
@@ -88,4 +87,25 @@ func (c *UploadComponent) Close() error {
 		return c.svc.Close(ctx)
 	}
 	return nil
+}
+
+func deleteObjectsInBucket(bucketName string, client *s3.Client) {
+	if client != nil {
+		listObjectInput := &s3.ListObjectsInput{
+			Bucket: aws.String(bucketName),
+		}
+		listObjectOutput, err := client.ListObjects(context.Background(), listObjectInput)
+
+		if err != nil {
+			fmt.Println("Error is :", err.Error())
+			return
+		}
+		for _, object := range listObjectOutput.Contents {
+			deleteObjectInput := &s3.DeleteObjectInput{
+				Bucket: aws.String(bucketName),
+				Key:    object.Key,
+			}
+			_, _ = client.DeleteObject(context.Background(), deleteObjectInput)
+		}
+	}
 }

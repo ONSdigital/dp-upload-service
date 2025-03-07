@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	s3client "github.com/ONSdigital/dp-s3/v2"
+	s3client "github.com/ONSdigital/dp-s3/v3"
 	"github.com/ONSdigital/dp-upload-service/aws"
 	mock_aws "github.com/ONSdigital/dp-upload-service/aws/mock"
 	"github.com/ONSdigital/dp-upload-service/upload"

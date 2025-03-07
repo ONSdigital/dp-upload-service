@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/ONSdigital/dp-api-clients-go/v2/files"
-	s3client "github.com/ONSdigital/dp-s3/v2"
+	s3client "github.com/ONSdigital/dp-s3/v3"
 	"github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/log.go/v2/log"
@@ -41,7 +41,7 @@ type Store struct {
 type Resumable struct {
 	FileName     string `schema:"resumableFilename"`
 	Type         string `schema:"resumableType"`
-	CurrentChunk int64  `schema:"resumableChunkNumber"`
+	CurrentChunk int32  `schema:"resumableChunkNumber"`
 	TotalChunks  int    `schema:"resumableTotalChunks"`
 }
 
@@ -68,7 +68,7 @@ func (s Store) Status(ctx context.Context, path string) (*Status, error) {
 	}
 
 	//file content
-	head, err := s.bucket.Head(path)
+	head, err := s.bucket.Head(ctx, path)
 	fileContent := newStatusMessage(head != nil && head.ContentLength != nil && *head.ContentLength > 0, err)
 
 	return &Status{
@@ -95,7 +95,7 @@ func (s Store) UploadFile(ctx context.Context, metadata files.FileMetaData, resu
 			return false, err
 		}
 
-		head, err := s.bucket.Head(metadata.Path)
+		head, err := s.bucket.Head(ctx, metadata.Path)
 		if err != nil {
 			log.Error(ctx, "failed to get completed file info from s3", err, log.Data{"key": metadata.Path})
 			return false, ErrS3Head

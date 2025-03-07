@@ -2,9 +2,10 @@ package aws
 
 import (
 	"context"
+
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	s3client "github.com/ONSdigital/dp-s3/v2"
-	"github.com/aws/aws-sdk-go/service/s3"
+	s3client "github.com/ONSdigital/dp-s3/v3"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 //go:generate moq -out mock/s3.go -pkg mock_aws . S3Clienter
@@ -17,7 +18,7 @@ type S3Clienter interface {
 	UploadPart(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error)
 	CheckPartUploaded(ctx context.Context, req *s3client.UploadPartRequest) (bool, error)
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
-	Head(key string) (*s3.HeadObjectOutput, error)
+	Head(ctx context.Context, key string) (*s3.HeadObjectOutput, error)
 }
 
 type Bucket struct {

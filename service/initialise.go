@@ -6,12 +6,13 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
-	dps3 "github.com/ONSdigital/dp-s3/v2"
+	dps3 "github.com/ONSdigital/dp-s3/v3"
 	dpaws "github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
@@ -72,31 +73,38 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 
 // DoGetS3Uploaded returns a S3Client
 func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
-	return generateS3Client(cfg, cfg.UploadBucketName)
+	return generateS3Client(ctx, cfg, cfg.UploadBucketName)
 }
 
 // DoGetStaticFileS3Uploader returns a S3Client
 func (e *Init) DoGetStaticFileS3Uploader(ctx context.Context, cfg *config.Config) (dpaws.S3Clienter, error) {
-	return generateS3Client(cfg, cfg.StaticFilesEncryptedBucketName)
+	return generateS3Client(ctx, cfg, cfg.StaticFilesEncryptedBucketName)
 }
 
-func generateS3Client(cfg *config.Config, bucketName string) (dpaws.S3Clienter, error) {
+func generateS3Client(ctx context.Context, cfg *config.Config, bucketName string) (dpaws.S3Clienter, error) {
+	var AWSConfig aws.Config
+	var err error
+	var client *dps3.Client
 	if cfg.LocalstackHost != "" {
-		s, err := session.NewSession(&aws.Config{
-			Endpoint:         aws.String(cfg.LocalstackHost),
-			Region:           aws.String(cfg.AwsRegion),
-			S3ForcePathStyle: aws.Bool(true),
-			Credentials:      credentials.NewStaticCredentials("test", "test", ""),
-		})
+
+		AWSConfig, err = awsConfig.LoadDefaultConfig(
+			ctx,
+			awsConfig.WithRegion(cfg.AwsRegion),
+			awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("test", "test", "")),
+		)
 
 		if err != nil {
 			return nil, err
 		}
 
-		return dps3.NewClientWithSession(bucketName, s), nil
+		client = dps3.NewClientWithConfig(bucketName, AWSConfig, func(options *s3.Options) {
+			options.BaseEndpoint = aws.String(cfg.LocalstackHost)
+			options.UsePathStyle = true
+		})
+		return client, nil
 	}
 
-	s3Client, err := dps3.NewClient(cfg.AwsRegion, bucketName)
+	s3Client, err := dps3.NewClient(ctx, cfg.AwsRegion, bucketName)
 	if err != nil {
 		return nil, err
 	}

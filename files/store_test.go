@@ -7,12 +7,12 @@ import (
 
 	"github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/config"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/stretchr/testify/suite"
 
 	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
-	s3client "github.com/ONSdigital/dp-s3/v2"
+	s3client "github.com/ONSdigital/dp-s3/v3"
 	mock_aws "github.com/ONSdigital/dp-upload-service/aws/mock"
 	"github.com/ONSdigital/dp-upload-service/files"
 	mock_files "github.com/ONSdigital/dp-upload-service/files/mock"
@@ -51,7 +51,7 @@ func (s *StoreSuite) SetupTest() {
 	}
 
 	s.mockS3 = &mock_aws.S3ClienterMock{
-		HeadFunc: func(key string) (*s3.HeadObjectOutput, error) {
+		HeadFunc: func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
 			size := int64(100)
 			etag := "head-object-etag"
 			return &s3.HeadObjectOutput{ContentLength: &size, ETag: &etag}, nil
@@ -107,7 +107,7 @@ func (s StoreSuite) TestUploadChunkTooSmallReturnsErrChuckTooSmall() {
 }
 
 func (s StoreSuite) TestHeadReturnsAnError() {
-	s.mockS3.HeadFunc = func(key string) (*s3.HeadObjectOutput, error) {
+	s.mockS3.HeadFunc = func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
 		return nil, errors.New("head error")
 	}
 
@@ -118,7 +118,7 @@ func (s StoreSuite) TestHeadReturnsAnError() {
 }
 
 func (s StoreSuite) TestHeadReturnsNoEtag() {
-	s.mockS3.HeadFunc = func(key string) (*s3.HeadObjectOutput, error) {
+	s.mockS3.HeadFunc = func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
 		size := int64(100)
 		return &s3.HeadObjectOutput{ContentLength: &size}, nil
 	}
@@ -173,7 +173,7 @@ func (s *StoreSuite) TestStatusWhenErrorOnFilesAPIGetCall() {
 }
 
 func (s *StoreSuite) TestStatusStillReturnedIfBucketReadFails() {
-	s.mockS3.HeadFunc = func(key string) (*s3.HeadObjectOutput, error) {
+	s.mockS3.HeadFunc = func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
 		return nil, errors.New("downstream error")
 	}
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})

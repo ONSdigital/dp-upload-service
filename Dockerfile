@@ -1,4 +1,4 @@
-FROM golang:1.23.4-bullseye as build
+FROM golang:1.24.1 as build
 
 WORKDIR /service
 ADD . /service

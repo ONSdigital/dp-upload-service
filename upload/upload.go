@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	s3client "github.com/ONSdigital/dp-s3/v2"
+	s3client "github.com/ONSdigital/dp-s3/v3"
 	"github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
@@ -35,7 +35,7 @@ func (resum *Resumable) createS3Request() *s3client.UploadPartRequest {
 	return &s3client.UploadPartRequest{
 		UploadKey:   resum.Identifier,
 		Type:        resum.Type,
-		ChunkNumber: int64(resum.ChunkNumber),
+		ChunkNumber: int32(resum.ChunkNumber),
 		TotalChunks: resum.TotalChunks,
 		FileName:    resum.FileName,
 	}
