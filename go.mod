@@ -10,14 +10,11 @@ exclude github.com/gogo/protobuf v1.2.1
 
 exclude github.com/prometheus/client_golang v0.9.3
 
-//replace github.com/ONSdigital/dp-s3/v2 => /Users/geehan/src/github.com/ONSdigital/dp-s3
-
 require (
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.263.0
 	github.com/ONSdigital/dp-component-test v0.15.0
 	github.com/ONSdigital/dp-healthcheck v1.6.3
 	github.com/ONSdigital/dp-net/v2 v2.22.0
-	github.com/ONSdigital/dp-s3/v3 v3.0.0
 	github.com/ONSdigital/log.go/v2 v2.4.3
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.9
@@ -35,12 +32,14 @@ require (
 	github.com/swaggo/swag v1.16.4
 )
 
+require github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.65 // indirect
+
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/ONSdigital/dp-mongodb-in-memory v1.7.0 // indirect
+	github.com/ONSdigital/dp-s3/v3 v3.0.0
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.65 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.34 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.34 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
