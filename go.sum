@@ -27,8 +27,8 @@ github.com/ONSdigital/dp-net/v2 v2.22.0 h1:LY9C5x1+sfK9QyjNpB2G3TPvAtSuOFR9FRcXs
 github.com/ONSdigital/dp-net/v2 v2.22.0/go.mod h1:F6yL3jjuVwBLVMFIKgHF3zhMRbmZysAxBiu+aIAi3Z0=
 github.com/ONSdigital/dp-net/v3 v3.0.0 h1:uQvU+4kX5rH4istsaqJFhPXe8Hcz13pFmKhblUoPpQ8=
 github.com/ONSdigital/dp-net/v3 v3.0.0/go.mod h1:ki9Vcn8BuKP/3c2X3KDTFtUFFa5bemfglCbtH1IXZwA=
-github.com/ONSdigital/dp-s3/v3 v3.1.0 h1:x/+1bK+2gOh53OaMZ1WcLepKtBs20IR5a+D4TUZJEwk=
-github.com/ONSdigital/dp-s3/v3 v3.1.0/go.mod h1:Wga1KP8LO8nirZnwhD9s0W48Cni0KI4i8QFw5sj/1ZI=
+github.com/ONSdigital/dp-s3/v3 v3.2.0 h1:SYQ5Q1W75GsSG0fE7gk7e2WX2XZKgzHfn8SzYysWkGU=
+github.com/ONSdigital/dp-s3/v3 v3.2.0/go.mod h1:wnxrcZ15VD2/izSKZeGJoUug59CrvgFuPD7WKO4jjFs=
 github.com/ONSdigital/log.go/v2 v2.4.4 h1:yQYdZAdsuLOCzrIdWnISkFmWLJZDvqgjuwI1y+BFUb4=
 github.com/ONSdigital/log.go/v2 v2.4.4/go.mod h1:bUKxmsY+5L39ESCdEFR3+XChKUmPbYWlU6Lw3sOLS6A=
 github.com/aws/aws-sdk-go-v2 v1.36.3 h1:mJoei2CxPutQVxaATCzDUjcZEjVRdpsiiXi2o38yqWM=

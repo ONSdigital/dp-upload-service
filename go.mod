@@ -41,7 +41,7 @@ require (
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/ONSdigital/dp-mongodb-in-memory v1.8.0 // indirect
-	github.com/ONSdigital/dp-s3/v3 v3.1.0
+	github.com/ONSdigital/dp-s3/v3 v3.2.0
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.34 // indirect
