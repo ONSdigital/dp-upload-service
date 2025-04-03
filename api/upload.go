@@ -25,6 +25,7 @@ type Metadata struct {
 	Path          string  `schema:"path" validate:"required,aws-upload-key"`
 	IsPublishable *bool   `schema:"isPublishable,omitempty" validate:"required"`
 	CollectionId  *string `schema:"collectionId,omitempty"`
+	BundleId      *string `schema:"bundleId,omitempty"`
 	Title         string  `schema:"title"`
 	SizeInBytes   int     `schema:"resumableTotalSize" validate:"required"`
 	Type          string  `schema:"resumableType" validate:"required"`
@@ -128,6 +129,7 @@ func getStoreMetadata(metadata Metadata, resumable files.Resumable) filesAPI.Fil
 		Path:          fmt.Sprintf("%s/%s", metadata.Path, resumable.FileName),
 		IsPublishable: *metadata.IsPublishable,
 		CollectionID:  metadata.CollectionId,
+		BundleID:      metadata.BundleId,
 		Title:         metadata.Title,
 		SizeInBytes:   uint64(metadata.SizeInBytes),
 		Type:          metadata.Type,

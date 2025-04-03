@@ -11,7 +11,7 @@ exclude github.com/gogo/protobuf v1.2.1
 exclude github.com/prometheus/client_golang v0.9.3
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.264.0
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.265.0
 	github.com/ONSdigital/dp-component-test v0.19.0
 	github.com/ONSdigital/dp-healthcheck v1.6.3
 	github.com/ONSdigital/dp-net/v2 v2.22.0

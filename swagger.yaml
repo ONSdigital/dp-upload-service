@@ -212,6 +212,11 @@ paths:
           required: true
           type: string
         - in: formData
+          name: bundleId
+          description: The ID of the bundle to which the file belongs
+          required: false
+          type: string
+        - in: formData
           name: file
           description: Specifies the file to be uploaded
           required: true

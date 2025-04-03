@@ -118,6 +118,19 @@ func (s UploadTestSuite) TestFileWasSupplied() {
 	s.Contains(string(response), "FileForm")
 }
 
+func (s UploadTestSuite) TestFileWasSuppliedWithBundleId() {
+	b, formWriter := generateFormWriterWithBundleId("valid")
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(stubStoreFunction)
+
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusBadRequest, rec.Code)
+	response, _ := io.ReadAll(rec.Body)
+	s.Contains(string(response), "FileForm")
+}
+
 func (s UploadTestSuite) TestSuccessfulStorageOfCompleteFileReturns201() {
 	payload := "TEST DATA"
 	funcCalled := false
@@ -240,6 +253,21 @@ func generateFormWriter(path string) (*bytes.Buffer, *multipart.Writer) {
 	formWriter.WriteField("path", path)
 	formWriter.WriteField("isPublishable", "false")
 	formWriter.WriteField("collectionId", "1234567890")
+	formWriter.WriteField("title", "A New File")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
+	formWriter.WriteField("licence", "OGL v3")
+	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
+	return b, formWriter
+}
+
+func generateFormWriterWithBundleId(path string) (*bytes.Buffer, *multipart.Writer) {
+	b := &bytes.Buffer{}
+	formWriter := multipart.NewWriter(b)
+	formWriter.WriteField("resumableFilename", "file.csv")
+	formWriter.WriteField("path", path)
+	formWriter.WriteField("isPublishable", "false")
+	formWriter.WriteField("bundleId", "1234567890")
 	formWriter.WriteField("title", "A New File")
 	formWriter.WriteField("resumableTotalSize", "1478")
 	formWriter.WriteField("resumableType", "text/csv")
