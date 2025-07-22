@@ -14,7 +14,7 @@ import (
 
 	s3client "github.com/ONSdigital/dp-s3/v3"
 
-	"github.com/ONSdigital/dp-net/v2/request"
+	"github.com/ONSdigital/dp-net/v3/request"
 
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/cucumber/godog"

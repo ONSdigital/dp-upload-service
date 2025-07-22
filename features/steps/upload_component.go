@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	componenttest "github.com/ONSdigital/dp-component-test"
-	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	dphttp "github.com/ONSdigital/dp-net/v3/http"
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/service"
 )

@@ -3,12 +3,13 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"github.com/ONSdigital/dp-net/v2/request"
+	"net/http"
+
+	"github.com/ONSdigital/dp-net/v3/request"
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/files"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
-	"net/http"
 )
 
 func StatusHandler(store files.Store) http.HandlerFunc {

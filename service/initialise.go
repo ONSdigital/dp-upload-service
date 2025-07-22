@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	dphttp "github.com/ONSdigital/dp-net/v3/http"
 	dps3 "github.com/ONSdigital/dp-s3/v3"
 	dpaws "github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/config"

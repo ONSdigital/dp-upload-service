@@ -8,7 +8,7 @@ import (
 	"regexp"
 
 	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
-	"github.com/ONSdigital/dp-net/v2/request"
+	"github.com/ONSdigital/dp-net/v3/request"
 	"github.com/ONSdigital/dp-upload-service/config"
 	"github.com/ONSdigital/dp-upload-service/files"
 	"github.com/ONSdigital/log.go/v2/log"
