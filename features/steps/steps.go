@@ -34,6 +34,7 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the data file "([^"]*)" with content:$`, c.theDataFile)
 	ctx.Step(`^the file meta-data is:$`, c.theFileMetadataIs)
 	ctx.Step(`^the 1st part of the file "([^"]*)" has been uploaded with resumable parameters:$`, c.the1StPartOfTheFileHasBeenUploaded)
+	ctx.Step(`^dp-files-api has a file "([^"]*)" already registered$`, c.dpfilesapiHasAFileAlreadyRegistered)
 
 	// Whens
 	ctx.Step(`^I upload the file "([^"]*)" with the following form resumable parameters:$`, c.iUploadTheFileWithTheFollowingFormResumableParameters)
@@ -44,6 +45,7 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file "([^"]*)" should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
 	ctx.Step(`^the files api POST request should contain a default authorization header$`, c.theFilesApiPOSTRequestShouldContainADefaultAuthorizationHeader)
 	ctx.Step(`^the files api PATCH request with path \("([^"]*)"\) should contain a default authorization header$`, c.theFilesApiPATCHRequestWithPathShouldContainADefaultAuthorizationHeader)
+	ctx.Step(`^the response should contain error code "([^"]*)"$`, c.theResponseShouldContainErrorCode)
 	// Buts
 	ctx.Step(`^the file should not be marked as uploaded$`, c.theFileShouldNotBeMarkedAsUploaded)
 	ctx.Step(`^the file upload should not have been registered again$`, c.theFileUploadShouldNotHaveBeenRegisteredAgain)
@@ -121,6 +123,26 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 func (c *UploadComponent) theFileMetadataIs(table *godog.Table) error {
 	assist := assistdog.NewDefault()
 	c.fileMetadata, _ = assist.ParseMap(table)
+	return nil
+}
+
+func (c *UploadComponent) dpfilesapiHasAFileAlreadyRegistered(filename string) error {
+	requests = make(map[string]string)
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		requests[fmt.Sprintf("%s|%s", r.URL.Path, r.Method)] = string(body)
+		requests[fmt.Sprintf("%s|%s|auth", r.URL.Path, r.Method)] = r.Header.Get(request.AuthHeaderKey)
+
+		if r.Method == http.MethodPost {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"errors":[{"errorCode":"DuplicateFileError","description":"file already registered"}]}`))
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+
+	os.Setenv("FILES_API_URL", s.URL)
 	return nil
 }
 
@@ -326,4 +348,18 @@ func (c *UploadComponent) theFilesApiPATCHRequestWithPathShouldContainADefaultAu
 	cfg, _ := config.Get()
 	assert.Equal(c.ApiFeature, "Bearer "+cfg.ServiceAuthToken, requests[fmt.Sprintf("%s/%s|%s|auth", filesURI, filepath, http.MethodPatch)])
 	return c.ApiFeature.StepError()
+}
+
+func (c *UploadComponent) theResponseShouldContainErrorCode(errorCode string) error {
+	body, err := io.ReadAll(c.ApiFeature.HTTPResponse.Body)
+	if err != nil {
+		return err
+	}
+
+	responseBody := string(body)
+	if !strings.Contains(responseBody, errorCode) {
+		return fmt.Errorf("expected response to contain error code '%s', but got: %s", errorCode, responseBody)
+	}
+
+	return nil
 }

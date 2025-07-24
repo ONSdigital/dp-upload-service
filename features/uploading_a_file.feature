@@ -114,4 +114,21 @@ Feature: Uploading a file
       And the files api PATCH request with path ("data/authorized.csv") should contain a default authorization header
       And the HTTP status code should be "201"
 
+    Scenario: Uploading a file that already exists returns 409 Conflict
+      Given dp-files-api has a file "/data/populations.csv" already registered
+      And the data file "populations.csv" with content:
+          """
+          mark,1
+          jon,2
+          russ,3
+          """
+      When I upload the file "test-data/populations.csv" with the following form resumable parameters:
+        | resumableFilename    | populations.csv      |
+        | resumableType        | text/csv             |
+        | resumableTotalChunks | 1                    |
+        | resumableChunkNumber | 1                    |
+        | path                 | data                 |
+      Then the HTTP status code should be "409"
+      And the response should contain error code "DuplicateFile"
+
 

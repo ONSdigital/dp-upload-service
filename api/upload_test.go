@@ -176,7 +176,7 @@ func (s UploadTestSuite) TestChunkTooSmallReturns400() {
 
 func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
 	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
-		return false, files.ErrFilesAPIDuplicateFile
+		return false, filesAPI.ErrFileAlreadyRegistered
 	}
 
 	b, formWriter := generateFormWriter("valid")
@@ -187,7 +187,7 @@ func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
 	h := api.CreateV1UploadHandler(st)
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
-	s.Equal(http.StatusBadRequest, rec.Code)
+	s.Equal(http.StatusConflict, rec.Code)
 	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "DuplicateFile")
 }
