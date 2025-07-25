@@ -34,7 +34,6 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the data file "([^"]*)" with content:$`, c.theDataFile)
 	ctx.Step(`^the file meta-data is:$`, c.theFileMetadataIs)
 	ctx.Step(`^the 1st part of the file "([^"]*)" has been uploaded with resumable parameters:$`, c.the1StPartOfTheFileHasBeenUploaded)
-	ctx.Step(`^dp-files-api has a file "([^"]*)" already registered$`, c.dpfilesapiHasAFileAlreadyRegistered)
 
 	// Whens
 	ctx.Step(`^I upload the file "([^"]*)" with the following form resumable parameters:$`, c.iUploadTheFileWithTheFollowingFormResumableParameters)
@@ -129,26 +128,6 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 func (c *UploadComponent) theFileMetadataIs(table *godog.Table) error {
 	assist := assistdog.NewDefault()
 	c.fileMetadata, _ = assist.ParseMap(table)
-	return nil
-}
-
-func (c *UploadComponent) dpfilesapiHasAFileAlreadyRegistered(filename string) error {
-	requests = make(map[string]string)
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		requests[fmt.Sprintf("%s|%s", r.URL.Path, r.Method)] = string(body)
-		requests[fmt.Sprintf("%s|%s|auth", r.URL.Path, r.Method)] = r.Header.Get(request.AuthHeaderKey)
-
-		if r.Method == http.MethodPost {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"errors":[{"errorCode":"DuplicateFileError","description":"file already registered"}]}`))
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
-	}))
-
-	os.Setenv("FILES_API_URL", s.URL)
 	return nil
 }
 
