@@ -115,20 +115,33 @@ Feature: Uploading a file
       And the HTTP status code should be "201"
 
     Scenario: Uploading a file that already exists returns 409 Conflict
-      Given dp-files-api has a file "/data/populations.csv" already registered
+      Given dp-files-api has a file with path "data" and filename "populations.csv" registered with meta-data:
+        """
+        {"path":"data/populations.csv","title":"existing file"}
+        """
       And the data file "populations.csv" with content:
-          """
-          mark,1
-          jon,2
-          russ,3
-          """
+        """
+        mark,1
+        jon,2
+        russ,3
+        """
+      And the file meta-data is:
+        | isPublishable      | true                                                                      |
+        | collectionId       | 1234-asdfg-54321-qwerty                                                   |
+        | title              | The number of people                                                      |
+        | resumableTotalSize | 14794                                                                     |
+        | licence            | OGL v3                                                                    |
+        | licenceUrl         | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
       When I upload the file "test-data/populations.csv" with the following form resumable parameters:
-        | resumableFilename    | populations.csv      |
-        | resumableType        | text/csv             |
-        | resumableTotalChunks | 1                    |
-        | resumableChunkNumber | 1                    |
-        | path                 | data                 |
+        | resumableFilename    | populations.csv |
+        | resumableType        | text/csv        |
+        | resumableTotalChunks | 1               |
+        | resumableChunkNumber | 1               |
+        | path                 | data            |
       Then the HTTP status code should be "409"
-      And the response should contain error code "DuplicateFile"
+      And I should receive the following JSON response:
+        """
+        {"errors":[{"code":"DuplicateFile","description":"bad request: file already registered"}]}
+        """
 
 

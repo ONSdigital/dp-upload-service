@@ -45,7 +45,6 @@ func (c *UploadComponent) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the file "([^"]*)" should be marked as uploaded using payload:$`, c.theFileUploadOfShouldBeMarkedAsUploadedUsingPayload)
 	ctx.Step(`^the files api POST request should contain a default authorization header$`, c.theFilesApiPOSTRequestShouldContainADefaultAuthorizationHeader)
 	ctx.Step(`^the files api PATCH request with path \("([^"]*)"\) should contain a default authorization header$`, c.theFilesApiPATCHRequestWithPathShouldContainADefaultAuthorizationHeader)
-	ctx.Step(`^the response should contain error code "([^"]*)"$`, c.theResponseShouldContainErrorCode)
 	// Buts
 	ctx.Step(`^the file should not be marked as uploaded$`, c.theFileShouldNotBeMarkedAsUploaded)
 	ctx.Step(`^the file upload should not have been registered again$`, c.theFileUploadShouldNotHaveBeenRegisteredAgain)
@@ -93,6 +92,13 @@ func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) 
 
 func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMetadata(path, filename string, jsonResponse *godog.DocString) error {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"errors":[{"errorCode":"DuplicateFileError","description":"file already registered"}]}`))
+			return
+		}
+
 		if strings.HasSuffix(r.URL.Path, "/valid") {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
@@ -348,18 +354,4 @@ func (c *UploadComponent) theFilesApiPATCHRequestWithPathShouldContainADefaultAu
 	cfg, _ := config.Get()
 	assert.Equal(c.ApiFeature, "Bearer "+cfg.ServiceAuthToken, requests[fmt.Sprintf("%s/%s|%s|auth", filesURI, filepath, http.MethodPatch)])
 	return c.ApiFeature.StepError()
-}
-
-func (c *UploadComponent) theResponseShouldContainErrorCode(errorCode string) error {
-	body, err := io.ReadAll(c.ApiFeature.HTTPResponse.Body)
-	if err != nil {
-		return err
-	}
-
-	responseBody := string(body)
-	if !strings.Contains(responseBody, errorCode) {
-		return fmt.Errorf("expected response to contain error code '%s', but got: %s", errorCode, responseBody)
-	}
-
-	return nil
 }
