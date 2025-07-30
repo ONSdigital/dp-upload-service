@@ -104,6 +104,16 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 			return
 		}
 
+		if r.Method == http.MethodGet {
+			expectedPath := fmt.Sprintf("%s/%s", path, filename)
+			if strings.HasSuffix(r.URL.Path, expectedPath) {
+				w.WriteHeader(http.StatusOK)
+				w.Header().Set("Content-Type", "application/json")
+				w.Write([]byte(jsonResponse.Content))
+				return
+			}
+		}
+
 		if strings.HasSuffix(r.URL.Path, "/valid") {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
