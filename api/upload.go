@@ -91,6 +91,8 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			switch err {
 			case files.ErrFilesAPIDuplicateFile:
 				writeError(w, buildErrors(err, "DuplicateFile"), http.StatusConflict)
+			case filesAPI.ErrConflict:
+				writeError(w, buildErrors(err, "DuplicateFile"), http.StatusConflict)
 			case files.ErrFileAPICreateInvalidData:
 				writeError(w, buildErrors(err, "RemoteValidationError"), http.StatusInternalServerError)
 			case files.ErrChunkTooSmall:

@@ -90,13 +90,6 @@ func (s Store) UploadFile(ctx context.Context, metadata files.FileMetaData, resu
 
 	if response.AllPartsUploaded {
 		var err error
-		if metadata.Path != "" {
-			existingFile, _ := s.files.GetFile(ctx, metadata.Path, s.cfg.ServiceAuthToken)
-			if existingFile.Path == metadata.Path {
-				log.Error(ctx, "duplicate file detected in upload service", ErrFilesAPIDuplicateFile, log.Data{"path": metadata.Path})
-				return false, ErrFilesAPIDuplicateFile
-			}
-		}
 		if err = s.files.RegisterFile(ctx, metadata); err != nil {
 			log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
 			return false, err
