@@ -96,8 +96,8 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 			expectedPath := fmt.Sprintf("%s/%s", path, filename)
 			if strings.Contains(string(body), expectedPath) {
 				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"errors":[{"errorCode":"DuplicateFileError","description":"file already registered"}]}`))
+				w.WriteHeader(http.StatusConflict)
+				w.Write([]byte(`{"errors":[{"code":"DuplicateFileError","description":"file already registered"}]}`))
 				return
 			}
 			w.WriteHeader(http.StatusCreated)
