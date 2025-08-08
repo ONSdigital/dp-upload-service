@@ -176,7 +176,7 @@ func (s UploadTestSuite) TestChunkTooSmallReturns400() {
 
 func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
 	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
-		return false, files.ErrFilesAPIDuplicateFile
+		return false, filesAPI.ErrFileAlreadyRegistered
 	}
 
 	b, formWriter := generateFormWriter("valid")

@@ -141,7 +141,7 @@ Feature: Uploading a file
       Then the HTTP status code should be "409"
       And I should receive the following JSON response:
         """
-        {"errors":[{"code":"DuplicateFile","description":"resource conflict"}]}
+        {"errors":[{"code":"DuplicateFile","description":"resource conflict: file already registered"}]}
         """
 
 
