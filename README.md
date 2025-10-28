@@ -83,9 +83,12 @@ curl 'http://localhost:14566/testing/readme-md/README.md' -X GET -L -O
 
 The command downloads the uploaded file to the directory from which it is run.
 
-## API Client
+## SDK
 
-There is an [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/upload) for the Upload API this is part of [dp-api-clients-go](https://github.com/ONSdigital/dp-api-clients-go) package.
+> **Deprecated:**  
+> The [API Client](https://github.com/ONSdigital/dp-api-clients-go/tree/main/upload) for the Upload API is now deprecated. This used to be stored in [dp-api-clients-go](https://github.com/ONSdigital/dp-api-clients-go)
+
+The SDK for this service is stored in this repository within the [`/sdk`](./sdk) package.
 
 ## Contributing
 
