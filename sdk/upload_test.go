@@ -47,16 +47,10 @@ func TestUpload_Success(t *testing.T) {
 		metadata := validMetadata
 
 		Convey("When Upload is called with a single chunk", func() {
-			uploadResp, err := client.Upload(context.Background(), fileContent, metadata, Headers{})
+			err := client.Upload(context.Background(), fileContent, metadata, Headers{})
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
-			})
-
-			Convey("And the expected UploadResponse is returned", func() {
-				So(uploadResp, ShouldNotBeNil)
-				So(uploadResp.StatusCode, ShouldEqual, http.StatusCreated)
-				So(uploadResp.Errors, ShouldBeNil)
 			})
 
 			Convey("And the mock clienter's Do method is called once with the correct request details", func() {
@@ -71,16 +65,10 @@ func TestUpload_Success(t *testing.T) {
 
 		Convey("When Upload is called with multiple chunks", func() {
 			metadata.SizeInBytes = chunkSize*2 + 1
-			uploadResp, err := client.Upload(context.Background(), fileContent, metadata, Headers{})
+			err := client.Upload(context.Background(), fileContent, metadata, Headers{})
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
-			})
-
-			Convey("And the expected UploadResponse is returned", func() {
-				So(uploadResp, ShouldNotBeNil)
-				So(uploadResp.StatusCode, ShouldEqual, http.StatusCreated)
-				So(uploadResp.Errors, ShouldBeNil)
 			})
 
 			Convey("And the mock clienter's Do method is called three times", func() {
@@ -102,15 +90,11 @@ func TestUpload_Failure(t *testing.T) {
 		metadata.SizeInBytes = maxFileSize + 1
 
 		Convey("And Upload is called", func() {
-			uploadResp, err := client.Upload(context.Background(), fileContent, metadata, Headers{})
+			err := client.Upload(context.Background(), fileContent, metadata, Headers{})
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldNotBeNil)
 				So(err, ShouldEqual, ErrFileTooLarge)
-			})
-
-			Convey("And no UploadResponse is returned", func() {
-				So(uploadResp, ShouldBeNil)
 			})
 
 			Convey("And the mock clienter's Do method is not called", func() {
@@ -126,15 +110,11 @@ func TestUpload_Failure(t *testing.T) {
 		metadata := validMetadata
 
 		Convey("And Upload is called", func() {
-			uploadResp, err := client.Upload(context.Background(), brokenReader, metadata, Headers{})
+			err := client.Upload(context.Background(), brokenReader, metadata, Headers{})
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldNotBeNil)
 				So(err, ShouldEqual, expectedReadErr)
-			})
-
-			Convey("And no UploadResponse is returned", func() {
-				So(uploadResp, ShouldBeNil)
 			})
 
 			Convey("And the mock clienter's Do method is not called", func() {
@@ -152,15 +132,11 @@ func TestUpload_Failure(t *testing.T) {
 		metadata := validMetadata
 
 		Convey("And Upload is called", func() {
-			uploadResp, err := client.Upload(context.Background(), fileContent, metadata, Headers{})
+			err := client.Upload(context.Background(), fileContent, metadata, Headers{})
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldNotBeNil)
 				So(err, ShouldEqual, expectedDoErr)
-			})
-
-			Convey("And no UploadResponse is returned", func() {
-				So(uploadResp, ShouldBeNil)
 			})
 
 			Convey("And the mock clienter's Do method is called once", func() {
@@ -182,19 +158,20 @@ func TestUpload_Failure(t *testing.T) {
 		metadata := validMetadata
 
 		Convey("And Upload is called", func() {
-			uploadResp, err := client.Upload(context.Background(), fileContent, metadata, Headers{})
+			err := client.Upload(context.Background(), fileContent, metadata, Headers{})
 
-			Convey("Then no error is returned", func() {
-				So(err, ShouldBeNil)
-			})
+			Convey("Then an APIError is returned with the expected details", func() {
+				So(err, ShouldNotBeNil)
+				// checking APIError implements error interface correctly
+				So(err.Error(), ShouldEqual, "API error: status code 500\n  - code: InternalError, description: internal server error occurred")
 
-			Convey("And the expected UploadResponse is returned", func() {
-				So(uploadResp, ShouldNotBeNil)
-				So(uploadResp.StatusCode, ShouldEqual, http.StatusInternalServerError)
-				So(uploadResp.Errors, ShouldNotBeNil)
-				So(uploadResp.Errors.Error, ShouldHaveLength, 1)
-				So(uploadResp.Errors.Error[0].Code, ShouldEqual, "InternalError")
-				So(uploadResp.Errors.Error[0].Description, ShouldEqual, "internal server error occurred")
+				apiErr, ok := err.(*APIError)
+				So(ok, ShouldBeTrue)
+				So(apiErr.StatusCode, ShouldEqual, http.StatusInternalServerError)
+				So(apiErr.Errors, ShouldNotBeNil)
+				So(len(apiErr.Errors.Error), ShouldEqual, 1)
+				So(apiErr.Errors.Error[0].Code, ShouldEqual, "InternalError")
+				So(apiErr.Errors.Error[0].Description, ShouldEqual, "internal server error occurred")
 			})
 
 			Convey("And the mock clienter's Do method is called once", func() {

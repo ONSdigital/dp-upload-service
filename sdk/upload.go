@@ -24,19 +24,10 @@ type ChunkInfo struct {
 	Total   int
 }
 
-type UploadResponse struct {
-	StatusCode int
-	Errors     *api.JsonErrors
-}
-
-var (
-	ErrFileTooLarge = fmt.Errorf("file too large, max file size: %d MB", maxFileSize>>20)
-)
-
 // Upload uploads a file in chunks to the upload service via the /upload-new endpoint with the provided metadata and headers
-func (cli *Client) Upload(ctx context.Context, fileContent io.ReadCloser, metadata api.Metadata, headers Headers) (*UploadResponse, error) {
+func (cli *Client) Upload(ctx context.Context, fileContent io.ReadCloser, metadata api.Metadata, headers Headers) error {
 	if metadata.SizeInBytes > maxFileSize {
-		return nil, ErrFileTooLarge
+		return ErrFileTooLarge
 	}
 
 	totalChunks := (metadata.SizeInBytes + chunkSize - 1) / chunkSize
@@ -47,12 +38,12 @@ func (cli *Client) Upload(ctx context.Context, fileContent io.ReadCloser, metada
 
 		reqBody, contentType, err := createUploadRequestBody(chunkInfo, fileContent, metadata)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/upload-new", cli.hcCli.URL), reqBody)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		req.Header.Set("Content-Type", contentType)
@@ -61,23 +52,26 @@ func (cli *Client) Upload(ctx context.Context, fileContent io.ReadCloser, metada
 		resp, err := cli.hcCli.Client.Do(ctx, req)
 		if err != nil {
 			closeResponseBody(ctx, resp)
-			return nil, err
+			return err
 		}
 
 		statusCode := resp.StatusCode
 		if statusCode != http.StatusOK && statusCode != http.StatusCreated {
 			jsonErrors, err := unmarshalJsonErrors(resp.Body)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			closeResponseBody(ctx, resp)
-			return &UploadResponse{StatusCode: statusCode, Errors: jsonErrors}, nil
+			return &APIError{
+				StatusCode: statusCode,
+				Errors:     jsonErrors,
+			}
 		}
 
 		closeResponseBody(ctx, resp)
 	}
 
-	return &UploadResponse{StatusCode: http.StatusCreated}, nil
+	return nil
 }
 
 // createUploadRequestBody creates a multipart/form-data request body for the given chunk and metadata
