@@ -16,5 +16,5 @@ type Clienter interface {
 	Health() *health.Client
 	URL() string
 
-	Upload(ctx context.Context, fileContent io.ReadCloser, metadata api.Metadata, headers Headers) (*UploadResponse, error)
+	Upload(ctx context.Context, fileContent io.ReadCloser, metadata api.Metadata, headers Headers) error
 }

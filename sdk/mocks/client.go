@@ -32,7 +32,7 @@ var _ sdk.Clienter = &ClienterMock{}
 //			URLFunc: func() string {
 //				panic("mock out the URL method")
 //			},
-//			UploadFunc: func(ctx context.Context, fileContent io.ReadCloser, metadata api.Metadata, headers sdk.Headers) (*sdk.UploadResponse, error) {
+//			UploadFunc: func(ctx context.Context, fileContent io.ReadCloser, metadata api.Metadata, headers sdk.Headers) error {
 //				panic("mock out the Upload method")
 //			},
 //		}
@@ -52,7 +52,7 @@ type ClienterMock struct {
 	URLFunc func() string
 
 	// UploadFunc mocks the Upload method.
-	UploadFunc func(ctx context.Context, fileContent io.ReadCloser, metadata api.Metadata, headers sdk.Headers) (*sdk.UploadResponse, error)
+	UploadFunc func(ctx context.Context, fileContent io.ReadCloser, metadata api.Metadata, headers sdk.Headers) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -178,7 +178,7 @@ func (mock *ClienterMock) URLCalls() []struct {
 }
 
 // Upload calls UploadFunc.
-func (mock *ClienterMock) Upload(ctx context.Context, fileContent io.ReadCloser, metadata api.Metadata, headers sdk.Headers) (*sdk.UploadResponse, error) {
+func (mock *ClienterMock) Upload(ctx context.Context, fileContent io.ReadCloser, metadata api.Metadata, headers sdk.Headers) error {
 	if mock.UploadFunc == nil {
 		panic("ClienterMock.UploadFunc: method is nil but Clienter.Upload was just called")
 	}
