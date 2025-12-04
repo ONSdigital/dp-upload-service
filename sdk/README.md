@@ -8,10 +8,10 @@ This SDK provides a client for interacting with the dp-upload-service. It is int
 
 | Name | Description |
 |------|-------------|
-| [`URL`](client.go) | Returns the URL used by the Client |
-| [`Health`](client.go) | Returns the `health.Client` used by the Client |
-| [`Checker`](client.go) | Calls the `health.Client`'s `Checker` method |
-| [`Upload`](upload.go) | Uploads a file in chunks to the upload service via the `/upload-new` endpoint with the provided metadata and headers |
+| [`URL`](#url) | Returns the URL used by the Client |
+| [`Health`](#health) | Returns the `health.Client` used by the Client |
+| [`Checker`](#checker) | Calls the `health.Client`'s `Checker` method |
+| [`Upload`](#upload) | Uploads a file in chunks to the upload service via the `/upload-new` endpoint with the provided metadata and headers |
 
 ## Instantiation
 
@@ -75,7 +75,7 @@ func main() {
     metadata := api.Metadata{
         Path:          "path/to/file.csv",
         IsPublishable: &isPublishable,
-        CollectionId:  &collectionID,
+        CollectionId:  &collectionID, // Only one of BundleId or CollectionId should be set
         Title:         "Example Title",
         SizeInBytes:   123, // Replace with actual file size
         Type:          "text/csv",
@@ -107,7 +107,72 @@ func main() {
 }
 ```
 
-## Available functionality
+## Available Functionality
+
+### Checker
+
+```go
+import "github.com/ONSdigital/dp-healthcheck/healthcheck"
+
+check := &healthcheck.CheckState{}
+err := client.Checker(ctx, check)
+```
+
+### Health
+
+```go
+healthClient := client.Health()
+```
+
+### URL
+
+```go
+url := client.URL()
+```
+
+### Upload
+
+```go
+import (
+    "os"
+
+    "github.com/ONSdigital/dp-upload-service/api"
+    "github.com/ONSdigital/dp-upload-service/sdk"
+)
+
+// Prepare file content
+fileContent, err := os.Open("path/to/file.csv")
+if err != nil {
+    panic(err)
+}
+defer fileContent.Close()
+
+// Prepare metadata
+isPublishable := true
+collectionID := "example-collection-id" // Only one of BundleId or CollectionId should be set
+
+// Build Metadata struct
+metadata := api.Metadata{
+    Path:          "path/to/file.csv",
+    IsPublishable: &isPublishable,
+    CollectionId:  &collectionID,
+    Title:         "Example Title",
+    SizeInBytes:   123, // Replace with actual file size
+    Type:          "text/csv",
+    Licence:       "Example Licence",
+    LicenceUrl:    "http://example.com/licence",
+}
+
+// Prepare Headers for authentication
+headers := sdk.Headers{
+    ServiceAuthToken: "example-auth-token",
+}
+
+// Call Upload method
+err = client.Upload(context.Background(), fileContent, metadata, headers)
+```
+
+## Additional Information
 
 ### Errors
 
