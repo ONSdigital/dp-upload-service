@@ -78,7 +78,6 @@ func (cli *Client) Upload(ctx context.Context, fileContent io.ReadCloser, metada
 func createUploadRequestBody(chunkInfo ChunkInfo, fileContent io.ReadCloser, metadata api.Metadata) (*bytes.Buffer, string, error) {
 	reqBuff := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(reqBuff)
-	defer formWriter.Close()
 
 	contentChunk, contentChunkLength, err := chunkReader(fileContent)
 	if err != nil {
@@ -92,6 +91,10 @@ func createUploadRequestBody(chunkInfo ChunkInfo, fileContent io.ReadCloser, met
 
 	_, err = writeFileFormField(formWriter, contentChunk, contentChunkLength, filepath.Base(metadata.Path))
 	if err != nil {
+		return nil, "", err
+	}
+
+	if err := formWriter.Close(); err != nil {
 		return nil, "", err
 	}
 
@@ -132,7 +135,7 @@ func writeMetadataFormFields(formWriter *multipart.Writer, metadata api.Metadata
 
 	formFields := map[string]string{
 		"path":                 metadata.Path,
-		"isPublishable":        strconv.FormatBool(*metadata.IsPublishable), // no nil check as this is a required field as defined in api.Metadata
+		"isPublishable":        strconv.FormatBool(*metadata.IsPublishable),
 		"title":                metadata.Title,
 		"licence":              metadata.Licence,
 		"licenceUrl":           metadata.LicenceUrl,
@@ -141,6 +144,16 @@ func writeMetadataFormFields(formWriter *multipart.Writer, metadata api.Metadata
 		"resumableChunkNumber": fmt.Sprintf("%d", chunkInfo.Current),
 		"resumableTotalChunks": fmt.Sprintf("%d", chunkInfo.Total),
 		"resumableFilename":    filepath.Base(metadata.Path),
+	}
+
+	if metadata.DatasetID != "" {
+		formFields["datasetId"] = metadata.DatasetID
+	}
+	if metadata.Edition != "" {
+		formFields["edition"] = metadata.Edition
+	}
+	if metadata.Version != "" {
+		formFields["version"] = metadata.Version
 	}
 
 	for field, value := range formFields {

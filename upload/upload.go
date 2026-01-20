@@ -125,7 +125,11 @@ func (u *Uploader) Upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	defer content.Close()
+	defer func() {
+		if err := content.Close(); err != nil {
+			log.Error(req.Context(), "error closing file", err)
+		}
+	}()
 
 	payload, err := io.ReadAll(content)
 	if err != nil {

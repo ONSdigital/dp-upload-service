@@ -143,5 +143,62 @@ Feature: Uploading a file
         """
         {"errors":[{"code":"DuplicateFile","description":"resource conflict: file already registered"}]}
         """
+      
+    Scenario: File upload with dataset information
+      Given dp-files-api does not have a file "/data/cpih-data.csv" registered
+      And the file meta-data is:
+        | isPublishable      | true                                                                      |
+        | collectionId       | 1234-asdfg-54321-qwerty                                                   |
+        | title              | CPIH Dataset                                                              |
+        | resumableTotalSize | 14794                                                                     |
+        | licence            | OGL v3                                                                    |
+        | licenceUrl         | http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ |
+        | datasetId          | cpih01                                                                    |
+        | edition            | time-series                                                               |
+        | version            | 1                                                                         |
+      And the data file "cpih-data.csv" with content:
+          """
+          date,value
+          2024-01,105.2
+          2024-02,105.8
+          """
+      When I upload the file "test-data/cpih-data.csv" with the following form resumable parameters:
+        | resumableFilename    | cpih-data.csv      |
+        | resumableType        | text/csv           |
+        | resumableTotalChunks | 1                  |
+        | resumableChunkNumber | 1                  |
+        | path                 | data               |
+      Then the HTTP status code should be "201"
+      And the path "/data/cpih-data.csv" should be available in the S3 bucket:
+          """
+          date,value
+          2024-01,105.2
+          2024-02,105.8
+          """
+      And the file upload should be marked as started using payload:
+          """
+          {
+            "path": "data/cpih-data.csv",
+            "is_publishable": true,
+            "collection_id": "1234-asdfg-54321-qwerty",
+            "title": "CPIH Dataset",
+            "size_in_bytes": 14794,
+            "type": "text/csv",
+            "licence": "OGL v3",
+            "licence_url": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+            "content_item": {
+              "dataset_id": "cpih01",
+              "edition": "time-series",
+              "version": "1"
+            }
+          }
+          """
+      And the file "data/cpih-data.csv" should be marked as uploaded using payload:
+          """
+          {
+            "state": "UPLOADED",
+            "etag": "32204b5b34cd2e635d6d69a443916584-1"
+          }
+          """
 
 

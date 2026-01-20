@@ -18,7 +18,7 @@ import (
 	"github.com/ONSdigital/dp-upload-service/api"
 )
 
-var stubStoreFunction = func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, c []byte) (bool, error) {
+var stubStoreFunction = func(ctx context.Context, uf files.FileMetadataWithContentItem, r files.Resumable, c []byte) (bool, error) {
 	return false, nil
 }
 
@@ -38,7 +38,7 @@ func (suite *UploadTestSuite) SetupTest() {
 	rec = httptest.NewRecorder()
 }
 
-func (s UploadTestSuite) TestJsonProvidedRatherThanMultiPartForm() {
+func (s *UploadTestSuite) TestJsonProvidedRatherThanMultiPartForm() {
 	req, _ := http.NewRequest(http.MethodPost, UploadURI, bytes.NewBufferString(`{"key": "value"}`))
 
 	h := api.CreateV1UploadHandler(stubStoreFunction)
@@ -49,7 +49,7 @@ func (s UploadTestSuite) TestJsonProvidedRatherThanMultiPartForm() {
 	s.Contains(string(response), "ParsingForm")
 }
 
-func (s UploadTestSuite) TestFailureToWriteErrorToResponse() {
+func (s *UploadTestSuite) TestFailureToWriteErrorToResponse() {
 	rec := &ErrorWriter{}
 	req, _ := http.NewRequest(http.MethodPost, UploadURI, bytes.NewBufferString(`{"key": "value"}`))
 
@@ -80,7 +80,7 @@ func (s UploadTestSuite) TestRequiredFields() {
 	s.Contains(string(response), "LicenceUrl required")
 }
 
-func (s UploadTestSuite) TestPathValid() {
+func (s *UploadTestSuite) TestPathValid() {
 	b, formWriter := generateFormWriter("\\x")
 	formWriter.Close()
 
@@ -93,7 +93,7 @@ func (s UploadTestSuite) TestPathValid() {
 	s.Contains(string(response), "Path aws-upload-key")
 }
 
-func (s UploadTestSuite) TestIsPublishableSetToFalseInNotARequireFailure() {
+func (s *UploadTestSuite) TestIsPublishableSetToFalseInNotARequireFailure() {
 	b, formWriter := generateFormWriter("valid")
 	formWriter.Close()
 
@@ -105,7 +105,7 @@ func (s UploadTestSuite) TestIsPublishableSetToFalseInNotARequireFailure() {
 	s.NotContains(string(response), "IsPublishable required")
 }
 
-func (s UploadTestSuite) TestFileWasSupplied() {
+func (s *UploadTestSuite) TestFileWasSupplied() {
 	b, formWriter := generateFormWriter("valid")
 	formWriter.Close()
 
@@ -118,7 +118,7 @@ func (s UploadTestSuite) TestFileWasSupplied() {
 	s.Contains(string(response), "FileForm")
 }
 
-func (s UploadTestSuite) TestFileWasSuppliedWithBundleId() {
+func (s *UploadTestSuite) TestFileWasSuppliedWithBundleId() {
 	b, formWriter := generateFormWriterWithBundleId("valid")
 	formWriter.Close()
 
@@ -131,10 +131,10 @@ func (s UploadTestSuite) TestFileWasSuppliedWithBundleId() {
 	s.Contains(string(response), "FileForm")
 }
 
-func (s UploadTestSuite) TestSuccessfulStorageOfCompleteFileReturns201() {
+func (s *UploadTestSuite) TestSuccessfulStorageOfCompleteFileReturns201() {
 	payload := "TEST DATA"
 	funcCalled := false
-	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf files.FileMetadataWithContentItem, r files.Resumable, fileContent []byte) (bool, error) {
 		funcCalled = true
 		s.Equal(payload, string(fileContent))
 		return true, nil
@@ -153,9 +153,9 @@ func (s UploadTestSuite) TestSuccessfulStorageOfCompleteFileReturns201() {
 	s.True(funcCalled)
 }
 
-func (s UploadTestSuite) TestChunkTooSmallReturns400() {
+func (s *UploadTestSuite) TestChunkTooSmallReturns400() {
 	payload := "TEST DATA"
-	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
+	st := func(ctx context.Context, uf files.FileMetadataWithContentItem, r files.Resumable, fileContent []byte) (bool, error) {
 		return true, files.ErrChunkTooSmall
 	}
 
@@ -174,8 +174,8 @@ func (s UploadTestSuite) TestChunkTooSmallReturns400() {
 	s.Equal(http.StatusBadRequest, rec.Code)
 }
 
-func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
-	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
+func (s *UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
+	st := func(ctx context.Context, uf files.FileMetadataWithContentItem, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, filesAPI.ErrFileAlreadyRegistered
 	}
 
@@ -192,8 +192,8 @@ func (s UploadTestSuite) TestFilePathExistsInFilesAPIReturns409() {
 	s.Contains(string(response), "DuplicateFile")
 }
 
-func (s UploadTestSuite) TestInvalidContentReturns500() {
-	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
+func (s *UploadTestSuite) TestInvalidContentReturns500() {
+	st := func(ctx context.Context, uf files.FileMetadataWithContentItem, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFileAPICreateInvalidData
 	}
 
@@ -210,8 +210,8 @@ func (s UploadTestSuite) TestInvalidContentReturns500() {
 	s.Contains(string(response), "RemoteValidationError")
 }
 
-func (s UploadTestSuite) TestServerErrorReturns500() {
-	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
+func (s *UploadTestSuite) TestServerErrorReturns500() {
+	st := func(ctx context.Context, uf files.FileMetadataWithContentItem, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFilesServer
 	}
 
@@ -228,8 +228,8 @@ func (s UploadTestSuite) TestServerErrorReturns500() {
 	s.Contains(string(response), "RemoteServerError")
 }
 
-func (s UploadTestSuite) TestFileUnathorisedErrorReturnsForbidden() {
-	st := func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, fileContent []byte) (bool, error) {
+func (s *UploadTestSuite) TestFileUnathorisedErrorReturnsForbidden() {
+	st := func(ctx context.Context, uf files.FileMetadataWithContentItem, r files.Resumable, fileContent []byte) (bool, error) {
 		return false, files.ErrFilesUnauthorised
 	}
 
@@ -244,6 +244,61 @@ func (s UploadTestSuite) TestFileUnathorisedErrorReturnsForbidden() {
 	s.Equal(http.StatusForbidden, rec.Code)
 	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "Unauthorised")
+}
+
+func (s *UploadTestSuite) TestDatasetFieldsMappedToContentItem() {
+	var capturedMetadata files.FileMetadataWithContentItem
+	st := func(ctx context.Context, uf files.FileMetadataWithContentItem, r files.Resumable, fileContent []byte) (bool, error) {
+		capturedMetadata = uf
+		return true, nil
+	}
+
+	b := &bytes.Buffer{}
+	formWriter := multipart.NewWriter(b)
+	formWriter.WriteField("resumableFilename", "file.csv")
+	formWriter.WriteField("path", "valid")
+	formWriter.WriteField("isPublishable", "false")
+	formWriter.WriteField("collectionId", "1234567890")
+	formWriter.WriteField("title", "A New File")
+	formWriter.WriteField("resumableTotalSize", "1478")
+	formWriter.WriteField("resumableType", "text/csv")
+	formWriter.WriteField("licence", "OGL v3")
+	formWriter.WriteField("licenceUrl", "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/")
+	formWriter.WriteField("datasetId", "cpih01")
+	formWriter.WriteField("edition", "time-series")
+	formWriter.WriteField("version", "1")
+
+	part, _ := formWriter.CreateFormFile("file", "testing.csv")
+	part.Write([]byte("TEST DATA"))
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(st)
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusCreated, rec.Code)
+	s.NotNil(capturedMetadata.ContentItem)
+	s.Equal("cpih01", capturedMetadata.ContentItem.DatasetID)
+	s.Equal("time-series", capturedMetadata.ContentItem.Edition)
+	s.Equal("1", capturedMetadata.ContentItem.Version)
+}
+
+func (s *UploadTestSuite) TestContentItemNilWhenDatasetFieldsNotProvided() {
+	var capturedMetadata files.FileMetadataWithContentItem
+	st := func(ctx context.Context, uf files.FileMetadataWithContentItem, r files.Resumable, fileContent []byte) (bool, error) {
+		capturedMetadata = uf
+		return true, nil
+	}
+
+	b, formWriter := generateFormWriter("valid")
+	part, _ := formWriter.CreateFormFile("file", "testing.csv")
+	part.Write([]byte("TEST DATA"))
+	formWriter.Close()
+
+	h := api.CreateV1UploadHandler(st)
+	h.ServeHTTP(rec, generateRequest(b, formWriter))
+
+	s.Equal(http.StatusCreated, rec.Code)
+	s.Nil(capturedMetadata.ContentItem)
 }
 
 func generateFormWriter(path string) (*bytes.Buffer, *multipart.Writer) {

@@ -31,9 +31,12 @@ type Metadata struct {
 	Type          string  `schema:"resumableType" validate:"required"`
 	Licence       string  `schema:"licence" validate:"required"`
 	LicenceUrl    string  `schema:"licenceUrl" validate:"required"`
+	DatasetID     string  `schema:"datasetId"`
+	Edition       string  `schema:"edition"`
+	Version       string  `schema:"version"`
 }
 
-type StoreFile func(ctx context.Context, uf filesAPI.FileMetaData, r files.Resumable, content []byte) (bool, error)
+type StoreFile func(ctx context.Context, uf files.FileMetadataWithContentItem, r files.Resumable, content []byte) (bool, error)
 
 func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -77,7 +80,11 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			writeError(w, buildErrors(err, "FileForm"), http.StatusBadRequest)
 			return
 		}
-		defer content.Close()
+		defer func() {
+			if err := content.Close(); err != nil {
+				log.Error(augmentedContext, "error closing file", err)
+			}
+		}()
 
 		payload, err := io.ReadAll(content)
 		if err != nil {
@@ -124,16 +131,28 @@ func getResponseStatus(allPartsUploaded bool) int {
 	return http.StatusOK
 }
 
-func getStoreMetadata(metadata Metadata, resumable files.Resumable) filesAPI.FileMetaData {
-	return filesAPI.FileMetaData{
-		Path:          fmt.Sprintf("%s/%s", metadata.Path, resumable.FileName),
-		IsPublishable: *metadata.IsPublishable,
-		CollectionID:  metadata.CollectionId,
-		BundleID:      metadata.BundleId,
-		Title:         metadata.Title,
-		SizeInBytes:   uint64(metadata.SizeInBytes),
-		Type:          metadata.Type,
-		Licence:       metadata.Licence,
-		LicenceUrl:    metadata.LicenceUrl,
+func getStoreMetadata(metadata Metadata, resumable files.Resumable) files.FileMetadataWithContentItem {
+	req := files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{
+			Path:          fmt.Sprintf("%s/%s", metadata.Path, resumable.FileName),
+			IsPublishable: *metadata.IsPublishable,
+			CollectionID:  metadata.CollectionId,
+			BundleID:      metadata.BundleId,
+			Title:         metadata.Title,
+			SizeInBytes:   uint64(metadata.SizeInBytes),
+			Type:          metadata.Type,
+			Licence:       metadata.Licence,
+			LicenceUrl:    metadata.LicenceUrl,
+		},
 	}
+
+	if metadata.DatasetID != "" || metadata.Edition != "" || metadata.Version != "" {
+		req.ContentItem = &files.ContentItem{
+			DatasetID: metadata.DatasetID,
+			Edition:   metadata.Edition,
+			Version:   metadata.Version,
+		}
+	}
+
+	return req
 }

@@ -3,9 +3,12 @@ package files
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 
-	"github.com/ONSdigital/dp-api-clients-go/v2/files"
+	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
+	filesAPITypes "github.com/ONSdigital/dp-files-api/files"
+	filesSDK "github.com/ONSdigital/dp-files-api/sdk"
 	s3client "github.com/ONSdigital/dp-s3/v3"
 	"github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/config"
@@ -26,10 +29,23 @@ var (
 	ErrFilesUnauthorised        = errors.New("access unauthorised")
 )
 
+// FileMetadataWithContentItem extends the files API metadata with content_item
+type FileMetadataWithContentItem struct {
+	filesAPI.FileMetaData
+	ContentItem *ContentItem `json:"content_item,omitempty"`
+}
+
+type ContentItem struct {
+	DatasetID string `json:"dataset_id"`
+	Edition   string `json:"edition"`
+	Version   string `json:"version"`
+}
+
 type FilesClienter interface {
-	GetFile(ctx context.Context, path string, authToken string) (files.FileMetaData, error)
-	RegisterFile(ctx context.Context, metadata files.FileMetaData) error
-	MarkFileUploaded(ctx context.Context, path string, etag string) error
+	GetFile(ctx context.Context, path string, headers filesSDK.Headers) (*filesAPITypes.StoredRegisteredMetaData, error)
+	RegisterFile(ctx context.Context, metadata filesAPITypes.StoredRegisteredMetaData, headers filesSDK.Headers) error
+	MarkFilePublished(ctx context.Context, path string, headers filesSDK.Headers) error
+	MarkFileUploaded(ctx context.Context, path string, etag string, headers filesSDK.Headers) error
 }
 
 type Store struct {
@@ -51,8 +67,8 @@ type StatusMessage struct {
 }
 
 type Status struct {
-	Metadata    files.FileMetaData `json:"metadata"`
-	FileContent StatusMessage      `json:"file_content"`
+	Metadata    filesAPITypes.FileMetaData `json:"metadata"`
+	FileContent StatusMessage              `json:"file_content"`
 }
 
 func NewStore(files FilesClienter, bucket *aws.Bucket, cfg *config.Config) Store {
@@ -60,11 +76,28 @@ func NewStore(files FilesClienter, bucket *aws.Bucket, cfg *config.Config) Store
 }
 
 func (s Store) Status(ctx context.Context, path string) (*Status, error) {
+	headers := filesSDK.Headers{
+		Authorization: s.cfg.ServiceAuthToken,
+	}
+
 	//metadata
-	metadata, err := s.files.GetFile(ctx, path, s.cfg.ServiceAuthToken)
+	storedMetadata, err := s.files.GetFile(ctx, path, headers)
 	if err != nil {
 		log.Error(ctx, "failed to get file metadata", err, log.Data{"path": path})
 		return nil, ErrFilesAPINotFound
+	}
+
+	metadata := filesAPITypes.FileMetaData{
+		Path:          storedMetadata.Path,
+		IsPublishable: storedMetadata.IsPublishable,
+		CollectionID:  storedMetadata.CollectionID,
+		Title:         storedMetadata.Title,
+		SizeInBytes:   storedMetadata.SizeInBytes,
+		Type:          storedMetadata.Type,
+		Licence:       storedMetadata.Licence,
+		LicenceURL:    storedMetadata.LicenceURL,
+		State:         storedMetadata.State,
+		Etag:          storedMetadata.Etag,
 	}
 
 	//file content
@@ -77,8 +110,58 @@ func (s Store) Status(ctx context.Context, path string) (*Status, error) {
 	}, nil
 }
 
-func (s Store) UploadFile(ctx context.Context, metadata files.FileMetaData, resumable Resumable, content []byte) (bool, error) {
-	part := generateUploadPart(metadata, resumable)
+// registerFileWithContentItem uses the dp-files-api SDK to register file with content_item
+func (s Store) registerFileWithContentItem(ctx context.Context, metadata FileMetadataWithContentItem) error {
+	var contentItem *filesAPITypes.StoredContentItem
+	if metadata.ContentItem != nil {
+		contentItem = &filesAPITypes.StoredContentItem{
+			DatasetID: metadata.ContentItem.DatasetID,
+			Edition:   metadata.ContentItem.Edition,
+			Version:   metadata.ContentItem.Version,
+		}
+	}
+
+	storedMetadata := filesAPITypes.StoredRegisteredMetaData{
+		Path:          metadata.Path,
+		IsPublishable: metadata.IsPublishable,
+		CollectionID:  metadata.CollectionID,
+		BundleID:      metadata.BundleID,
+		Title:         metadata.Title,
+		SizeInBytes:   metadata.SizeInBytes,
+		Type:          metadata.Type,
+		Licence:       metadata.Licence,
+		LicenceURL:    metadata.LicenceUrl,
+		ContentItem:   contentItem,
+	}
+
+	headers := filesSDK.Headers{
+		Authorization: s.cfg.ServiceAuthToken,
+	}
+
+	err := s.files.RegisterFile(ctx, storedMetadata, headers)
+
+	if err != nil {
+		if apiErr, ok := err.(*filesSDK.APIError); ok {
+			switch apiErr.StatusCode {
+			case http.StatusConflict:
+				return filesAPI.ErrFileAlreadyRegistered
+			case http.StatusBadRequest:
+				return ErrFileAPICreateInvalidData
+			case http.StatusForbidden:
+				return ErrFilesUnauthorised
+			case http.StatusInternalServerError:
+				return ErrFilesServer
+			}
+		}
+	}
+
+	return err
+}
+
+func (s Store) UploadFile(ctx context.Context, metadata FileMetadataWithContentItem, resumable Resumable, content []byte) (bool, error) {
+	baseMetadata := metadata.FileMetaData
+
+	part := generateUploadPart(baseMetadata, resumable)
 	response, err := s.bucket.UploadPart(ctx, part, content)
 	if err != nil {
 		log.Error(ctx, "failed to write chunk to s3", err, log.Data{"s3-upload-part": part})
@@ -89,29 +172,31 @@ func (s Store) UploadFile(ctx context.Context, metadata files.FileMetaData, resu
 	}
 
 	if response.AllPartsUploaded {
-		var err error
-		if err = s.files.RegisterFile(ctx, metadata); err != nil {
+		if err = s.registerFileWithContentItem(ctx, metadata); err != nil {
 			log.Error(ctx, "failed to register file metadata with dp-files-api", err, log.Data{"metadata": metadata})
 			return false, err
 		}
 
-		head, err := s.bucket.Head(ctx, metadata.Path)
+		head, err := s.bucket.Head(ctx, baseMetadata.Path)
 		if err != nil {
-			log.Error(ctx, "failed to get completed file info from s3", err, log.Data{"key": metadata.Path})
+			log.Error(ctx, "failed to get completed file info from s3", err, log.Data{"key": baseMetadata.Path})
 			return false, ErrS3Head
 		}
 		if head.ETag == nil {
-			log.Error(ctx, "failed to get completed file etag from s3", err, log.Data{"key": metadata.Path})
+			log.Error(ctx, "failed to get completed file etag from s3", err, log.Data{"key": baseMetadata.Path})
 			return false, ErrS3Head
 		}
 
-		return true, s.files.MarkFileUploaded(ctx, metadata.Path, strings.Trim(*head.ETag, "\""))
+		headers := filesSDK.Headers{
+			Authorization: s.cfg.ServiceAuthToken,
+		}
+		return true, s.files.MarkFileUploaded(ctx, baseMetadata.Path, strings.Trim(*head.ETag, "\""), headers)
 	}
 
 	return false, nil
 }
 
-func generateUploadPart(metadata files.FileMetaData, resumable Resumable) *s3client.UploadPartRequest {
+func generateUploadPart(metadata filesAPI.FileMetaData, resumable Resumable) *s3client.UploadPartRequest {
 	return &s3client.UploadPartRequest{
 		UploadKey:   metadata.Path,
 		Type:        resumable.Type,

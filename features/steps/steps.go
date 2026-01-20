@@ -60,7 +60,11 @@ func (c *UploadComponent) theDataFile(filename string, fileContent *godog.DocStr
 		return errors.New(fmt.Sprintf("Cannot create file: %s", err.Error()))
 	}
 
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to close file: %v\n", err)
+		}
+	}()
 
 	_, err = file.Write([]byte(fileContent.Content))
 	if err != nil {
@@ -84,7 +88,9 @@ func (c *UploadComponent) dpfilesapiDoesNotHaveAFileRegistered(filename string) 
 		}
 	}))
 
-	os.Setenv("FILES_API_URL", s.URL)
+	if err := os.Setenv("FILES_API_URL", s.URL); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -97,7 +103,8 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 			if strings.Contains(string(body), expectedPath) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusConflict)
-				w.Write([]byte(`{"errors":[{"errorCode":"DuplicateFileError","description":"file already registered"}]}`))
+				_, _ = w.Write([]byte(`{"errors":[{"errorCode":"DuplicateFileError","description":"file already registered"}]}`))
+
 				return
 			}
 			w.WriteHeader(http.StatusCreated)
@@ -109,7 +116,7 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 			if strings.HasSuffix(r.URL.Path, expectedPath) {
 				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
-				w.Write([]byte(jsonResponse.Content))
+				_, _ = w.Write([]byte(jsonResponse.Content))
 				return
 			}
 		}
@@ -117,7 +124,7 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 		if strings.HasSuffix(r.URL.Path, "/valid") {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(jsonResponse.Content))
+			_, _ = w.Write([]byte(jsonResponse.Content))
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -136,7 +143,9 @@ func (c *UploadComponent) dpfilesapiHasAFileWithPathAndFilenameRegisteredWithMet
 		FileName:    filename,
 	}, []byte("content"))
 
-	os.Setenv("FILES_API_URL", s.URL)
+	if err := os.Setenv("FILES_API_URL", s.URL); err != nil {
+		return err
+	}
 
 	return err
 }
@@ -156,7 +165,9 @@ func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParameters(
 	formWriter := multipart.NewWriter(b)
 
 	for key, value := range c.fileMetadata {
-		formWriter.WriteField(key, value)
+		if err := formWriter.WriteField(key, value); err != nil {
+			return err
+		}
 	}
 
 	part, _ := formWriter.CreateFormFile("file", filename)
@@ -175,16 +186,24 @@ func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParameters(
 	if total > 1 {
 		if current == 1 {
 			b := testPayload[:(5 * 1024 * 1024)]
-			part.Write(b)
+			if _, err := part.Write(b); err != nil {
+				return err
+			}
 		} else if total > 1 {
 			b := testPayload[(5 * 1024 * 1024):]
-			part.Write(b)
+			if _, err := part.Write(b); err != nil {
+				return err
+			}
 		}
 	} else {
-		part.Write(testPayload)
+		if _, err := part.Write(testPayload); err != nil {
+			return err
+		}
 	}
 
-	formWriter.Close()
+	if err := formWriter.Close(); err != nil {
+		return err
+	}
 
 	handler, err := c.ApiFeature.Initialiser()
 	if err != nil {
@@ -211,7 +230,9 @@ func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParametersA
 	formWriter := multipart.NewWriter(b)
 
 	for key, value := range c.fileMetadata {
-		formWriter.WriteField(key, value)
+		if err := formWriter.WriteField(key, value); err != nil {
+			return err
+		}
 	}
 
 	part, _ := formWriter.CreateFormFile("file", filename)
@@ -230,16 +251,24 @@ func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParametersA
 	if total > 1 {
 		if current == 1 {
 			b := testPayload[:(5 * 1024 * 1024)]
-			part.Write(b)
+			if _, err := part.Write(b); err != nil {
+				return err
+			}
 		} else if total > 1 {
 			b := testPayload[(5 * 1024 * 1024):]
-			part.Write(b)
+			if _, err := part.Write(b); err != nil {
+				return err
+			}
 		}
 	} else {
-		part.Write(testPayload)
+		if _, err := part.Write(testPayload); err != nil {
+			return err
+		}
 	}
 
-	formWriter.Close()
+	if err := formWriter.Close(); err != nil {
+		return err
+	}
 
 	handler, err := c.ApiFeature.Initialiser()
 	if err != nil {
@@ -254,50 +283,6 @@ func (c *UploadComponent) iUploadTheFileWithTheFollowingFormResumableParametersA
 		q.Add(key, value)
 	}
 	req.URL.RawQuery = q.Encode()
-
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	c.ApiFeature.HTTPResponse = w.Result()
-
-	return nil
-}
-
-// deprecated
-func (c *UploadComponent) iUploadTheFileWithMetaData(filename string, table *godog.Table) error {
-	b := &bytes.Buffer{}
-	formWriter := multipart.NewWriter(b)
-
-	assist := assistdog.NewDefault()
-	data, err := assist.ParseMap(table)
-	for key, value := range data {
-		formWriter.WriteField(key, value)
-	}
-
-	part, err := formWriter.CreateFormFile("file", filename)
-	if err != nil {
-		return err
-	}
-
-	testPayload, err := os.ReadFile(fmt.Sprintf("%s/%s", testFilePath, filename))
-	if err != nil {
-		return err
-	}
-
-	if _, err = part.Write(testPayload); err != nil {
-		return err
-	}
-	err = formWriter.Close()
-	if err != nil {
-		return err
-	}
-
-	handler, err := c.ApiFeature.Initialiser()
-	if err != nil {
-		return err
-	}
-	req := httptest.NewRequest(http.MethodPost, "http://foo/upload-new", b)
-	req.Header.Set("Content-Type", formWriter.FormDataContentType())
 
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)

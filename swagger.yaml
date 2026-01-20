@@ -276,6 +276,21 @@ paths:
           description: The total size of the file in bytes
           required: true
           type: integer
+        - in: formData
+          name: datasetId
+          description: The dataset ID that the file relates to
+          required: true
+          type: string
+        - in: formData
+          name: edition
+          description: The edition that the file relates to
+          required: true
+          type: string
+        - in: formData
+          name: version
+          description: The version that the file relates to
+          required: true
+          type: string
       produces:
         - application/json
       responses:

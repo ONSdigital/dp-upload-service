@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
+	filesSDK "github.com/ONSdigital/dp-files-api/sdk"
 	"github.com/ONSdigital/dp-upload-service/api"
 	"github.com/ONSdigital/dp-upload-service/aws"
 	"github.com/ONSdigital/dp-upload-service/config"
@@ -89,7 +89,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	r.Path("/upload/{id}").Methods(http.MethodGet).HandlerFunc(uploader.GetS3URL)
 
 	// v1 DO NOT USE IN PRODUCTION YET!
-	filesAPIClient := filesAPI.NewAPIClient(cfg.FilesAPIURL, cfg.ServiceAuthToken)
+	filesAPIClient := filesSDK.New(cfg.FilesAPIURL)
 	store := files.NewStore(filesAPIClient, staticBucket, cfg)
 	r.Path("/upload-new").Methods(http.MethodPost).HandlerFunc(api.CreateV1UploadHandler(store.UploadFile))
 	r.Path("/upload-new/files/{path:.*?}/status").Methods(http.MethodGet).HandlerFunc(api.StatusHandler(store))

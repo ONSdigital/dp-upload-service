@@ -5,45 +5,52 @@ package mock_files
 
 import (
 	"context"
-	v2files "github.com/ONSdigital/dp-api-clients-go/v2/files"
-	dpuploadservicefiles "github.com/ONSdigital/dp-upload-service/files"
+	filesAPITypes "github.com/ONSdigital/dp-files-api/files"
+	filesSDK "github.com/ONSdigital/dp-files-api/sdk"
+	"github.com/ONSdigital/dp-upload-service/files"
 	"sync"
 )
 
-// Ensure, that FilesClienterMock does implement dpuploadservicefiles.FilesClienter.
+// Ensure, that FilesClienterMock does implement files.FilesClienter.
 // If this is not the case, regenerate this file with moq.
-var _ dpuploadservicefiles.FilesClienter = &FilesClienterMock{}
+var _ files.FilesClienter = &FilesClienterMock{}
 
-// FilesClienterMock is a mock implementation of dpuploadservicefiles.FilesClienter.
+// FilesClienterMock is a mock implementation of files.FilesClienter.
 //
 //	func TestSomethingThatUsesFilesClienter(t *testing.T) {
 //
-//		// make and configure a mocked dpuploadservicefiles.FilesClienter
+//		// make and configure a mocked files.FilesClienter
 //		mockedFilesClienter := &FilesClienterMock{
-//			GetFileFunc: func(ctx context.Context, path string, authToken string) (v2files.FileMetaData, error) {
+//			GetFileFunc: func(ctx context.Context, path string, headers filesSDK.Headers) (*filesAPITypes.StoredRegisteredMetaData, error) {
 //				panic("mock out the GetFile method")
 //			},
-//			MarkFileUploadedFunc: func(ctx context.Context, path string, etag string) error {
+//			MarkFilePublishedFunc: func(ctx context.Context, path string, headers filesSDK.Headers) error {
+//				panic("mock out the MarkFilePublished method")
+//			},
+//			MarkFileUploadedFunc: func(ctx context.Context, path string, etag string, headers filesSDK.Headers) error {
 //				panic("mock out the MarkFileUploaded method")
 //			},
-//			RegisterFileFunc: func(ctx context.Context, metadata v2files.FileMetaData) error {
+//			RegisterFileFunc: func(ctx context.Context, metadata filesAPITypes.StoredRegisteredMetaData, headers filesSDK.Headers) error {
 //				panic("mock out the RegisterFile method")
 //			},
 //		}
 //
-//		// use mockedFilesClienter in code that requires dpuploadservicefiles.FilesClienter
+//		// use mockedFilesClienter in code that requires files.FilesClienter
 //		// and then make assertions.
 //
 //	}
 type FilesClienterMock struct {
 	// GetFileFunc mocks the GetFile method.
-	GetFileFunc func(ctx context.Context, path string, authToken string) (v2files.FileMetaData, error)
+	GetFileFunc func(ctx context.Context, path string, headers filesSDK.Headers) (*filesAPITypes.StoredRegisteredMetaData, error)
+
+	// MarkFilePublishedFunc mocks the MarkFilePublished method.
+	MarkFilePublishedFunc func(ctx context.Context, path string, headers filesSDK.Headers) error
 
 	// MarkFileUploadedFunc mocks the MarkFileUploaded method.
-	MarkFileUploadedFunc func(ctx context.Context, path string, etag string) error
+	MarkFileUploadedFunc func(ctx context.Context, path string, etag string, headers filesSDK.Headers) error
 
 	// RegisterFileFunc mocks the RegisterFile method.
-	RegisterFileFunc func(ctx context.Context, metadata v2files.FileMetaData) error
+	RegisterFileFunc func(ctx context.Context, metadata filesAPITypes.StoredRegisteredMetaData, headers filesSDK.Headers) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -53,8 +60,17 @@ type FilesClienterMock struct {
 			Ctx context.Context
 			// Path is the path argument value.
 			Path string
-			// AuthToken is the authToken argument value.
-			AuthToken string
+			// Headers is the headers argument value.
+			Headers filesSDK.Headers
+		}
+		// MarkFilePublished holds details about calls to the MarkFilePublished method.
+		MarkFilePublished []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Path is the path argument value.
+			Path string
+			// Headers is the headers argument value.
+			Headers filesSDK.Headers
 		}
 		// MarkFileUploaded holds details about calls to the MarkFileUploaded method.
 		MarkFileUploaded []struct {
@@ -64,38 +80,43 @@ type FilesClienterMock struct {
 			Path string
 			// Etag is the etag argument value.
 			Etag string
+			// Headers is the headers argument value.
+			Headers filesSDK.Headers
 		}
 		// RegisterFile holds details about calls to the RegisterFile method.
 		RegisterFile []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 			// Metadata is the metadata argument value.
-			Metadata v2files.FileMetaData
+			Metadata filesAPITypes.StoredRegisteredMetaData
+			// Headers is the headers argument value.
+			Headers filesSDK.Headers
 		}
 	}
-	lockGetFile          sync.RWMutex
-	lockMarkFileUploaded sync.RWMutex
-	lockRegisterFile     sync.RWMutex
+	lockGetFile           sync.RWMutex
+	lockMarkFilePublished sync.RWMutex
+	lockMarkFileUploaded  sync.RWMutex
+	lockRegisterFile      sync.RWMutex
 }
 
 // GetFile calls GetFileFunc.
-func (mock *FilesClienterMock) GetFile(ctx context.Context, path string, authToken string) (v2files.FileMetaData, error) {
+func (mock *FilesClienterMock) GetFile(ctx context.Context, path string, headers filesSDK.Headers) (*filesAPITypes.StoredRegisteredMetaData, error) {
 	if mock.GetFileFunc == nil {
 		panic("FilesClienterMock.GetFileFunc: method is nil but FilesClienter.GetFile was just called")
 	}
 	callInfo := struct {
-		Ctx       context.Context
-		Path      string
-		AuthToken string
+		Ctx     context.Context
+		Path    string
+		Headers filesSDK.Headers
 	}{
-		Ctx:       ctx,
-		Path:      path,
-		AuthToken: authToken,
+		Ctx:     ctx,
+		Path:    path,
+		Headers: headers,
 	}
 	mock.lockGetFile.Lock()
 	mock.calls.GetFile = append(mock.calls.GetFile, callInfo)
 	mock.lockGetFile.Unlock()
-	return mock.GetFileFunc(ctx, path, authToken)
+	return mock.GetFileFunc(ctx, path, headers)
 }
 
 // GetFileCalls gets all the calls that were made to GetFile.
@@ -103,14 +124,14 @@ func (mock *FilesClienterMock) GetFile(ctx context.Context, path string, authTok
 //
 //	len(mockedFilesClienter.GetFileCalls())
 func (mock *FilesClienterMock) GetFileCalls() []struct {
-	Ctx       context.Context
-	Path      string
-	AuthToken string
+	Ctx     context.Context
+	Path    string
+	Headers filesSDK.Headers
 } {
 	var calls []struct {
-		Ctx       context.Context
-		Path      string
-		AuthToken string
+		Ctx     context.Context
+		Path    string
+		Headers filesSDK.Headers
 	}
 	mock.lockGetFile.RLock()
 	calls = mock.calls.GetFile
@@ -118,24 +139,66 @@ func (mock *FilesClienterMock) GetFileCalls() []struct {
 	return calls
 }
 
+// MarkFilePublished calls MarkFilePublishedFunc.
+func (mock *FilesClienterMock) MarkFilePublished(ctx context.Context, path string, headers filesSDK.Headers) error {
+	if mock.MarkFilePublishedFunc == nil {
+		panic("FilesClienterMock.MarkFilePublishedFunc: method is nil but FilesClienter.MarkFilePublished was just called")
+	}
+	callInfo := struct {
+		Ctx     context.Context
+		Path    string
+		Headers filesSDK.Headers
+	}{
+		Ctx:     ctx,
+		Path:    path,
+		Headers: headers,
+	}
+	mock.lockMarkFilePublished.Lock()
+	mock.calls.MarkFilePublished = append(mock.calls.MarkFilePublished, callInfo)
+	mock.lockMarkFilePublished.Unlock()
+	return mock.MarkFilePublishedFunc(ctx, path, headers)
+}
+
+// MarkFilePublishedCalls gets all the calls that were made to MarkFilePublished.
+// Check the length with:
+//
+//	len(mockedFilesClienter.MarkFilePublishedCalls())
+func (mock *FilesClienterMock) MarkFilePublishedCalls() []struct {
+	Ctx     context.Context
+	Path    string
+	Headers filesSDK.Headers
+} {
+	var calls []struct {
+		Ctx     context.Context
+		Path    string
+		Headers filesSDK.Headers
+	}
+	mock.lockMarkFilePublished.RLock()
+	calls = mock.calls.MarkFilePublished
+	mock.lockMarkFilePublished.RUnlock()
+	return calls
+}
+
 // MarkFileUploaded calls MarkFileUploadedFunc.
-func (mock *FilesClienterMock) MarkFileUploaded(ctx context.Context, path string, etag string) error {
+func (mock *FilesClienterMock) MarkFileUploaded(ctx context.Context, path string, etag string, headers filesSDK.Headers) error {
 	if mock.MarkFileUploadedFunc == nil {
 		panic("FilesClienterMock.MarkFileUploadedFunc: method is nil but FilesClienter.MarkFileUploaded was just called")
 	}
 	callInfo := struct {
-		Ctx  context.Context
-		Path string
-		Etag string
+		Ctx     context.Context
+		Path    string
+		Etag    string
+		Headers filesSDK.Headers
 	}{
-		Ctx:  ctx,
-		Path: path,
-		Etag: etag,
+		Ctx:     ctx,
+		Path:    path,
+		Etag:    etag,
+		Headers: headers,
 	}
 	mock.lockMarkFileUploaded.Lock()
 	mock.calls.MarkFileUploaded = append(mock.calls.MarkFileUploaded, callInfo)
 	mock.lockMarkFileUploaded.Unlock()
-	return mock.MarkFileUploadedFunc(ctx, path, etag)
+	return mock.MarkFileUploadedFunc(ctx, path, etag, headers)
 }
 
 // MarkFileUploadedCalls gets all the calls that were made to MarkFileUploaded.
@@ -143,14 +206,16 @@ func (mock *FilesClienterMock) MarkFileUploaded(ctx context.Context, path string
 //
 //	len(mockedFilesClienter.MarkFileUploadedCalls())
 func (mock *FilesClienterMock) MarkFileUploadedCalls() []struct {
-	Ctx  context.Context
-	Path string
-	Etag string
+	Ctx     context.Context
+	Path    string
+	Etag    string
+	Headers filesSDK.Headers
 } {
 	var calls []struct {
-		Ctx  context.Context
-		Path string
-		Etag string
+		Ctx     context.Context
+		Path    string
+		Etag    string
+		Headers filesSDK.Headers
 	}
 	mock.lockMarkFileUploaded.RLock()
 	calls = mock.calls.MarkFileUploaded
@@ -159,21 +224,23 @@ func (mock *FilesClienterMock) MarkFileUploadedCalls() []struct {
 }
 
 // RegisterFile calls RegisterFileFunc.
-func (mock *FilesClienterMock) RegisterFile(ctx context.Context, metadata v2files.FileMetaData) error {
+func (mock *FilesClienterMock) RegisterFile(ctx context.Context, metadata filesAPITypes.StoredRegisteredMetaData, headers filesSDK.Headers) error {
 	if mock.RegisterFileFunc == nil {
 		panic("FilesClienterMock.RegisterFileFunc: method is nil but FilesClienter.RegisterFile was just called")
 	}
 	callInfo := struct {
 		Ctx      context.Context
-		Metadata v2files.FileMetaData
+		Metadata filesAPITypes.StoredRegisteredMetaData
+		Headers  filesSDK.Headers
 	}{
 		Ctx:      ctx,
 		Metadata: metadata,
+		Headers:  headers,
 	}
 	mock.lockRegisterFile.Lock()
 	mock.calls.RegisterFile = append(mock.calls.RegisterFile, callInfo)
 	mock.lockRegisterFile.Unlock()
-	return mock.RegisterFileFunc(ctx, metadata)
+	return mock.RegisterFileFunc(ctx, metadata, headers)
 }
 
 // RegisterFileCalls gets all the calls that were made to RegisterFile.
@@ -182,11 +249,13 @@ func (mock *FilesClienterMock) RegisterFile(ctx context.Context, metadata v2file
 //	len(mockedFilesClienter.RegisterFileCalls())
 func (mock *FilesClienterMock) RegisterFileCalls() []struct {
 	Ctx      context.Context
-	Metadata v2files.FileMetaData
+	Metadata filesAPITypes.StoredRegisteredMetaData
+	Headers  filesSDK.Headers
 } {
 	var calls []struct {
 		Ctx      context.Context
-		Metadata v2files.FileMetaData
+		Metadata filesAPITypes.StoredRegisteredMetaData
+		Headers  filesSDK.Headers
 	}
 	mock.lockRegisterFile.RLock()
 	calls = mock.calls.RegisterFile

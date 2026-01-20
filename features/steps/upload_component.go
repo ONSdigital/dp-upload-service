@@ -78,7 +78,9 @@ func (c *UploadComponent) Reset() {
 	if err != nil {
 		panic("Failed to remove test-data")
 	}
-	os.Mkdir(testFilePath, 0755)
+	if err := os.Mkdir(testFilePath, 0755); err != nil {
+		panic(fmt.Sprintf("Failed to create test-data directory: %s", err.Error()))
+	}
 }
 
 func (c *UploadComponent) Close() error {

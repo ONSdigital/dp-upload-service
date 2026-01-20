@@ -18,7 +18,7 @@ func StatusHandler(store files.Store) http.HandlerFunc {
 		augmentedContext := context.WithValue(req.Context(), config.AuthContextKey, authHeaderValue)
 
 		path := mux.Vars(req)["path"]
-		status, err := store.Status(req.Context(), path)
+		status, err := store.Status(augmentedContext, path)
 		if err != nil {
 			log.Error(augmentedContext, "error getting status", err)
 			switch err {

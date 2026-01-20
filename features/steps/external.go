@@ -23,8 +23,8 @@ type external struct {
 }
 
 func (e external) DoGetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
-	e.Server.Server.Addr = bindAddr
-	e.Server.Server.Handler = router
+	e.Server.Addr = bindAddr
+	e.Server.Handler = router
 
 	return e.Server
 }

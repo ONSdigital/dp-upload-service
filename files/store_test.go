@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	filesAPI "github.com/ONSdigital/dp-api-clients-go/v2/files"
+	filesAPITypes "github.com/ONSdigital/dp-files-api/files"
+	filesSDK "github.com/ONSdigital/dp-files-api/sdk"
 	s3client "github.com/ONSdigital/dp-s3/v3"
 	mock_aws "github.com/ONSdigital/dp-upload-service/aws/mock"
 	"github.com/ONSdigital/dp-upload-service/files"
@@ -39,14 +41,14 @@ func TestStore(t *testing.T) {
 // beforeEach
 func (s *StoreSuite) SetupTest() {
 	s.mockFiles = &mock_files.FilesClienterMock{
-		RegisterFileFunc: func(ctx context.Context, metadata filesAPI.FileMetaData) error {
+		RegisterFileFunc: func(ctx context.Context, metadata filesAPITypes.StoredRegisteredMetaData, headers filesSDK.Headers) error {
 			return nil
 		},
-		MarkFileUploadedFunc: func(ctx context.Context, path string, etag string) error {
+		MarkFileUploadedFunc: func(ctx context.Context, path string, etag string, headers filesSDK.Headers) error {
 			return nil
 		},
-		GetFileFunc: func(ctx context.Context, path string, authToken string) (filesAPI.FileMetaData, error) {
-			return filesAPI.FileMetaData{Path: path}, nil
+		GetFileFunc: func(ctx context.Context, path string, headers filesSDK.Headers) (*filesAPITypes.StoredRegisteredMetaData, error) {
+			return &filesAPITypes.StoredRegisteredMetaData{Path: path}, nil
 		},
 	}
 
@@ -67,57 +69,67 @@ func (s *StoreSuite) SetupTest() {
 func (s *StoreSuite) TestFileUploadIsRegisteredWithFilesApi() {
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
 
-	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, content)
+	_, err := store.UploadFile(context.Background(), files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{},
+	}, firstResumable, content)
 	s.NoError(err)
 	s.Len(s.mockFiles.RegisterFileCalls(), 1)
 }
 
 func (s *StoreSuite) TestFileRegistrationFailsWithFilesApi() {
 	expectedError := errors.New("registration error")
-	s.mockFiles.RegisterFileFunc = func(ctx context.Context, metadata filesAPI.FileMetaData) error {
+	s.mockFiles.RegisterFileFunc = func(ctx context.Context, metadata filesAPITypes.StoredRegisteredMetaData, headers filesSDK.Headers) error {
 		return expectedError
 	}
 
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
 
-	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, firstResumable, content)
+	_, err := store.UploadFile(context.Background(), files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{},
+	}, firstResumable, content)
 	s.Equal(expectedError, err)
 }
 
-func (s StoreSuite) TestUploadPartReturnsAnError() {
+func (s *StoreSuite) TestUploadPartReturnsAnError() {
 	s.mockS3.UploadPartFunc = func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
 		return s3client.MultipartUploadResponse{}, s3client.NewError(errors.New("broken"), nil)
 	}
 
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
 
-	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	_, err := store.UploadFile(context.Background(), files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{},
+	}, lastResumable, content)
 	s.Equal(files.ErrS3Upload, err)
 }
 
-func (s StoreSuite) TestUploadChunkTooSmallReturnsErrChuckTooSmall() {
+func (s *StoreSuite) TestUploadChunkTooSmallReturnsErrChuckTooSmall() {
 	s.mockS3.UploadPartFunc = func(ctx context.Context, req *s3client.UploadPartRequest, payload []byte) (s3client.MultipartUploadResponse, error) {
 		return s3client.MultipartUploadResponse{}, s3client.NewChunkTooSmallError(errors.New("chunk size below minimum 5MB"), nil)
 	}
 
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
 
-	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	_, err := store.UploadFile(context.Background(), files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{},
+	}, lastResumable, content)
 	s.Equal(files.ErrChunkTooSmall, err)
 }
 
-func (s StoreSuite) TestHeadReturnsAnError() {
+func (s *StoreSuite) TestHeadReturnsAnError() {
 	s.mockS3.HeadFunc = func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
 		return nil, errors.New("head error")
 	}
 
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
 
-	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	_, err := store.UploadFile(context.Background(), files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{},
+	}, lastResumable, content)
 	s.ErrorIs(err, files.ErrS3Head)
 }
 
-func (s StoreSuite) TestHeadReturnsNoEtag() {
+func (s *StoreSuite) TestHeadReturnsNoEtag() {
 	s.mockS3.HeadFunc = func(ctx context.Context, key string) (*s3.HeadObjectOutput, error) {
 		size := int64(100)
 		return &s3.HeadObjectOutput{ContentLength: &size}, nil
@@ -125,29 +137,35 @@ func (s StoreSuite) TestHeadReturnsNoEtag() {
 
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
 
-	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	_, err := store.UploadFile(context.Background(), files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{},
+	}, lastResumable, content)
 	s.ErrorIs(err, files.ErrS3Head)
 }
 
-func (s StoreSuite) TestErrorMarkingAsUploaded() {
+func (s *StoreSuite) TestErrorMarkingAsUploaded() {
 	expectedError := errors.New("marking error")
-	s.mockFiles.MarkFileUploadedFunc = func(ctx context.Context, path string, etag string) error {
+	s.mockFiles.MarkFileUploadedFunc = func(ctx context.Context, path string, etag string, headers filesSDK.Headers) error {
 		return expectedError
 	}
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
 
-	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	_, err := store.UploadFile(context.Background(), files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{},
+	}, lastResumable, content)
 	s.Equal(expectedError, err)
 }
 
-func (s StoreSuite) TestMarkingAsUploadedAddsCorrectEtag() {
-	s.mockFiles.MarkFileUploadedFunc = func(ctx context.Context, path string, etag string) error {
+func (s *StoreSuite) TestMarkingAsUploadedAddsCorrectEtag() {
+	s.mockFiles.MarkFileUploadedFunc = func(ctx context.Context, path string, etag string, headers filesSDK.Headers) error {
 		s.Equal("head-object-etag", etag)
 		return nil
 	}
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
 
-	_, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	_, err := store.UploadFile(context.Background(), files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{},
+	}, lastResumable, content)
 	s.NoError(err)
 }
 
@@ -162,8 +180,8 @@ func (s *StoreSuite) TestStatusHappyPath() {
 }
 
 func (s *StoreSuite) TestStatusWhenErrorOnFilesAPIGetCall() {
-	s.mockFiles.GetFileFunc = func(ctx context.Context, path string, authToken string) (filesAPI.FileMetaData, error) {
-		return filesAPI.FileMetaData{}, errors.New("downstream error")
+	s.mockFiles.GetFileFunc = func(ctx context.Context, path string, headers filesSDK.Headers) (*filesAPITypes.StoredRegisteredMetaData, error) {
+		return nil, errors.New("downstream error")
 	}
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
 	_, err := store.Status(context.Background(), "invalid-path")
@@ -190,7 +208,9 @@ func (s *StoreSuite) TestNotAllPartsUploaded() {
 		return s3client.MultipartUploadResponse{Etag: "uploaded-part-etag", AllPartsUploaded: false}, nil
 	}
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
-	flag, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	flag, err := store.UploadFile(context.Background(), files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{},
+	}, lastResumable, content)
 	s.NoError(err)
 	s.False(flag)
 	s.Len(s.mockFiles.RegisterFileCalls(), 0)
@@ -203,10 +223,63 @@ func (s *StoreSuite) TestAllPartsUploaded() {
 		return s3client.MultipartUploadResponse{Etag: "uploaded-part-etag", AllPartsUploaded: true}, nil
 	}
 	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
-	flag, err := store.UploadFile(context.Background(), filesAPI.FileMetaData{}, lastResumable, content)
+	flag, err := store.UploadFile(context.Background(), files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{},
+	}, lastResumable, content)
 	s.NoError(err)
 	s.True(flag)
 	s.Len(s.mockFiles.RegisterFileCalls(), 1)
 	s.Len(s.mockS3.HeadCalls(), 1)
 	s.Len(s.mockFiles.MarkFileUploadedCalls(), 1)
+}
+
+func (s *StoreSuite) TestUploadFileWithContentItem() {
+	var capturedMetadata filesAPITypes.StoredRegisteredMetaData
+	s.mockFiles.RegisterFileFunc = func(ctx context.Context, metadata filesAPITypes.StoredRegisteredMetaData, headers filesSDK.Headers) error {
+		capturedMetadata = metadata
+		return nil
+	}
+
+	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
+
+	metadata := files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{
+			Path: "test/path",
+		},
+		ContentItem: &files.ContentItem{
+			DatasetID: "cpih01",
+			Edition:   "time-series",
+			Version:   "1",
+		},
+	}
+
+	_, err := store.UploadFile(context.Background(), metadata, lastResumable, content)
+
+	s.NoError(err)
+	s.NotNil(capturedMetadata.ContentItem)
+	s.Equal("cpih01", capturedMetadata.ContentItem.DatasetID)
+	s.Equal("time-series", capturedMetadata.ContentItem.Edition)
+	s.Equal("1", capturedMetadata.ContentItem.Version)
+}
+
+func (s *StoreSuite) TestUploadFileWithoutContentItem() {
+	var capturedMetadata filesAPITypes.StoredRegisteredMetaData
+	s.mockFiles.RegisterFileFunc = func(ctx context.Context, metadata filesAPITypes.StoredRegisteredMetaData, headers filesSDK.Headers) error {
+		capturedMetadata = metadata
+		return nil
+	}
+
+	store := files.NewStore(s.mockFiles, s.bucket, &config.Config{})
+
+	metadata := files.FileMetadataWithContentItem{
+		FileMetaData: filesAPI.FileMetaData{
+			Path: "test/path",
+		},
+		ContentItem: nil,
+	}
+
+	_, err := store.UploadFile(context.Background(), metadata, lastResumable, content)
+
+	s.NoError(err)
+	s.Nil(capturedMetadata.ContentItem)
 }
