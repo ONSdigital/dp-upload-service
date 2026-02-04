@@ -60,7 +60,7 @@ func (s *UploadTestSuite) TestFailureToWriteErrorToResponse() {
 	s.Equal(http.StatusInternalServerError, rec.status)
 }
 
-func (s UploadTestSuite) TestRequiredFields() {
+func (s *UploadTestSuite) TestRequiredFields() {
 	b := &bytes.Buffer{}
 	formWriter := multipart.NewWriter(b)
 	formWriter.Close()
@@ -241,7 +241,7 @@ func (s *UploadTestSuite) TestFileUnathorisedErrorReturnsForbidden() {
 	h := api.CreateV1UploadHandler(st)
 	h.ServeHTTP(rec, generateRequest(b, formWriter))
 
-	s.Equal(http.StatusForbidden, rec.Code)
+	s.Equal(http.StatusUnauthorized, rec.Code)
 	response, _ := io.ReadAll(rec.Body)
 	s.Contains(string(response), "Unauthorised")
 }

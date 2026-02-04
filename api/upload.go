@@ -105,7 +105,9 @@ func CreateV1UploadHandler(storeFile StoreFile) http.HandlerFunc {
 			case files.ErrFilesServer:
 				writeError(w, buildErrors(err, "RemoteServerError"), http.StatusInternalServerError)
 			case files.ErrFilesUnauthorised:
-				writeError(w, buildErrors(err, "Unauthorised"), http.StatusForbidden)
+				writeError(w, buildErrors(err, "Unauthorised"), http.StatusUnauthorized)
+			case files.ErrFilesForbidden:
+				writeError(w, buildErrors(err, "Forbidden"), http.StatusForbidden)
 			default:
 				writeError(w, buildErrors(err, "InternalError"), http.StatusInternalServerError)
 			}

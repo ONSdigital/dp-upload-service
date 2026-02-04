@@ -26,7 +26,8 @@ var (
 	ErrS3Head                   = errors.New("getting file info failed")
 	ErrChunkTooSmall            = errors.New("chunk size below minimum 5MB")
 	ErrFilesServer              = errors.New("file api returning internal server errors")
-	ErrFilesUnauthorised        = errors.New("access unauthorised")
+	ErrFilesUnauthorised        = errors.New("authentication required")
+	ErrFilesForbidden           = errors.New("access forbidden")
 )
 
 // FileMetadataWithContentItem extends the files API metadata with content_item
@@ -76,12 +77,10 @@ func NewStore(files FilesClienter, bucket *aws.Bucket, cfg *config.Config) Store
 }
 
 func (s Store) Status(ctx context.Context, path string) (*Status, error) {
-	headers := filesSDK.Headers{
-		Authorization: s.cfg.ServiceAuthToken,
-	}
+	authToken := getAuthTokenFromContext(ctx, s.cfg)
 
 	//metadata
-	storedMetadata, err := s.files.GetFile(ctx, path, headers)
+	storedMetadata, err := s.files.GetFile(ctx, path, filesSDK.Headers{Authorization: authToken})
 	if err != nil {
 		log.Error(ctx, "failed to get file metadata", err, log.Data{"path": path})
 		return nil, ErrFilesAPINotFound
@@ -134,11 +133,8 @@ func (s Store) registerFileWithContentItem(ctx context.Context, metadata FileMet
 		ContentItem:   contentItem,
 	}
 
-	headers := filesSDK.Headers{
-		Authorization: s.cfg.ServiceAuthToken,
-	}
-
-	err := s.files.RegisterFile(ctx, storedMetadata, headers)
+	authToken := getAuthTokenFromContext(ctx, s.cfg)
+	err := s.files.RegisterFile(ctx, storedMetadata, filesSDK.Headers{Authorization: authToken})
 
 	if err != nil {
 		if apiErr, ok := err.(*filesSDK.APIError); ok {
@@ -147,8 +143,10 @@ func (s Store) registerFileWithContentItem(ctx context.Context, metadata FileMet
 				return filesAPI.ErrFileAlreadyRegistered
 			case http.StatusBadRequest:
 				return ErrFileAPICreateInvalidData
-			case http.StatusForbidden:
+			case http.StatusUnauthorized:
 				return ErrFilesUnauthorised
+			case http.StatusForbidden:
+				return ErrFilesForbidden
 			case http.StatusInternalServerError:
 				return ErrFilesServer
 			}
@@ -160,6 +158,7 @@ func (s Store) registerFileWithContentItem(ctx context.Context, metadata FileMet
 
 func (s Store) UploadFile(ctx context.Context, metadata FileMetadataWithContentItem, resumable Resumable, content []byte) (bool, error) {
 	baseMetadata := metadata.FileMetaData
+	authToken := getAuthTokenFromContext(ctx, s.cfg)
 
 	part := generateUploadPart(baseMetadata, resumable)
 	response, err := s.bucket.UploadPart(ctx, part, content)
@@ -187,10 +186,7 @@ func (s Store) UploadFile(ctx context.Context, metadata FileMetadataWithContentI
 			return false, ErrS3Head
 		}
 
-		headers := filesSDK.Headers{
-			Authorization: s.cfg.ServiceAuthToken,
-		}
-		return true, s.files.MarkFileUploaded(ctx, baseMetadata.Path, strings.Trim(*head.ETag, "\""), headers)
+		return true, s.files.MarkFileUploaded(ctx, baseMetadata.Path, strings.Trim(*head.ETag, "\""), filesSDK.Headers{Authorization: authToken})
 	}
 
 	return false, nil
@@ -214,4 +210,11 @@ func newStatusMessage(val bool, err error) StatusMessage {
 		msg.Err = err.Error()
 	}
 	return msg
+}
+
+func getAuthTokenFromContext(ctx context.Context, cfg *config.Config) string {
+	if authStr, ok := ctx.Value(config.AuthContextKey).(string); ok && authStr != "" {
+		return strings.TrimPrefix(authStr, "Bearer ")
+	}
+	return cfg.ServiceAuthToken
 }

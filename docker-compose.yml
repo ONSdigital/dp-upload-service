@@ -13,5 +13,3 @@ services:
       GRACEFUL_SHUTDOWN_TIMEOUT: "5s"
       HEALTHCHECK_INTERVAL: "5s"
       HEALTHCHECK_CRITICAL_TIMEOUT: "5s"
-    volumes:
-      - ../dp-files-api:/dp-files-api:ro
