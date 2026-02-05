@@ -247,7 +247,7 @@ func (s *StoreSuite) TestUploadFileWithContentItem() {
 			Path: "test/path",
 		},
 		ContentItem: &files.ContentItem{
-			DatasetID: "cpih01",
+			DatasetID: "test-dataset",
 			Edition:   "time-series",
 			Version:   "1",
 		},
@@ -257,7 +257,7 @@ func (s *StoreSuite) TestUploadFileWithContentItem() {
 
 	s.NoError(err)
 	s.NotNil(capturedMetadata.ContentItem)
-	s.Equal("cpih01", capturedMetadata.ContentItem.DatasetID)
+	s.Equal("test-dataset", capturedMetadata.ContentItem.DatasetID)
 	s.Equal("time-series", capturedMetadata.ContentItem.Edition)
 	s.Equal("1", capturedMetadata.ContentItem.Version)
 }
