@@ -203,7 +203,7 @@ func TestCreateUploadRequestBody(t *testing.T) {
 				body := reqBuff.String()
 				So(body, ShouldContainSubstring, *metadata.CollectionId)
 
-				So(body, ShouldContainSubstring, metadata.Path)
+				So(body, ShouldContainSubstring, filepath.Dir(metadata.Path))
 				So(body, ShouldContainSubstring, strconv.FormatBool(*metadata.IsPublishable))
 				So(body, ShouldContainSubstring, metadata.Title)
 				So(body, ShouldContainSubstring, metadata.Licence)
@@ -377,7 +377,7 @@ func TestWriteMetadataFormFields(t *testing.T) {
 				So(body, ShouldContainSubstring, *metadata.CollectionId)
 				So(body, ShouldContainSubstring, *metadata.BundleId)
 
-				So(body, ShouldContainSubstring, metadata.Path)
+				So(body, ShouldContainSubstring, filepath.Dir(metadata.Path))
 				So(body, ShouldContainSubstring, strconv.FormatBool(*metadata.IsPublishable))
 				So(body, ShouldContainSubstring, metadata.Title)
 				So(body, ShouldContainSubstring, metadata.Licence)

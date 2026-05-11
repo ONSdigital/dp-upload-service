@@ -134,7 +134,7 @@ func writeMetadataFormFields(formWriter *multipart.Writer, metadata api.Metadata
 	}
 
 	formFields := map[string]string{
-		"path":                 metadata.Path,
+		"path":                 filepath.Dir(metadata.Path),
 		"isPublishable":        strconv.FormatBool(*metadata.IsPublishable), // no nil check as this is a required field as defined in api.Metadata
 		"title":                metadata.Title,
 		"licence":              metadata.Licence,
