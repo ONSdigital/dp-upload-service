@@ -18,4 +18,3 @@ run:
     - |
       /start_docker.sh
       dp-upload-service/ci/scripts/component.sh
-      
